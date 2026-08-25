@@ -13,6 +13,8 @@ const Icons = (() => {
       '<path d="M20 6 9 17l-5-5"/>',
     'chevron-down':
       '<path d="m6 9 6 6 6-6"/>',
+    'chevrons-up-down':
+      '<path d="m7 15 5 5 5-5"/> <path d="m7 9 5-5 5 5"/>',
     'circle-alert':
       '<circle cx="12" cy="12" r="10"/> <line x1="12" x2="12" y1="8" y2="12"/> <line x1="12" x2="12.01" y1="16" y2="16"/>',
     'clock':

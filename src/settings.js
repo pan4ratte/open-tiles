@@ -59,7 +59,15 @@ const SettingsUI = (() => {
     return { control: label, focusId: input.id };
   }
 
+  /**
+   * A macOS pop-up button. The <select> keeps its own id and does the work;
+   * the wrapper exists to hang the paired chevron beside it, which is the
+   * glyph macOS uses for "this opens a menu of one choice".
+   */
   function buildChoice(field, value, commit) {
+    const wrap = document.createElement('div');
+    wrap.className = 'popup';
+
     const select = document.createElement('select');
     select.className = 'select';
     select.id = 'set-' + field.key;
@@ -77,7 +85,11 @@ const SettingsUI = (() => {
       select.value = String(effective);
     });
 
-    return { control: select, focusId: select.id };
+    const chevron = Icons.create('chevrons-up-down', { size: 13 });
+    chevron.setAttribute('class', 'icon popup__chevron');
+
+    wrap.append(select, chevron);
+    return { control: wrap, focusId: select.id };
   }
 
   function buildSegmented(field, value, commit) {
@@ -124,6 +136,11 @@ const SettingsUI = (() => {
     return { control: group };
   }
 
+  /**
+   * A macOS slider: the part already travelled is filled with the accent. CSS
+   * paints that as a gradient stop, so the fraction has to be handed to it -
+   * there is no selector for "how far along a range input is".
+   */
   function buildRange(field, value, commit) {
     const wrap = document.createElement('div');
     wrap.className = 'range';
@@ -140,8 +157,16 @@ const SettingsUI = (() => {
     badge.className = 'range__value';
     badge.textContent = value + (field.unit || '');
 
+    const paint = current => {
+      const span = field.max - field.min;
+      const fraction = span > 0 ? (Number(current) - field.min) / span : 0;
+      input.style.setProperty('--fill', (fraction * 100).toFixed(2) + '%');
+    };
+    paint(value);
+
     input.addEventListener('input', () => {
       badge.textContent = input.value + (field.unit || '');
+      paint(input.value);
       commit(Number(input.value));
     });
 
@@ -457,7 +482,8 @@ const SettingsUI = (() => {
   const EXTERNAL = new Set(Schema.FIELDS.filter(f => f.external).map(f => f.key));
 
   /**
-   * Builds the dialog: the sections as tabs down the side, one panel each.
+   * Builds the window: the sections down the sidebar, one panel of grouped
+   * rows each.
    *
    * Every panel is built up front and the inactive ones are hidden, so the
    * controls are all reachable (and testable) whichever tab is showing.
@@ -509,7 +535,18 @@ const SettingsUI = (() => {
       tab.dataset.section = section.id;
       tab.setAttribute('role', 'tab');
       tab.setAttribute('aria-controls', 'panel-' + section.id);
-      if (section.icon) tab.append(Icons.create(section.icon, { size: 16 }));
+
+      // The glyph rides a tinted rounded square, the way a System Settings
+      // sidebar marks its sections: colour is what the eye picks out, and the
+      // words are only there to confirm it.
+      if (section.icon) {
+        const badge = document.createElement('span');
+        badge.className = 'tab__icon';
+        if (section.tint) badge.style.setProperty('--tab-tint', section.tint);
+        badge.append(Icons.create(section.icon, { size: 13 }));
+        tab.append(badge);
+      }
+
       tab.append(document.createTextNode(section.label));
 
       const panel = document.createElement('section');
@@ -523,11 +560,19 @@ const SettingsUI = (() => {
       heading.textContent = section.label;
       panel.append(heading);
 
+      // The rows go in a grouped box rather than straight into the panel: on
+      // macOS that container is what says "these belong together", and it is
+      // what draws the hairlines between them.
+      const box = document.createElement('div');
+      box.className = 'box';
+
       section.fields.forEach(field => {
         const row = buildField(field, ctx.values[field.key], inner);
         if (field.when) conditional.push({ field, row });
-        panel.append(row);
+        box.append(row);
       });
+
+      panel.append(box);
 
       tab.addEventListener('click', () => show(section.id));
       tabs.push({ id: section.id, tab, panel });

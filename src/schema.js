@@ -3,11 +3,13 @@
  * layout of the settings dialog. Add a field here and it shows up in the UI,
  * gets a default and is validated on read - nothing else to touch.
  *
- * Sections become the tabs down the side of the dialog, in the order below.
+ * Sections become the rows of the settings sidebar, in the order below. Each
+ * carries an `icon` and a `tint` - the colour of the rounded square its glyph
+ * sits on, which is what makes the sidebar scannable at a glance.
  *
  * Field types
  *   segmented   one of `options`, rendered as a row of buttons
- *   choice      one of `options`, rendered as a <select>
+ *   choice      one of `options`, rendered as a macOS pop-up button
  *   range       number between min and max
  *   toggle      boolean
  *   color       hex colour
@@ -34,6 +36,7 @@ const Schema = (() => {
       id: 'appearance',
       label: 'Appearance',
       icon: 'palette',
+      tint: 'var(--system-purple)',
       fields: [
         {
           key: 'theme',
@@ -50,7 +53,7 @@ const Schema = (() => {
           key: 'accent',
           label: 'Accent colour',
           type: 'color',
-          default: '#5b8cff'
+          default: '#007aff'
         },
         {
           key: 'font',
@@ -68,6 +71,7 @@ const Schema = (() => {
       id: 'background',
       label: 'Background',
       icon: 'image',
+      tint: 'var(--system-teal)',
       fields: [
         {
           key: 'background',
@@ -97,6 +101,7 @@ const Schema = (() => {
       id: 'layout',
       label: 'Layout',
       icon: 'layout-grid',
+      tint: 'var(--system-indigo)',
       fields: [
         {
           key: 'columns',
@@ -114,6 +119,7 @@ const Schema = (() => {
       id: 'header',
       label: 'Header',
       icon: 'clock',
+      tint: 'var(--system-orange)',
       fields: [
         { key: 'showClock', label: 'Show the clock', type: 'toggle', default: true },
         { key: 'clock24', label: '24-hour time', type: 'toggle', default: true },
@@ -124,6 +130,7 @@ const Schema = (() => {
       id: 'tiles',
       label: 'Tiles',
       icon: 'globe',
+      tint: 'var(--system-blue)',
       fields: [
         { key: 'showLabels', label: 'Show site names', type: 'toggle', default: true },
         { key: 'openInNewTab', label: 'Open sites in a new tab', type: 'toggle', default: false },
@@ -145,6 +152,7 @@ const Schema = (() => {
       id: 'groups',
       label: 'Groups',
       icon: 'tag',
+      tint: 'var(--system-green)',
       fields: [
         {
           key: 'groupStyle',
@@ -199,6 +207,7 @@ const Schema = (() => {
       id: 'other',
       label: 'Other',
       icon: 'settings',
+      tint: 'var(--system-gray)',
       fields: [
         {
           key: 'reset',

@@ -59,9 +59,12 @@
 
   // ---------------------------------------------------------------- helpers
 
+  /* Apple's system colours rather than fixed hex, so a monogram brightens in
+     dark mode along with everything else. */
   const TILE_COLORS = [
-    '#5b8cff', '#e0625f', '#3fae7a', '#c77dff',
-    '#f0913a', '#39b5c7', '#d4517f', '#7c86f5'
+    'var(--system-blue)', 'var(--system-red)', 'var(--system-green)',
+    'var(--system-purple)', 'var(--system-orange)', 'var(--system-teal)',
+    'var(--system-pink)', 'var(--system-indigo)'
   ];
 
   function colorFor(text) {

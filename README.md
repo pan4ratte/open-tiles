@@ -21,24 +21,69 @@ overridden — accept it, otherwise the default page stays.
 
 - **+** tile — add a site (`example.com` is enough, `https://` is filled in)
 - **drag a tile** — reorder; the new order is saved automatically
-- **right-click a tile** — edit or delete it
+- **right-click a tile** — edit or delete it (opens as a sheet)
 - **+ New group** — start a group; **click a group** to show only its tiles
 - **drag a tile onto a group** — move it there (or onto *All* to take it out)
 - **right-click a group** — rename or delete it
-- **gear, top right** — settings, including the background picture
-- **Esc** — close a dialog
+- **gear, top right** — settings, in a window of their own
+- **Esc** — close a sheet or the settings window
+
+## Design
+
+The interface follows Apple's Human Interface Guidelines for macOS. The icons
+are Lucide and the type is Inter — those stay ours; everything else about the
+look is Apple's. [`src/newtab.css`](src/newtab.css) is organised around four
+ideas, and its opening comment says the same:
+
+**Semantic colour.** Nothing in the stylesheet names a colour it wants; it names
+the job the colour does — `--label`, `--fill-secondary`, `--separator`,
+`--system-red`. Each job has a light and a dark value, so switching theme is a
+token swap and nothing else. The system palette is Apple's, including the pairs
+that differ between themes (`#007AFF` / `#0A84FF` for blue, `#FF3B30` /
+`#FF453A` for red), and the accent defaults to systemBlue.
+
+**Materials.** Surfaces are translucent and blur what is behind them, in four
+thicknesses — thick for sheets and toolbars, regular for the group pill and the
+sidebar, thin for tiles. Depth comes from the material and a hairline stroke
+rather than from a heavy shadow. Where `backdrop-filter` is unavailable, and
+wherever the reader has asked for **Reduce transparency**, every material falls
+back to something opaque.
+
+**Deference.** Controls are small, quiet and macOS-shaped: 22px switches, 4px
+sliders with a round knob, pop-up buttons with the paired chevron, and Ventura's
+segmented control — a tinted trough with the chosen segment *raised* out of it
+in the control colour rather than filled with the accent. The accent is spent
+only where it carries meaning: the default button, the selected sidebar row, the
+active group.
+
+**Continuity of motion.** Everything that appears, appears from somewhere, on
+Apple's curves. A sheet slides down from the top edge; a window scales the last
+few per cent into place; a switch knob springs.
+
+Two presentations, and the difference is deliberate. A **sheet** belongs to the
+page it interrupts — it comes down from the top edge, keeps its bottom corners
+round and its top corners square, and is dismissed by its own *Cancel* and
+default buttons, with anything destructive banished to the far left. That is the
+tile and group dialogs. **Settings** is a **window**: centred, fully rounded, a
+toolbar with a centred title, and closed from that toolbar.
+
+Site icons are clipped to Apple's app-icon squircle — one `<clipPath>` in
+[`src/newtab.html`](src/newtab.html), in `objectBoundingBox` units, so the one
+path fits an icon of any size.
 
 ## Settings
 
-Everything lives in one dialog. Each section is a tab down the left-hand side,
-and only that section's panel is on screen — the strip lies down across the top
-when the window is too narrow for it. Changes apply as you make them and are
-written to storage in the background.
+Everything lives in one window, laid out the way macOS System Settings is: the
+sections run down a translucent sidebar, each with its glyph on a tinted rounded
+square, and the chosen one's panel fills the pane beside it. Related rows are
+gathered into a grouped box with hairlines between them. The sidebar lies down
+across the top when the window is too narrow for it. Changes apply as you make
+them and are written to storage in the background.
 
-| Tab | Setting | Default |
+| Section | Setting | Default |
 | --- | --- | --- |
 | Appearance | Theme — system / dark / light | System |
-| | Accent colour | `#5b8cff` |
+| | Accent colour | `#007AFF` (systemBlue) |
 | | Font — any Google Fonts family | Inter |
 | Background | Picture — a file from this computer | none |
 | | Blur — 0–40px | 0px |
@@ -58,8 +103,8 @@ written to storage in the background.
 | | Position — top / bottom *(status bar)* | Top |
 | Other | Reset all | — |
 
-The dialog is a fixed size, so moving between tabs does not make it jump about;
-a panel taller than the box scrolls on its own.
+The window is a fixed size, so moving between sections does not make it jump
+about; a panel taller than the pane scrolls on its own.
 
 **Other → Reset all** puts every setting back to its default and takes the
 background picture away. Tiles and groups are left alone.
@@ -72,7 +117,8 @@ Tiles are centred at every size. *Auto* columns fit as many tiles per row as the
 window allows; a fixed count keeps the grid at exactly that width, centred,
 rather than leaving it against one edge of the row.
 
-Adding a field to [`src/schema.js`](src/schema.js) is all it takes to add a
+Each section also carries a `tint` — the colour of its sidebar square. Adding a
+field to [`src/schema.js`](src/schema.js) is all it takes to add a
 setting — the dialog, the defaults and the validation all read from there. A
 field marked `external` renders in the dialog but keeps its value somewhere
 other than `settings`, which is how the background picture stays out of an
@@ -89,10 +135,11 @@ and show under *All*.
 
 Settings → *Groups* decides how the block looks:
 
-- **Floating** — a rounded pill above the clock (frosted glass over a picture).
-- **Status bar** — a full-width bar pinned to the **top** or **bottom** of the
-  window, with its chips to the **left**, **centre** or **right**. A bar along
-  the top pushes the settings button and the page down out of its way.
+- **Floating** — a HUD pill above the clock, frosted whatever is behind it.
+- **Status bar** — the menu bar: a full-width translucent strip pinned to the
+  **top** or **bottom** of the window, with its chips to the **left**,
+  **centre** or **right**. A bar along the top pushes the settings button and
+  the page down out of its way.
 - **On hover** fades the block out until the pointer reaches it — with two
   exceptions, because both would otherwise look like a bug: while a group is
   being shown, and while a tile is being dragged.
@@ -124,8 +171,8 @@ does full size.
 
 *Blur* and *Dim* apply to the picture only, not to what stands on it. Dim fades
 towards the theme colour rather than towards black, so it keeps the text legible
-in light and dark alike. With a picture set, the tiles and the settings button
-turn to frosted glass.
+in light and dark alike. The tiles and the group block are frosted glass either
+way; over a picture they thin out further, so more of it shows through.
 
 ## Icons
 
@@ -216,8 +263,8 @@ permissions are needed. Leaving the field empty falls back to the system font.
 | File | Purpose |
 | --- | --- |
 | `manifest.json` | MV3 manifest; overrides `newtab` and `homepage` |
-| `src/newtab.html` | Page markup, group block, tile / group / settings dialogs |
-| `src/newtab.css` | Styling, theme tokens, grid geometry |
+| `src/newtab.html` | Page markup, squircle clip path, sheets, settings window |
+| `src/newtab.css` | The design system: Apple tokens, materials, controls, motion |
 | `src/icons.js` | `Icons` — the Lucide set used by the UI, inlined |
 | `src/schema.js` | `Schema` — settings definitions, defaults, validation |
 | `src/storage.js` | `Store` — `browser.storage.local` with a localStorage fallback |
