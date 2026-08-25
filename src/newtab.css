@@ -248,6 +248,19 @@
   --bg-dim: .35;
   --groupbar-h: 38px;
   --groupbar-align: center;
+
+  /* How far the page is held off the window's edges. The top has to clear the
+     floating pill and the settings button, and the bottom matches it. */
+  --page-inset: 56px;
+
+  /* Geometrically centred reads a shade low, so the grid is lifted off the
+     middle by this much. Twice it on the bottom padding moves the centred row
+     up by exactly the lift. */
+  --optical-lift: clamp(10px, 3vh, 28px);
+
+  /* Slack around the grid, so a tile's press scale and focus ring have
+     somewhere to go instead of being clipped. */
+  --grid-bleed: 8px;
   /* The window's shape, so the background preview crops the way the page does.
      JS keeps it up to date; the fallback is only for a stylesheet on its own. */
   --page-ratio: 16 / 9;
@@ -470,10 +483,13 @@ body.gb-floating .groupbar {
   left: 50%;
   transform: translateX(-50%);
   max-width: min(70vw, 860px);
-  animation: pill-in var(--t-slow) var(--ease-out) both;
 }
 
+/* The pill animates itself in. Doing it one level up, on .groupbar, would
+   fight the `on hover` rule below and win: a running or filled animation
+   outranks a normal declaration, so `opacity: 0` would never take. */
 body.gb-floating .groupbar__inner {
+  animation: pill-in var(--t-slow) var(--ease-out) both;
   padding: 4px;
   border-radius: var(--r-pill);
   background: var(--mat-regular);
@@ -483,8 +499,8 @@ body.gb-floating .groupbar__inner {
 }
 
 @keyframes pill-in {
-  from { opacity: 0; transform: translateX(-50%) translateY(-8px); }
-  to   { opacity: 1; transform: translateX(-50%); }
+  from { opacity: 0; transform: translateY(-8px); }
+  to   { opacity: 1; transform: none; }
 }
 
 /* -- status bar: the menu bar -- */
@@ -509,14 +525,53 @@ body.gb-bar.gb-bottom .groupbar {
 body.gb-bar .groupbar__inner {
   flex: 1;
   justify-content: var(--groupbar-align);
-  padding: 0 10px;
+  /* Both ends are held clear of the settings button, so chips set to centre
+     stay centred and chips set to the right do not slide under it. */
+  padding: 0 40px;
 }
 
-/* Out of the way of a bar along the top: the toolbar drops below it, and the
-   page starts under it. */
-body.gb-bar:not(.gb-bottom) .toolbar { top: calc(var(--groupbar-h) + 10px); }
-body.gb-bar:not(.gb-bottom) .page { padding-top: calc(11vh + var(--groupbar-h)); }
-body.gb-bar.gb-bottom .page { padding-bottom: calc(60px + var(--groupbar-h)); }
+/* A menu bar is where macOS keeps its status items, so the settings button
+   moves into the bar rather than floating clear of it. */
+body.gb-bar .toolbar {
+  top: 0;
+  right: 0;
+  display: flex;
+  align-items: center;
+  height: var(--groupbar-h);
+  padding-right: 10px;
+  /* Above the bar it now sits in. */
+  z-index: 7;
+}
+
+body.gb-bar.gb-bottom .toolbar {
+  top: auto;
+  bottom: 0;
+}
+
+/* In the bar it is a status item, so it drops the floating control's own
+   material and takes the plain menu-bar treatment. */
+body.gb-bar .toolbar .toolbtn {
+  width: 26px;
+  height: 26px;
+  border-radius: var(--r-control);
+}
+
+body.gb-bar .toolbar .toolbtn:hover {
+  background: var(--fill-tertiary);
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+  box-shadow: none;
+}
+
+/* The bar is chrome, not content: the page keeps its centre inside whatever
+   is left of the window. */
+body.gb-bar:not(.gb-bottom) .page {
+  padding-top: calc(var(--page-inset) + var(--groupbar-h));
+}
+
+body.gb-bar.gb-bottom .page {
+  padding-bottom: calc(var(--page-inset) + var(--optical-lift) * 2 + var(--groupbar-h));
+}
 
 /* -- on hover -- */
 
@@ -650,15 +705,31 @@ body.gb-bar .chip { border-radius: var(--r-control); }
    8. The page
    --------------------------------------------------------------------------- */
 
+/* The grid is the anchor: it holds the centre of the window, and nothing else
+   is allowed to shift it. Two flexible rows of equal height do that - the
+   clock hangs from the bottom of the row above, the empty notice from the top
+   of the row below, and neither shares the grid's row. Turning the clock off
+   empties its row rather than moving the tiles.
+
+   `1fr` is `minmax(auto, 1fr)`, so a row never shrinks below what is in it: on
+   a window too short to hold both, the rows give up their equal share, the
+   page grows past the viewport and scrolls, and nothing is clipped. */
 .page {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
+  display: grid;
+  /* minmax(0, ...) rather than the default `auto`: an auto track takes its
+     minimum from its content, so a column limit wider than the window would
+     blow the track out past the viewport and drag the grid off centre with
+     it. Pinned to the row, the grid simply drops to the columns that fit. */
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: 1fr auto 1fr;
+  justify-items: center;
   min-height: 100%;
-  padding: 11vh 24px 64px;
+  padding: var(--page-inset) 24px calc(var(--page-inset) + var(--optical-lift) * 2);
 }
 
 .page__header {
+  grid-row: 1;
+  align-self: end;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -709,6 +780,7 @@ body.gb-bar .chip { border-radius: var(--r-control); }
    --------------------------------------------------------------------------- */
 
 .grid {
+  grid-row: 2;
   display: grid;
   grid-template-columns: repeat(auto-fit, var(--tile-size));
   gap: var(--gap);
@@ -716,20 +788,21 @@ body.gb-bar .chip { border-radius: var(--r-control); }
   /* As a flex item the grid would shrink to one column, and auto-fit counts
      tracks against the width it is given — so claim the row. */
   width: 100%;
-  max-width: 1120px;
-  /* Room for the press scale and the focus ring inside the scroll box. */
-  margin: -8px;
-  padding: 8px;
+  max-width: calc(1120px + var(--grid-bleed) * 2);
+  margin: calc(var(--grid-bleed) * -1);
+  padding: var(--grid-bleed);
 }
 
-/* A fixed column count instead of "as many as fit". The grid shrinks to the
-   columns it has, so it stays centred rather than sitting off to one side of
-   the row it was given. */
+/* A fixed column count is a ceiling on the row, not a fixed width. Declaring
+   `repeat(N, ...)` would lay down N tracks whether or not there are tiles to
+   put in them, and four tiles under a six-column limit would sit in the left
+   four of six - off centre by a column. Capping the width at N columns and
+   leaving `auto-fit` to collapse the tracks that hold nothing gives the same
+   ceiling, and the tiles that exist are what gets centred. */
 .grid.is-fixed-columns {
-  grid-template-columns: repeat(var(--columns), var(--tile-size));
-  width: max-content;
-  max-width: 100%;
-  overflow-x: auto;
+  max-width: calc(var(--columns) * var(--tile-size)
+                  + (var(--columns) - 1) * var(--gap)
+                  + var(--grid-bleed) * 2);
 }
 
 .tile {
@@ -861,6 +934,8 @@ body.no-labels .tile__label { display: none; }
 .tile--add:active { transform: scale(.96); }
 
 .empty {
+  grid-row: 3;
+  align-self: start;
   max-width: 34ch;
   margin-top: 32px;
   text-align: center;

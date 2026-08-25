@@ -25,7 +25,8 @@ overridden — accept it, otherwise the default page stays.
 - **+ New group** — start a group; **click a group** to show only its tiles
 - **drag a tile onto a group** — move it there (or onto *All* to take it out)
 - **right-click a group** — rename or delete it
-- **gear, top right** — settings, in a window of their own
+- **gear, top right** — settings, in a window of their own (it moves into
+  the status bar when the group block is set to one)
 - **Esc** — close a sheet or the settings window
 
 ## Design
@@ -113,9 +114,24 @@ The two status-bar-only options carry a `when` in the schema and appear only
 while *Appearance* is set to *Status bar* — a field is hidden, not disabled, so
 the panel never shows a control that does nothing.
 
-Tiles are centred at every size. *Auto* columns fit as many tiles per row as the
-window allows; a fixed count keeps the grid at exactly that width, centred,
-rather than leaving it against one edge of the row.
+The tile grid holds the centre of the window, across and down, and nothing else
+is allowed to move it: turning the clock off empties the space above the tiles
+rather than sliding them up, and adding a tile keeps the block centred rather
+than growing it downwards. What is centred is the tiles that are actually
+there — never the space a setting has reserved for tiles that are not.
+
+Down the window the grid sits a little **above** the middle, at roughly 47% of
+the height rather than 50%. Dead-centre reads as slightly low to the eye, and
+lifting the block off the geometric centre is what makes it look centred. The
+one exception is a window too short to hold the clock and the tiles at once —
+there the page grows and scrolls, because the alternative is a clock cut off
+above the top edge with no way to reach it.
+
+*Auto* columns fit as many tiles per row as the window allows. A fixed count is
+a **ceiling on the row, not a fixed width**: six columns with four tiles gives
+one row of four, centred, rather than four tiles pushed to the left of a
+six-wide box. If the window cannot hold the count asked for, the grid drops to
+the columns that fit rather than running off the edge.
 
 Each section also carries a `tint` — the colour of its sidebar square. Adding a
 field to [`src/schema.js`](src/schema.js) is all it takes to add a
@@ -138,8 +154,9 @@ Settings → *Groups* decides how the block looks:
 - **Floating** — a HUD pill above the clock, frosted whatever is behind it.
 - **Status bar** — the menu bar: a full-width translucent strip pinned to the
   **top** or **bottom** of the window, with its chips to the **left**,
-  **centre** or **right**. A bar along the top pushes the settings button and
-  the page down out of its way.
+  **centre** or **right**. The settings button moves into the bar, at its right
+  hand end, the way macOS keeps status items in the menu bar; the page keeps
+  its centre inside whatever is left of the window.
 - **On hover** fades the block out until the pointer reaches it — with two
   exceptions, because both would otherwise look like a bug: while a group is
   being shown, and while a tile is being dragged.
