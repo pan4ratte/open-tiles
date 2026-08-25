@@ -27,26 +27,25 @@ overridden — accept it, otherwise the default page stays.
 
 ## Settings
 
-Everything lives in one dialog, grouped into sections. Changes apply as you make
-them and are written to storage in the background.
+Everything lives in one dialog. Each section is a tab down the left-hand side,
+and only that section's panel is on screen — the strip lies down across the top
+when the window is too narrow for it. Changes apply as you make them and are
+written to storage in the background.
 
-| Section | Setting | Default |
+| Tab | Setting | Default |
 | --- | --- | --- |
 | Appearance | Theme — system / dark / light | System |
 | | Accent colour | `#5b8cff` |
 | | Font — any Google Fonts family | Inter |
-| Background | Picture — a local file or an Unsplash photo | none |
+| Background | Picture — a file from this computer | none |
 | | Blur — 0–40px | 0px |
 | | Dim — 0–90% | 35% |
-| | Unsplash access key | empty |
 | Layout | Columns — auto, or 3–12 | Auto |
-| | Rows — auto, or 1–8 (beyond that the grid scrolls) | Auto |
 | | Tile size — 72–200px | 116px |
 | | Spacing — 4–48px | 18px |
 | Header | Show the clock | on |
 | | 24-hour time | on |
 | | Show the date | off |
-| | Show the hint line | on |
 | Tiles | Show site names | on |
 | | Open sites in a new tab | off |
 | | Deep icon lookup | off |
@@ -55,8 +54,8 @@ them and are written to storage in the background.
 picture away.
 
 Tiles are centred at every size. *Auto* columns fit as many tiles per row as the
-window allows; a fixed count keeps the grid at exactly that width, centred, so a
-row limit scrolls against the tiles rather than at the page edge.
+window allows; a fixed count keeps the grid at exactly that width, centred,
+rather than leaving it against one edge of the row.
 
 Adding a field to [`src/schema.js`](src/schema.js) is all it takes to add a
 setting — the dialog, the defaults and the validation all read from there. A
@@ -67,27 +66,20 @@ object that is rewritten on every slider drag.
 ## Background
 
 Settings → *Background* → **Choose file** takes any image on this computer; you
-can also drop one straight onto the preview. Anything larger than 2560px on its
-longest edge is scaled down to fit and re-encoded as JPEG, so a phone photo does
-not have to fit in extension storage at full size. Files under 800 KB are stored
-byte for byte, which keeps SVGs and animated GIFs whole. Six megabytes is the
-ceiling; past that the picture is refused rather than silently dropped.
+can also drop one straight onto the preview. **Six megabytes is the ceiling** —
+a file over it is refused on the spot, with a notice naming its size and the
+limit, rather than being read and quietly dropped later.
 
-The same field searches **Unsplash**, which needs an access key of your own —
-there is none to ship in an add-on:
+Under that ceiling, anything larger than 2560px on its longest edge is scaled
+down to fit and re-encoded as JPEG, so a phone photo does not have to fit in
+extension storage at full size. Files under 800 KB are stored byte for byte,
+which keeps SVGs and animated GIFs whole. The picture is stored as a `data:`
+URI, so the new tab paints offline and no request goes out when you open one.
 
-1. Sign in at [unsplash.com/oauth/applications](https://unsplash.com/oauth/applications)
-   and create an application (the free *Demo* tier allows 50 requests an hour)
-2. Copy its **Access Key** into Settings → *Background* → *Unsplash access key*
-3. Search, then click a photo to set it
-
-The chosen photo is downloaded once and stored with everything else, so the new
-tab paints offline and no request goes out when you open one. Unsplash's API
-guidelines are followed: their download endpoint is pinged when a photo is
-actually used, and the photographer is credited in the bottom-left corner with
-links back. The key travels as a `client_id` query parameter, which keeps the
-call a simple CORS request — `api.unsplash.com` and `images.unsplash.com` both
-send `Access-Control-Allow-Origin: *`, so no host permission is needed.
+The picture appears behind the tiles the moment it is chosen — it goes on screen
+before it is written to storage, not after. The preview in the dialog is shaped
+like the window and cropped the same way (`cover`, centred), so what it shows is
+what ends up behind the tiles.
 
 *Blur* and *Dim* apply to the picture only, not to what stands on it. Dim fades
 towards the theme colour rather than towards black, so it keeps the text legible
@@ -163,8 +155,10 @@ The default is **Inter**, bundled with the extension (`fonts/`, ~174 KB of
 woff2 covering latin, latin-ext, cyrillic and cyrillic-ext) so it renders
 offline and costs no request.
 
-Settings → *Font* accepts **any family Google Fonts serves**, not just the ~50
-suggestions in the dropdown. The first time a family is chosen, `src/fonts.js`
+Settings → *Font* sets the clock and the tile names, and nothing else — the
+dialogs, buttons and labels stay on Inter whatever is chosen, so an ornamental
+family cannot make the UI hard to read. It accepts **any family Google Fonts
+serves**, not just the ~50 suggestions in the dropdown. The first time a family is chosen, `src/fonts.js`
 
 1. fetches `https://fonts.googleapis.com/css2?family=<name>:wght@300;400;600`,
 2. downloads the woff2 for the latin/cyrillic subsets and rewrites the
@@ -187,12 +181,12 @@ permissions are needed. Leaving the field empty falls back to the system font.
 | `src/schema.js` | `Schema` — settings definitions, defaults, validation |
 | `src/storage.js` | `Store` — `browser.storage.local` with a localStorage fallback |
 | `src/fonts.js` | `Fonts` — Google Fonts loading and caching |
-| `src/backgrounds.js` | `Backgrounds` — the page picture: files, Unsplash, painting |
+| `src/backgrounds.js` | `Backgrounds` — the page picture: encoding, limits, painting |
 | `src/favicons.js` | `Favicons` — site icon discovery and caching |
 | `src/settings.js` | `SettingsUI` — renders the settings dialog from the schema |
 | `src/newtab.js` | Rendering, drag & drop reordering, wiring |
 | `test/gesture.test.js` | Guards the permission user-gesture chain |
-| `test/background.test.js` | Guards the background picker's settings contract |
+| `test/background.test.js` | Guards the background picker and the settings tabs |
 | `test/dom-shim.js` | The scrap of DOM both tests run the dialog against |
 | `fonts/` | Bundled Inter (variable) + its `@font-face` rules |
 | `icons/icon.svg` | Toolbar / add-on manager icon (Lucide `layout-grid`) |
@@ -203,7 +197,7 @@ permissions are needed. Leaving the field empty falls back to the system font.
 | --- | --- |
 | `tiles` | `[{ id, url, title }]` |
 | `settings` | see `src/schema.js` |
-| `background` | `{ kind, src, name, credit, savedAt }`, or `null` |
+| `background` | `{ src, name, savedAt }`, or `null` |
 | `fontCache` | `{ [family]: { css, savedAt } }` |
 | `iconCache` | `{ [origin]: { url, size, mode, savedAt } }` |
 
@@ -223,13 +217,10 @@ shim — no browser, no dependencies:
 
 ```
 node test/gesture.test.js      # the permission user-gesture chain
-node test/background.test.js   # the background picker's settings contract
+node test/background.test.js   # the background picker and the settings tabs
 ```
 
 ## Licences
 
 - Lucide icons — ISC
 - Inter — SIL Open Font License 1.1
-- Unsplash photos — [Unsplash License](https://unsplash.com/license), used
-  through the API under their
-  [guidelines](https://help.unsplash.com/en/articles/2511245-unsplash-api-guidelines)

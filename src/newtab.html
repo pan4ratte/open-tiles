@@ -13,8 +13,6 @@
     <div class="bg__veil"></div>
   </div>
 
-  <p class="bgcredit" id="bgCredit" hidden></p>
-
   <div class="topbar">
     <button class="iconbtn" id="btnSettings" type="button" title="Settings" aria-label="Settings"
             data-icon="settings"></button>
@@ -24,7 +22,6 @@
     <header class="page__header" id="header">
       <h1 class="page__clock" id="clock">--:--</h1>
       <p class="page__date" id="date" hidden></p>
-      <p class="page__hint" id="hint">Drag a tile to reorder &middot; right-click a tile to edit</p>
     </header>
 
     <section class="grid" id="grid" aria-label="Quick access tiles"></section>
@@ -76,7 +73,7 @@
                 aria-label="Close" data-icon="x" data-icon-size="18"></button>
       </div>
 
-      <div class="modal__body" id="settingsBody"></div>
+      <div class="modal__body modal__body--split" id="settingsBody"></div>
 
       <div class="modal__actions">
         <button class="btn" type="button" id="btnResetSettings">

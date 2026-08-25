@@ -3,6 +3,8 @@
  * layout of the settings dialog. Add a field here and it shows up in the UI,
  * gets a default and is validated on read - nothing else to touch.
  *
+ * Sections become the tabs down the side of the dialog, in the order below.
+ *
  * Field types
  *   segmented   one of `options`, rendered as a row of buttons
  *   choice      one of `options`, rendered as a <select>
@@ -11,7 +13,7 @@
  *   color       hex colour
  *   text        free text, trimmed and capped at `max` characters
  *   font        family name, with the Google Fonts picker attached
- *   background  the page picture: file picker plus Unsplash search
+ *   background  the page picture: a file from this computer
  *
  * A field marked `external: true` has no value in `settings` - it is a control
  * for something stored elsewhere (the background image is megabytes of data
@@ -20,7 +22,6 @@
  */
 const Schema = (() => {
   const columnChoices = ['auto', 3, 4, 5, 6, 7, 8, 9, 10, 12];
-  const rowChoices = ['auto', 1, 2, 3, 4, 5, 6, 8];
 
   const SECTIONS = [
     {
@@ -51,8 +52,9 @@ const Schema = (() => {
           type: 'font',
           default: 'Inter',
           busyText: 'Loading font…',
-          note: 'Any family on Google Fonts works, not just the suggestions. '
-              + 'Leave empty to use the system font.'
+          note: 'Sets the clock and the tile names. Any family on Google Fonts '
+              + 'works, not just the suggestions. Leave empty to use the system '
+              + 'font. The dialogs and buttons always stay on Inter.'
         }
       ]
     },
@@ -68,8 +70,8 @@ const Schema = (() => {
           // Stored under its own key, not in settings - see the header above.
           external: true,
           busyText: 'Working on it…',
-          note: 'A file from this computer, or a photo from Unsplash. Large '
-              + 'files are scaled down to fit.'
+          note: 'A file from this computer, up to 6 MB. Large pictures are '
+              + 'scaled down to fit; the preview shows the crop you will get.'
         },
         { key: 'bgBlur', label: 'Blur', type: 'range', default: 0, min: 0, max: 40, step: 2, unit: 'px' },
         {
@@ -82,16 +84,6 @@ const Schema = (() => {
           step: 5,
           unit: '%',
           note: 'Fades the picture towards the theme colour so tiles stay readable.'
-        },
-        {
-          key: 'unsplashKey',
-          label: 'Unsplash access key',
-          type: 'text',
-          default: '',
-          max: 80,
-          placeholder: 'Client-ID from your Unsplash app',
-          note: 'Needed for the search above. Create a free app at '
-              + 'unsplash.com/oauth/applications and paste its Access Key.'
         }
       ]
     },
@@ -108,14 +100,6 @@ const Schema = (() => {
           options: columnChoices,
           note: 'Auto fits as many tiles per row as the window allows.'
         },
-        {
-          key: 'rows',
-          label: 'Rows',
-          type: 'choice',
-          default: 'auto',
-          options: rowChoices,
-          note: 'Beyond this the grid scrolls.'
-        },
         { key: 'tileSize', label: 'Tile size', type: 'range', default: 116, min: 72, max: 200, step: 4, unit: 'px' },
         { key: 'gap', label: 'Spacing', type: 'range', default: 18, min: 4, max: 48, step: 2, unit: 'px' }
       ]
@@ -127,8 +111,7 @@ const Schema = (() => {
       fields: [
         { key: 'showClock', label: 'Show the clock', type: 'toggle', default: true },
         { key: 'clock24', label: '24-hour time', type: 'toggle', default: true },
-        { key: 'showDate', label: 'Show the date', type: 'toggle', default: false },
-        { key: 'showHint', label: 'Show the hint line', type: 'toggle', default: true }
+        { key: 'showDate', label: 'Show the date', type: 'toggle', default: false }
       ]
     },
     {

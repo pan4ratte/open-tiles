@@ -8,7 +8,7 @@
  * Keys
  *   tiles      - [{ id, url, title }]
  *   settings   - see schema.js
- *   background - { kind, src, name, credit, savedAt }  the page background
+ *   background - { src, name, savedAt }            the page background
  *   fontCache  - { [family]: { css, savedAt } }     CSS with the woff2 inlined
  *   iconCache  - { [origin]: { url, size, source, savedAt } }
  */
@@ -89,27 +89,15 @@ const Store = (() => {
 
   // ------------------------------------------------------------- background
 
-  const httpUrl = value =>
-    (typeof value === 'string' && /^https:\/\//i.test(value)) ? value : '';
-
-  /** Only a stored data: URI or an https URL is ever painted onto the page. */
+  /** Only a stored data: URI is ever painted onto the page. */
   function sanitizeBackground(raw) {
     if (!raw || typeof raw !== 'object') return null;
     const src = typeof raw.src === 'string' ? raw.src : '';
-    if (!/^data:image\//i.test(src) && !/^https:\/\//i.test(src)) return null;
+    if (!/^data:image\//i.test(src)) return null;
 
-    const from = raw.credit && typeof raw.credit === 'object' ? raw.credit : null;
     return {
-      kind: raw.kind === 'unsplash' ? 'unsplash' : 'local',
       src,
       name: typeof raw.name === 'string' ? raw.name.slice(0, 80) : '',
-      credit: from && typeof from.name === 'string' && from.name
-        ? {
-          name: from.name.slice(0, 80),
-          userUrl: httpUrl(from.userUrl),
-          photoUrl: httpUrl(from.photoUrl)
-        }
-        : null,
       savedAt: Number(raw.savedAt) || Date.now()
     };
   }

@@ -6,7 +6,6 @@
   const header = document.getElementById('header');
   const clock = document.getElementById('clock');
   const dateLine = document.getElementById('date');
-  const hint = document.getElementById('hint');
 
   const modal = document.getElementById('modal');
   const form = document.getElementById('tileForm');
@@ -28,7 +27,7 @@
   let tiles = [];
   /** @type {object} see schema.js */
   let settings = { ...Schema.DEFAULTS };
-  /** @type {?{kind:string,src:string,name:string,credit:?object}} page picture */
+  /** @type {?{src:string,name:string,savedAt:number}} page picture */
   let background = null;
   /** id of the tile currently open in the modal, or null when adding */
   let editingId = null;
@@ -92,16 +91,11 @@
     grid.classList.toggle('is-fixed-columns', fixedColumns);
     if (fixedColumns) root.style.setProperty('--columns', settings.columns);
 
-    const limitedRows = settings.rows !== 'auto';
-    grid.classList.toggle('is-limited-rows', limitedRows);
-    if (limitedRows) root.style.setProperty('--rows', settings.rows);
-
     document.body.classList.toggle('no-labels', !settings.showLabels);
 
     clock.hidden = !settings.showClock;
     dateLine.hidden = !settings.showDate;
-    hint.hidden = !settings.showHint;
-    header.hidden = !settings.showClock && !settings.showDate && !settings.showHint;
+    header.hidden = !settings.showClock && !settings.showDate;
 
     tick();
   }
@@ -442,33 +436,34 @@
 
   /**
    * The background picker sends an action rather than a value, and gets back
-   * `{record}` (what is on screen now) and/or `{results}` (photos to choose
-   * from). Anything that goes wrong comes back as the status line instead.
+   * `{record}` - what is on screen now. Anything that goes wrong (a file that
+   * is not an image, one over the size limit, no room to store it) comes back
+   * as the status line instead, with no `record`, so the preview keeps showing
+   * what is really on screen.
    */
   async function changeBackground(payload) {
+    const previous = background;
     try {
-      if (payload.action === 'search') {
-        const photos = await Backgrounds.search(payload.query, settings.unsplashKey);
-        return {
-          value: { results: photos },
-          status: photos.length
-            ? { kind: 'ok', text: `${photos.length} photos for "${payload.query}".` }
-            : { kind: 'error', text: `Unsplash has nothing for "${payload.query}".` }
-        };
-      }
-
       if (payload.action === 'clear') {
         background = await withOwnWrite(() => Backgrounds.clear());
         Backgrounds.apply(background);
         return { value: { record: null } };
       }
 
-      const record = payload.action === 'file'
-        ? await Backgrounds.fromFile(payload.file)
-        : await Backgrounds.fromPhoto(payload.photo, settings.unsplashKey);
+      const record = await Backgrounds.fromFile(payload.file);
 
-      background = await withOwnWrite(() => Backgrounds.save(record));
-      Backgrounds.apply(background);
+      // On screen first. Writing megabytes to storage is the slow half and the
+      // half that can fail; the picture should not wait on it, and the settings
+      // dialog is not the only place it has to show up.
+      Backgrounds.apply(record);
+      try {
+        // Same `src`, so this does not repaint - it is the stored record, name
+        // and timestamp included, that the rest of the page goes on to use.
+        background = await withOwnWrite(() => Backgrounds.save(record));
+      } catch (err) {
+        Backgrounds.apply(previous);
+        throw err;
+      }
 
       return {
         value: { record: background },
@@ -480,7 +475,6 @@
         }
       };
     } catch (err) {
-      // No `record` key, so the control keeps showing what is really on screen.
       return { value: {}, status: { kind: 'error', text: err.message } };
     }
   }
@@ -544,6 +538,20 @@
     render();
   });
 
+  // ------------------------------------------------------------ page shape
+
+  /** Lets the settings preview crop the picture exactly as the page does. */
+  function trackPageShape() {
+    const set = () => {
+      const { innerWidth: w, innerHeight: h } = window;
+      // A zero would make the ratio invalid and leave the preview shapeless.
+      if (!w || !h) return;
+      document.documentElement.style.setProperty('--page-ratio', `${w} / ${h}`);
+    };
+    set();
+    window.addEventListener('resize', set);
+  }
+
   // ---------------------------------------------------------------- clock
 
   function tick() {
@@ -567,6 +575,7 @@
       Store.load(), Store.loadSettings(), Store.loadBackground()
     ]);
 
+    trackPageShape();
     applySettings();
     Backgrounds.apply(background);
     Fonts.use(settings.font).catch(() => Fonts.applyStack(Schema.DEFAULTS.font));

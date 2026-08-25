@@ -195,13 +195,16 @@ const SettingsUI = (() => {
   }
 
   /**
-   * The background picker: what is on screen now, a file button that doubles
-   * as a drop target, and an Unsplash search.
+   * The background picker: what is on screen now, and a file button that
+   * doubles as a drop target.
    *
-   * `commit` is handed one of `{action:'file'|'photo'|'search'|'clear'}` and
-   * answers with `{record}` (the picture that took effect, or null) and/or
-   * `{results}` (photos to show). Neither this file nor the schema knows where
-   * any of it is stored.
+   * The preview is shaped like the window (see --page-ratio) and covers, the
+   * same way the page paints the picture, so the crop on show here is the crop
+   * that ends up behind the tiles.
+   *
+   * `commit` is handed one of `{action:'file'|'clear'}` and answers with
+   * `{record}` - the picture that took effect, or null. A refusal comes back
+   * without a `record`, so the preview keeps showing what is really on screen.
    */
   function buildBackground(field, value, commit) {
     const wrap = document.createElement('div');
@@ -229,23 +232,6 @@ const SettingsUI = (() => {
     remove.className = 'btn btn--sm btn--danger';
     remove.append(Icons.create('trash-2', { size: 15 }), document.createTextNode('Remove'));
 
-    const query = document.createElement('input');
-    query.type = 'search';
-    query.className = 'field__input';
-    query.placeholder = 'Search Unsplash — "mountains", "quiet street"…';
-    query.autocomplete = 'off';
-
-    const go = document.createElement('button');
-    go.type = 'button';
-    go.className = 'btn btn--sm';
-    go.title = 'Search Unsplash';
-    go.setAttribute('aria-label', 'Search Unsplash');
-    go.append(Icons.create('search', { size: 15 }));
-
-    const results = document.createElement('div');
-    results.className = 'bgfield__results';
-    results.hidden = true;
-
     // ------------------------------------------------------------ painting
 
     function showRecord(record) {
@@ -260,41 +246,17 @@ const SettingsUI = (() => {
         img.alt = '';
         img.src = record.src;
         preview.append(img);
-        caption.textContent = record.credit && record.credit.name
-          ? `Photo by ${record.credit.name} on Unsplash`
-          : (record.name || 'Local image');
+        caption.textContent = record.name || 'Local image';
       } else {
         preview.append(Icons.create('image', { size: 22 }));
-        caption.textContent = 'No picture — drop one here, or pick one below.';
+        caption.textContent = 'No picture — drop one here, or choose a file.';
       }
 
       remove.hidden = !has;
     }
 
-    function showResults(photos) {
-      results.textContent = '';
-      photos.forEach(photo => {
-        const hit = document.createElement('button');
-        hit.type = 'button';
-        hit.className = 'bgfield__hit';
-        hit.title = `${photo.alt} — ${photo.credit.name}`;
-
-        // A dozen thumbnails, all of them asked for - nothing to defer.
-        const img = document.createElement('img');
-        img.src = photo.thumb;
-        img.alt = photo.alt;
-        img.referrerPolicy = 'no-referrer';
-
-        hit.append(img);
-        hit.addEventListener('click', () => send({ action: 'photo', photo }));
-        results.append(hit);
-      });
-      results.hidden = photos.length === 0;
-    }
-
     async function send(payload) {
       const state = (await commit(payload)) || {};
-      if (state.results) showResults(state.results);
       if ('record' in state) showRecord(state.record);
     }
 
@@ -324,27 +286,11 @@ const SettingsUI = (() => {
       if (dropped) send({ action: 'file', file: dropped });
     });
 
-    const run = () => {
-      const q = query.value.trim();
-      if (q) send({ action: 'search', query: q });
-    };
-    go.addEventListener('click', run);
-    // The dialog is a <form>, so Enter would otherwise close it.
-    query.addEventListener('keydown', e => {
-      if (e.key !== 'Enter') return;
-      e.preventDefault();
-      run();
-    });
-
     const actions = document.createElement('div');
     actions.className = 'bgfield__actions';
     actions.append(choose, remove, file);
 
-    const search = document.createElement('div');
-    search.className = 'bgfield__search';
-    search.append(query, go);
-
-    wrap.append(preview, caption, actions, search, results);
+    wrap.append(preview, caption, actions);
     showRecord(value);
 
     return { control: wrap, wide: true };
@@ -453,7 +399,15 @@ const SettingsUI = (() => {
     return row;
   }
 
+  /** The tab left open, so a re-mount does not throw the user back to the top. */
+  let openSection = null;
+
   /**
+   * Builds the dialog: the sections as tabs down the side, one panel each.
+   *
+   * Every panel is built up front and the inactive ones are hidden, so the
+   * controls are all reachable (and testable) whichever tab is showing.
+   *
    * @param {HTMLElement} container
    * @param {{values: object, onChange: (key:string, value:*) =>
    *   Promise<{value:*, status?: Status}>}} ctx
@@ -461,22 +415,76 @@ const SettingsUI = (() => {
   function mount(container, ctx) {
     container.textContent = '';
 
+    const nav = document.createElement('nav');
+    nav.className = 'tabs';
+    nav.setAttribute('role', 'tablist');
+    nav.setAttribute('aria-label', 'Settings sections');
+
+    const panels = document.createElement('div');
+    panels.className = 'panels';
+
+    const tabs = [];
+
     Schema.SECTIONS.forEach(section => {
-      const wrap = document.createElement('section');
-      wrap.className = 'section';
+      const tab = document.createElement('button');
+      tab.type = 'button';
+      tab.className = 'tab';
+      tab.id = 'tab-' + section.id;
+      tab.dataset.section = section.id;
+      tab.setAttribute('role', 'tab');
+      tab.setAttribute('aria-controls', 'panel-' + section.id);
+      if (section.icon) tab.append(Icons.create(section.icon, { size: 16 }));
+      tab.append(document.createTextNode(section.label));
+
+      const panel = document.createElement('section');
+      panel.className = 'panel';
+      panel.id = 'panel-' + section.id;
+      panel.setAttribute('role', 'tabpanel');
+      panel.setAttribute('aria-labelledby', tab.id);
 
       const heading = document.createElement('h3');
-      heading.className = 'section__title';
-      if (section.icon) heading.append(Icons.create(section.icon, { size: 15 }));
-      heading.append(document.createTextNode(section.label));
-      wrap.append(heading);
+      heading.className = 'panel__title';
+      heading.textContent = section.label;
+      panel.append(heading);
 
       section.fields.forEach(field => {
-        wrap.append(buildField(field, ctx.values[field.key], ctx));
+        panel.append(buildField(field, ctx.values[field.key], ctx));
       });
 
-      container.append(wrap);
+      tab.addEventListener('click', () => show(section.id));
+      tabs.push({ id: section.id, tab, panel });
+
+      nav.append(tab);
+      panels.append(panel);
     });
+
+    function show(id) {
+      openSection = id;
+      tabs.forEach(entry => {
+        const on = entry.id === id;
+        entry.tab.classList.toggle('is-on', on);
+        entry.tab.setAttribute('aria-selected', String(on));
+        entry.tab.setAttribute('tabindex', on ? '0' : '-1');
+        entry.panel.hidden = !on;
+      });
+    }
+
+    // The strip runs down the side of a wide dialog and across the top of a
+    // narrow one, so both axes are wired to step through the tabs.
+    nav.addEventListener('keydown', e => {
+      const step = { ArrowDown: 1, ArrowRight: 1, ArrowUp: -1, ArrowLeft: -1 }[e.key];
+      if (!step) return;
+      e.preventDefault();
+      const at = tabs.findIndex(entry => entry.id === openSection);
+      const next = tabs[(at + step + tabs.length) % tabs.length];
+      show(next.id);
+      next.tab.focus();
+    });
+
+    const known = tabs.some(entry => entry.id === openSection);
+    show(known ? openSection : tabs[0].id);
+
+    container.append(nav, panels);
   }
 
   return { mount, setStatus };

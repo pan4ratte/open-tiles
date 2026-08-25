@@ -28,8 +28,7 @@ const sandbox = {
   setTimeout,
   clearTimeout,
   Icons: { create: () => new El('svg') },
-  Fonts: { SUGGESTED: ['Inter', 'Roboto'], stackFor: name => name || 'system-ui' },
-  Backgrounds: { search: async () => [] }
+  Fonts: { SUGGESTED: ['Inter', 'Roboto'], stackFor: name => name || 'system-ui' }
 };
 vm.createContext(sandbox);
 
