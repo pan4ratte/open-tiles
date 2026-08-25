@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>New Tab</title>
+  <link rel="stylesheet" href="../fonts/inter.css">
+  <link rel="stylesheet" href="newtab.css">
+</head>
+<body>
+  <!-- The picture, behind everything; hidden until one is chosen. -->
+  <div class="bg" id="bg" aria-hidden="true" hidden>
+    <div class="bg__image" id="bgImage"></div>
+    <div class="bg__veil"></div>
+  </div>
+
+  <p class="bgcredit" id="bgCredit" hidden></p>
+
+  <div class="topbar">
+    <button class="iconbtn" id="btnSettings" type="button" title="Settings" aria-label="Settings"
+            data-icon="settings"></button>
+  </div>
+
+  <main class="page">
+    <header class="page__header" id="header">
+      <h1 class="page__clock" id="clock">--:--</h1>
+      <p class="page__date" id="date" hidden></p>
+      <p class="page__hint" id="hint">Drag a tile to reorder &middot; right-click a tile to edit</p>
+    </header>
+
+    <section class="grid" id="grid" aria-label="Quick access tiles"></section>
+
+    <p class="empty" id="empty" hidden>No tiles yet. Hit <strong>+</strong> to add your first site.</p>
+  </main>
+
+  <!-- Add / edit tile -->
+  <div class="modal" id="modal" hidden>
+    <form class="modal__box" id="tileForm">
+      <div class="modal__head">
+        <h2 class="modal__title" id="modalTitle">Add tile</h2>
+        <button class="iconbtn iconbtn--sm" type="button" id="btnCancel" title="Close"
+                aria-label="Close" data-icon="x" data-icon-size="18"></button>
+      </div>
+
+      <div class="modal__body">
+        <label class="field">
+          <span class="field__label">URL</span>
+          <input class="field__input" id="fieldUrl" type="text" placeholder="example.com" required
+                 autocomplete="off" spellcheck="false">
+        </label>
+
+        <label class="field">
+          <span class="field__label">Name <em>(optional)</em></span>
+          <input class="field__input" id="fieldTitle" type="text" placeholder="Example"
+                 autocomplete="off">
+        </label>
+
+        <p class="status status--error" id="modalError" hidden></p>
+      </div>
+
+      <div class="modal__actions">
+        <button class="btn btn--danger" type="button" id="btnDelete" hidden>
+          <span class="btn__icon" data-icon="trash-2" data-icon-size="16"></span>Delete
+        </button>
+        <span class="modal__spacer"></span>
+        <button class="btn btn--primary" type="submit" id="btnSave">Save</button>
+      </div>
+    </form>
+  </div>
+
+  <!-- Settings -->
+  <div class="modal" id="settings" hidden>
+    <form class="modal__box modal__box--wide" id="settingsForm">
+      <div class="modal__head">
+        <h2 class="modal__title">Settings</h2>
+        <button class="iconbtn iconbtn--sm" type="button" id="btnSettingsClose" title="Close"
+                aria-label="Close" data-icon="x" data-icon-size="18"></button>
+      </div>
+
+      <div class="modal__body" id="settingsBody"></div>
+
+      <div class="modal__actions">
+        <button class="btn" type="button" id="btnResetSettings">
+          <span class="btn__icon" data-icon="rotate-ccw" data-icon-size="16"></span>Reset all
+        </button>
+        <span class="modal__spacer"></span>
+        <button class="btn btn--primary" type="submit">Done</button>
+      </div>
+    </form>
+  </div>
+
+  <script src="icons.js"></script>
+  <script src="schema.js"></script>
+  <script src="storage.js"></script>
+  <script src="fonts.js"></script>
+  <script src="backgrounds.js"></script>
+  <script src="favicons.js"></script>
+  <script src="settings.js"></script>
+  <script src="newtab.js"></script>
+</body>
+</html>
