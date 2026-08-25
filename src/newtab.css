@@ -334,7 +334,7 @@ body {
 .segmented__item:focus-visible,
 .range input:focus-visible,
 .switch input:focus-visible + .switch__track,
-.color__input:focus-visible {
+.color__well:focus-visible {
   outline: none;
   box-shadow: 0 0 0 3.5px var(--accent-ring);
 }
@@ -637,6 +637,11 @@ body.gb-bar .chip { border-radius: var(--r-control); }
   padding: 5px 9px;
   color: var(--label-tertiary);
 }
+
+/* Groups are put in order by dragging their chips about. A chip on its way
+   somewhere fades, the way a tile being reordered does — the gap it leaves and
+   the space it opens are what show where it will land. */
+.chip.is-dragging { opacity: .4; }
 
 /* A tile is over this chip and will land in its group. */
 .chip.is-drop {
@@ -1246,6 +1251,20 @@ body.tile-round .tile {
   color: var(--label);
 }
 
+/* A section that covers more ground than one list should is split into named
+   subsections down the same panel - the heading macOS puts over a group of
+   settings, quieter than the panel's own title. */
+.panel__subtitle {
+  margin: 22px 0 7px 2px;
+  font-size: var(--t-callout);
+  font-weight: 600;
+  letter-spacing: -.005em;
+  color: var(--label-secondary);
+}
+
+/* Except the first, which the panel title is already sitting above. */
+.panel__title + .panel__subtitle { margin-top: 0; }
+
 /* A grouped box: the container that makes a run of rows read as one group of
    settings. Rows inside it are parted by a hairline inset from the label. */
 .box {
@@ -1253,6 +1272,9 @@ body.tile-round .tile {
   background: var(--bg-box);
   box-shadow: inset 0 0 0 .5px var(--separator), var(--shadow-control);
 }
+
+/* Two boxes with no heading between them still need parting. */
+.box + .box { margin-top: 18px; }
 
 /* Too narrow for a sidebar: it lies down across the top instead. */
 @media (max-width: 620px) {
@@ -1601,7 +1623,10 @@ body.tile-round .tile {
   text-align: right;
 }
 
-/* -- colour well -- */
+/* -- colour well --
+   A macOS colour well: the colour itself in a small rounded frame, and the
+   value beside it. Pressing it opens the picker below, which is ours rather
+   than the operating system's - see settings.js for why. */
 
 .color {
   display: flex;
@@ -1609,27 +1634,150 @@ body.tile-round .tile {
   gap: 10px;
 }
 
-.color__input {
+.color__well {
   width: 34px;
   height: 22px;
-  padding: 0;
+  padding: 2px;
   border: 0;
   border-radius: var(--r-control);
-  background: transparent;
-  box-shadow: inset 0 0 0 .5px var(--separator), var(--shadow-control);
+  background: var(--control-bg);
+  box-shadow: inset 0 0 0 .5px var(--separator-opaque), var(--shadow-control);
   cursor: pointer;
-  overflow: hidden;
+  transition: transform var(--t-fast) var(--spring);
 }
 
-.color__input::-webkit-color-swatch-wrapper { padding: 2px; }
-.color__input::-webkit-color-swatch { border: 0; border-radius: 4px; }
-.color__input::-moz-color-swatch { border: 0; border-radius: 4px; }
+.color__well:active { transform: scale(.95); }
+
+.color__swatch {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border-radius: 4px;
+  /* The chequer shows through nothing here, but it keeps a pale colour from
+     dissolving into the well around it. */
+  box-shadow: inset 0 0 0 .5px rgba(0, 0, 0, .18);
+}
 
 .color__hex {
   color: var(--label-secondary);
   font-size: var(--t-callout);
   text-transform: uppercase;
   font-variant-numeric: tabular-nums;
+}
+
+/* -- the colour picker --
+   A popover, so it is placed in the body and positioned against the well; the
+   settings pane scrolls, and would clip it anywhere else. */
+
+.picker {
+  position: fixed;
+  z-index: 60;
+  width: 236px;
+  padding: 12px;
+  border-radius: var(--r-window);
+  background: var(--mat-thick);
+  -webkit-backdrop-filter: var(--mat-filter);
+  backdrop-filter: var(--mat-filter);
+  box-shadow: var(--shadow-window);
+  animation: picker-in var(--t-fast) var(--ease-out) both;
+}
+
+@keyframes picker-in {
+  from { opacity: 0; transform: scale(.96) translateY(-4px); }
+  to   { opacity: 1; transform: none; }
+}
+
+/* The named accents, which is what all but a few people are after. */
+.picker__presets {
+  display: grid;
+  grid-template-columns: repeat(10, 1fr);
+  gap: 5px;
+  margin-bottom: 12px;
+}
+
+.picker__preset {
+  aspect-ratio: 1;
+  padding: 0;
+  border: 0;
+  border-radius: var(--r-pill);
+  background: var(--preset);
+  box-shadow: inset 0 0 0 .5px rgba(0, 0, 0, .2);
+  cursor: pointer;
+  transition: transform var(--t-fast) var(--spring),
+              box-shadow var(--t-fast) var(--ease);
+}
+
+.picker__preset:hover { transform: scale(1.14); }
+.picker__preset:active { transform: scale(.94); }
+
+/* The one in use is ringed in the window's own colour, not in its own - a ring
+   of the same colour would vanish into the dot. */
+.picker__preset.is-on {
+  box-shadow: inset 0 0 0 .5px rgba(0, 0, 0, .2),
+              0 0 0 1.5px var(--bg-window), 0 0 0 3px var(--label);
+}
+
+.picker__preset:focus-visible {
+  outline: none;
+  box-shadow: inset 0 0 0 .5px rgba(0, 0, 0, .2), 0 0 0 3.5px var(--accent-ring);
+}
+
+/* Saturation left to right, brightness top to bottom, over the chosen hue. */
+.picker__area {
+  position: relative;
+  height: 116px;
+  margin-bottom: 12px;
+  border-radius: var(--r-box);
+  background:
+    linear-gradient(to top, #000, transparent),
+    linear-gradient(to right, #fff, hsl(var(--hue, 210), 100%, 50%));
+  box-shadow: inset 0 0 0 .5px var(--separator);
+  cursor: crosshair;
+  touch-action: none;
+}
+
+.picker__hue {
+  position: relative;
+  height: 12px;
+  border-radius: var(--r-pill);
+  background: linear-gradient(to right,
+    #f00 0%, #ff0 16.66%, #0f0 33.33%, #0ff 50%, #00f 66.66%, #f0f 83.33%, #f00 100%);
+  box-shadow: inset 0 0 0 .5px var(--separator);
+  cursor: pointer;
+  touch-action: none;
+}
+
+.picker__area:focus-visible,
+.picker__hue:focus-visible {
+  outline: none;
+  box-shadow: inset 0 0 0 .5px var(--separator), 0 0 0 3.5px var(--accent-ring);
+}
+
+/* The same knob macOS puts on a slider: white, hairline-edged, and it carries
+   the colour it is pointing at. */
+.picker__knob {
+  position: absolute;
+  top: 50%;
+  width: 14px;
+  height: 14px;
+  margin: -7px 0 0 -7px;
+  border-radius: var(--r-pill);
+  box-shadow: inset 0 0 0 2px var(--knob), var(--shadow-knob);
+  pointer-events: none;
+}
+
+.picker__knob--hue { background: transparent; }
+
+.picker__foot {
+  margin-top: 12px;
+}
+
+.picker__hex {
+  width: 100%;
+  text-align: center;
+  text-transform: uppercase;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: .04em;
 }
 
 /* -- push buttons --

@@ -174,27 +174,354 @@ const SettingsUI = (() => {
     return { control: wrap, focusId: input.id };
   }
 
+  /**
+   * Colour, the three ways this picker lets one be named.
+   *
+   * HSV rather than HSL because that is the shape of the control: a square of
+   * saturation against value, with hue kept to one side of it. The maths is
+   * the standard conversion, written out here so the file carries no
+   * dependency for six lines of arithmetic.
+   */
+
+  const HEX = /^#?([0-9a-f]{6})$/i;
+
+  function parseHex(text) {
+    const hit = HEX.exec(String(text == null ? '' : text).trim());
+    return hit ? '#' + hit[1].toLowerCase() : null;
+  }
+
+  function hexToHsv(hex) {
+    const n = parseInt(hex.slice(1), 16);
+    const r = ((n >> 16) & 255) / 255;
+    const g = ((n >> 8) & 255) / 255;
+    const b = (n & 255) / 255;
+
+    const max = Math.max(r, g, b);
+    const min = Math.min(r, g, b);
+    const chroma = max - min;
+
+    let h = 0;
+    if (chroma) {
+      if (max === r) h = (g - b) / chroma + (g < b ? 6 : 0);
+      else if (max === g) h = (b - r) / chroma + 2;
+      else h = (r - g) / chroma + 4;
+      h *= 60;
+    }
+
+    return { h, s: max ? chroma / max : 0, v: max };
+  }
+
+  function hsvToHex(hsv) {
+    const channel = n => {
+      const k = (n + hsv.h / 60) % 6;
+      const value = hsv.v - hsv.v * hsv.s * Math.max(0, Math.min(k, 4 - k, 1));
+      return Math.round(value * 255).toString(16).padStart(2, '0');
+    };
+    return '#' + channel(5) + channel(3) + channel(1);
+  }
+
+  const clamp01 = n => Math.min(1, Math.max(0, n));
+
+  /**
+   * Shuts whichever picker is open. The popover lives in the body rather than
+   * in its row, so re-mounting the dialog would otherwise leave it behind with
+   * its listeners still attached and nothing left to answer to.
+   */
+  let dismissPicker = null;
+
+  /**
+   * The accents macOS offers by name, in its order. A row of these is most of
+   * what an accent picker needs to be; the rest of the control is there for
+   * the one person in ten who wants a colour that is not on the list.
+   */
+  const ACCENTS = [
+    ['#007aff', 'Blue'], ['#5856d6', 'Indigo'], ['#af52de', 'Purple'],
+    ['#ff2d55', 'Pink'], ['#ff3b30', 'Red'], ['#ff9500', 'Orange'],
+    ['#ffcc00', 'Yellow'], ['#34c759', 'Green'], ['#30b0c7', 'Teal'],
+    ['#8e8e93', 'Graphite']
+  ];
+
+  /**
+   * Drags a knob around a box: a pointer down anywhere in it jumps the knob
+   * there and keeps following until the button is let go, which is how every
+   * macOS slider and colour area behaves. The handler is given the position as
+   * two fractions of the box, so the same code drives the square and the strip.
+   */
+  function trackDrag(el, onMove) {
+    const report = e => {
+      const rect = el.getBoundingClientRect();
+      onMove(
+        rect.width ? clamp01((e.clientX - rect.left) / rect.width) : 0,
+        rect.height ? clamp01((e.clientY - rect.top) / rect.height) : 0
+      );
+    };
+
+    el.addEventListener('pointerdown', e => {
+      e.preventDefault();
+      el.setPointerCapture(e.pointerId);
+      report(e);
+    });
+
+    el.addEventListener('pointermove', e => {
+      if (el.hasPointerCapture(e.pointerId)) report(e);
+    });
+
+    el.addEventListener('pointerup', e => el.releasePointerCapture(e.pointerId));
+  }
+
+  /**
+   * The colour well, and the picker it opens.
+   *
+   * The platform's own <input type="color"> hands the job to a dialog that
+   * belongs to the operating system: it looks nothing like the rest of this
+   * window, it cannot be themed, and on Firefox it is a modal that takes the
+   * page's focus away. So the well opens a popover of our own instead - the
+   * named accents first, then a saturation/value square, a hue strip and the
+   * hex, for a colour that is not one of the ten.
+   *
+   * The popover is placed in the body rather than in the row, because the
+   * settings pane scrolls and would otherwise clip it. It is positioned
+   * against the well and closes on the first thing that would move it: a click
+   * outside, Escape, a scroll, a resize.
+   */
   function buildColor(field, value, commit) {
+    let current = parseHex(value) || field.default;
+    let hsv = hexToHsv(current);
+
     const wrap = document.createElement('div');
     wrap.className = 'color';
 
-    const input = document.createElement('input');
-    input.type = 'color';
-    input.className = 'color__input';
-    input.value = value;
-    input.id = 'set-' + field.key;
+    const well = document.createElement('button');
+    well.type = 'button';
+    well.className = 'color__well';
+    well.id = 'set-' + field.key;
+    well.setAttribute('aria-haspopup', 'dialog');
+    well.setAttribute('aria-expanded', 'false');
 
-    const hex = document.createElement('span');
-    hex.className = 'color__hex';
-    hex.textContent = value;
+    const swatch = document.createElement('span');
+    swatch.className = 'color__swatch';
 
-    input.addEventListener('input', () => {
-      hex.textContent = input.value;
-      commit(input.value);
+    const hexLabel = document.createElement('span');
+    hexLabel.className = 'color__hex';
+
+    well.append(swatch);
+    wrap.append(well, hexLabel);
+
+    // ------------------------------------------------------------ the popover
+
+    const pop = document.createElement('div');
+    pop.className = 'picker';
+    pop.setAttribute('role', 'dialog');
+    pop.setAttribute('aria-label', field.label);
+
+    const presets = document.createElement('div');
+    presets.className = 'picker__presets';
+
+    const dots = ACCENTS.map(([hex, name]) => {
+      const dot = document.createElement('button');
+      dot.type = 'button';
+      dot.className = 'picker__preset';
+      dot.dataset.hex = hex;
+      dot.title = name;
+      dot.setAttribute('aria-label', name);
+      dot.style.setProperty('--preset', hex);
+      dot.addEventListener('click', () => set(hex));
+      presets.append(dot);
+      return dot;
     });
 
-    wrap.append(input, hex);
-    return { control: wrap, focusId: input.id };
+    const area = document.createElement('div');
+    area.className = 'picker__area';
+    area.tabIndex = 0;
+    area.setAttribute('role', 'application');
+    area.setAttribute('aria-label', 'Saturation and brightness');
+
+    const areaKnob = document.createElement('span');
+    areaKnob.className = 'picker__knob';
+    area.append(areaKnob);
+
+    const hue = document.createElement('div');
+    hue.className = 'picker__hue';
+    hue.tabIndex = 0;
+    hue.setAttribute('role', 'slider');
+    hue.setAttribute('aria-label', 'Hue');
+    hue.setAttribute('aria-valuemin', '0');
+    hue.setAttribute('aria-valuemax', '359');
+
+    const hueKnob = document.createElement('span');
+    hueKnob.className = 'picker__knob picker__knob--hue';
+    hue.append(hueKnob);
+
+    const foot = document.createElement('div');
+    foot.className = 'picker__foot';
+
+    const hexInput = document.createElement('input');
+    hexInput.type = 'text';
+    hexInput.className = 'field__input picker__hex';
+    hexInput.spellcheck = false;
+    hexInput.autocomplete = 'off';
+    hexInput.maxLength = 7;
+    hexInput.setAttribute('aria-label', 'Hex value');
+
+    foot.append(hexInput);
+    pop.append(presets, area, hue, foot);
+
+    // ------------------------------------------------------------- painting
+
+    /** Everything on screen, from `current` and `hsv`, in one pass. */
+    function paint() {
+      swatch.style.background = current;
+      hexLabel.textContent = current.toUpperCase();
+      well.title = current.toUpperCase();
+
+      area.style.setProperty('--hue', String(Math.round(hsv.h)));
+      areaKnob.style.left = (hsv.s * 100).toFixed(2) + '%';
+      areaKnob.style.top = ((1 - hsv.v) * 100).toFixed(2) + '%';
+      areaKnob.style.background = current;
+
+      hueKnob.style.left = (hsv.h / 360 * 100).toFixed(2) + '%';
+      hue.setAttribute('aria-valuenow', String(Math.round(hsv.h)));
+
+      if (document.activeElement !== hexInput) hexInput.value = current.toUpperCase();
+
+      dots.forEach(dot => {
+        const on = dot.dataset.hex === current;
+        dot.classList.toggle('is-on', on);
+        dot.setAttribute('aria-pressed', String(on));
+      });
+    }
+
+    /** Takes a hex, tells the page, and shows whatever came back of it. */
+    async function set(hex, keepHsv) {
+      const clean = parseHex(hex);
+      if (!clean) return;
+
+      current = clean;
+      if (!keepHsv) hsv = hexToHsv(clean);
+      paint();
+
+      const effective = parseHex(await commit(clean));
+      if (effective && effective !== current) {
+        current = effective;
+        hsv = hexToHsv(effective);
+        paint();
+      }
+    }
+
+    /** Moving the square or the strip: the hue is kept as the knob left it,
+     *  so a slide down to black and back up does not lose the colour. */
+    function setHsv(next) {
+      hsv = { ...hsv, ...next };
+      set(hsvToHex(hsv), true);
+    }
+
+    // -------------------------------------------------------------- gestures
+
+    trackDrag(area, (x, y) => setHsv({ s: x, v: 1 - y }));
+    trackDrag(hue, x => setHsv({ h: x * 360 }));
+
+    area.addEventListener('keydown', e => {
+      const step = e.shiftKey ? .1 : .02;
+      const move = {
+        ArrowLeft: { s: hsv.s - step }, ArrowRight: { s: hsv.s + step },
+        ArrowUp: { v: hsv.v + step }, ArrowDown: { v: hsv.v - step }
+      }[e.key];
+      if (!move) return;
+      e.preventDefault();
+      setHsv({ s: clamp01(move.s === undefined ? hsv.s : move.s),
+               v: clamp01(move.v === undefined ? hsv.v : move.v) });
+    });
+
+    hue.addEventListener('keydown', e => {
+      const step = (e.shiftKey ? 15 : 3) * ({ ArrowLeft: -1, ArrowDown: -1,
+                                              ArrowRight: 1, ArrowUp: 1 }[e.key] || 0);
+      if (!step) return;
+      e.preventDefault();
+      setHsv({ h: (hsv.h + step + 360) % 360 });
+    });
+
+    hexInput.addEventListener('input', () => {
+      const typed = parseHex(hexInput.value);
+      if (typed) set(typed);
+    });
+    hexInput.addEventListener('blur', () => { hexInput.value = current.toUpperCase(); });
+
+    // ------------------------------------------------------------- open/close
+
+    let open = false;
+
+    function place() {
+      const rect = well.getBoundingClientRect();
+      const gap = 7;
+      const width = pop.offsetWidth || 236;
+      const height = pop.offsetHeight || 300;
+
+      // Under the well by preference, above it when there is no room below.
+      let top = rect.bottom + gap;
+      if (top + height > window.innerHeight - 8) {
+        top = Math.max(8, rect.top - gap - height);
+      }
+
+      // Right edges aligned, the way a macOS popover hangs off its control,
+      // but never off the side of the window.
+      const left = Math.max(8, Math.min(rect.right - width, window.innerWidth - width - 8));
+
+      pop.style.top = Math.round(top) + 'px';
+      pop.style.left = Math.round(left) + 'px';
+    }
+
+    function onOutside(e) {
+      if (!pop.contains(e.target) && !well.contains(e.target)) close();
+    }
+
+    function onKey(e) {
+      if (e.key !== 'Escape') return;
+      // The settings window is listening for Escape too, and would close under
+      // the picker; the picker was on top, so the picker is what closes.
+      e.stopPropagation();
+      close();
+      well.focus();
+    }
+
+    function show() {
+      if (open) return;
+      if (dismissPicker) dismissPicker();
+      open = true;
+      dismissPicker = close;
+
+      document.body.append(pop);
+      paint();
+      place();
+      well.setAttribute('aria-expanded', 'true');
+      pop.classList.add('is-open');
+
+      // Capture, so a scroll inside the settings pane is caught as well - it
+      // does not bubble to the window.
+      document.addEventListener('pointerdown', onOutside, true);
+      document.addEventListener('keydown', onKey, true);
+      window.addEventListener('scroll', close, true);
+      window.addEventListener('resize', close, true);
+    }
+
+    function close() {
+      if (!open) return;
+      open = false;
+      if (dismissPicker === close) dismissPicker = null;
+
+      pop.classList.remove('is-open');
+      pop.remove();
+      well.setAttribute('aria-expanded', 'false');
+
+      document.removeEventListener('pointerdown', onOutside, true);
+      document.removeEventListener('keydown', onKey, true);
+      window.removeEventListener('scroll', close, true);
+      window.removeEventListener('resize', close, true);
+    }
+
+    well.addEventListener('click', () => (open ? close() : show()));
+
+    paint();
+    return { control: wrap, focusId: well.id };
   }
 
   /** A button that does something once - reset - rather than holding a value. */
@@ -475,8 +802,13 @@ const SettingsUI = (() => {
     return row;
   }
 
-  /** The tab left open, so a re-mount does not throw the user back to the top. */
+  /**
+   * The tab left open and how far down its pane was, so a re-mount - a reset,
+   * or another new-tab page changing something - puts the reader back where
+   * they were rather than at the top of the first section.
+   */
   let openSection = null;
+  let openScroll = 0;
 
   /** Keys that hold no value in `settings`, so nothing to track for a `when`. */
   const EXTERNAL = new Set(Schema.FIELDS.filter(f => f.external).map(f => f.key));
@@ -493,6 +825,7 @@ const SettingsUI = (() => {
    *   Promise<{value:*, status?: Status}>}} ctx
    */
   function mount(container, ctx) {
+    if (dismissPicker) dismissPicker();
     container.textContent = '';
 
     // A field with a `when` follows another field, so the dialog keeps its own
@@ -524,6 +857,7 @@ const SettingsUI = (() => {
 
     const panels = document.createElement('div');
     panels.className = 'panels';
+    panels.addEventListener('scroll', () => { openScroll = Number(panels.scrollTop) || 0; });
 
     const tabs = [];
 
@@ -560,19 +894,32 @@ const SettingsUI = (() => {
       heading.textContent = section.label;
       panel.append(heading);
 
-      // The rows go in a grouped box rather than straight into the panel: on
+      // The rows go in grouped boxes rather than straight into the panel: on
       // macOS that container is what says "these belong together", and it is
       // what draws the hairlines between them.
-      const box = document.createElement('div');
-      box.className = 'box';
+      //
+      // A section that was written as subsections gets one box each, under its
+      // own heading - the whole page still scrolls as one, which is the point
+      // of putting them together rather than on tabs of their own.
+      section.groups.forEach(group => {
+        if (group.label) {
+          const subtitle = document.createElement('h4');
+          subtitle.className = 'panel__subtitle';
+          subtitle.textContent = group.label;
+          panel.append(subtitle);
+        }
 
-      section.fields.forEach(field => {
-        const row = buildField(field, ctx.values[field.key], inner);
-        if (field.when) conditional.push({ field, row });
-        box.append(row);
+        const box = document.createElement('div');
+        box.className = 'box';
+
+        group.fields.forEach(field => {
+          const row = buildField(field, ctx.values[field.key], inner);
+          if (field.when) conditional.push({ field, row });
+          box.append(row);
+        });
+
+        panel.append(box);
       });
-
-      panel.append(box);
 
       tab.addEventListener('click', () => show(section.id));
       tabs.push({ id: section.id, tab, panel });
@@ -582,7 +929,11 @@ const SettingsUI = (() => {
     });
 
     function show(id) {
+      // Moving to another section is a fresh page, so it starts at the top;
+      // only coming back to the one already open keeps its place.
+      if (id !== openSection) openScroll = 0;
       openSection = id;
+
       tabs.forEach(entry => {
         const on = entry.id === id;
         entry.tab.classList.toggle('is-on', on);
@@ -590,6 +941,7 @@ const SettingsUI = (() => {
         entry.tab.setAttribute('tabindex', on ? '0' : '-1');
         entry.panel.hidden = !on;
       });
+      panels.scrollTop = openScroll;
     }
 
     // The strip runs down the side of a wide dialog and across the top of a
@@ -605,11 +957,10 @@ const SettingsUI = (() => {
     });
 
     refresh();
+    container.append(nav, panels);
 
     const known = tabs.some(entry => entry.id === openSection);
     show(known ? openSection : tabs[0].id);
-
-    container.append(nav, panels);
   }
 
   return { mount, setStatus };

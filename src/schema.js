@@ -7,6 +7,11 @@
  * carries an `icon` and a `tint` - the colour of the rounded square its glyph
  * sits on, which is what makes the sidebar scannable at a glance.
  *
+ * A section holds either a flat run of `fields` or, where one page covers more
+ * ground than a single list should, a few named `groups` of them - each drawn
+ * as its own titled box down the one panel. Both forms come out of `normalize`
+ * with the same shape, so nothing downstream has to know which was written.
+ *
  * Field types
  *   segmented   one of `options`, rendered as a row of buttons
  *   choice      one of `options`, rendered as a macOS pop-up button. An
@@ -32,7 +37,7 @@
 const Schema = (() => {
   const columnChoices = ['auto', 3, 4, 5, 6, 7, 8, 9, 10, 12];
 
-  const SECTIONS = [
+  const RAW_SECTIONS = [
     {
       id: 'appearance',
       label: 'Appearance',
@@ -103,17 +108,70 @@ const Schema = (() => {
       label: 'Layout',
       icon: 'layout-grid',
       tint: 'var(--system-indigo)',
-      fields: [
+      // How the tiles are arranged and how each one is drawn are the same
+      // decision made twice, so they share a page - two boxes, one panel.
+      groups: [
         {
-          key: 'columns',
-          label: 'Columns',
-          type: 'choice',
-          default: 'auto',
-          options: columnChoices,
-          note: 'Auto fits as many tiles per row as the window allows.'
+          label: 'Grid',
+          fields: [
+            {
+              key: 'columns',
+              label: 'Columns',
+              type: 'choice',
+              default: 'auto',
+              options: columnChoices,
+              note: 'Auto fits as many tiles per row as the window allows.'
+            },
+            { key: 'tileSize', label: 'Tile size', type: 'range', default: 116, min: 72, max: 200, step: 4, unit: 'px' },
+            { key: 'gap', label: 'Spacing', type: 'range', default: 18, min: 4, max: 48, step: 2, unit: 'px' }
+          ]
         },
-        { key: 'tileSize', label: 'Tile size', type: 'range', default: 116, min: 72, max: 200, step: 4, unit: 'px' },
-        { key: 'gap', label: 'Spacing', type: 'range', default: 18, min: 4, max: 48, step: 2, unit: 'px' }
+        {
+          label: 'Tiles',
+          fields: [
+            {
+              key: 'tileShape',
+              label: 'Shape',
+              type: 'choice',
+              default: 'square',
+              options: [
+                { value: 'square', label: 'Square' },
+                { value: 'circle', label: 'Circular' },
+                { value: '3:2', label: '3:2' },
+                { value: '16:10', label: '16:10' },
+                { value: '16:9', label: '16:9' }
+              ],
+              note: 'Tile size sets the width; the shape sets the height to match. '
+                  + 'A wide tile is a short one, so it has less room for a site name.'
+            },
+            {
+              key: 'logoPad',
+              label: 'Logo padding',
+              type: 'range',
+              default: 20,
+              min: 0,
+              max: 40,
+              step: 5,
+              unit: '%',
+              note: 'How much of the room inside a tile is left clear around its '
+                  + 'icon. At 0% the icon fills what the shape and the name leave.'
+            },
+            { key: 'showLabels', label: 'Show site names', type: 'toggle', default: true },
+            { key: 'openInNewTab', label: 'Open sites in a new tab', type: 'toggle', default: false },
+            {
+              key: 'deepIcons',
+              label: 'Deep icon lookup',
+              type: 'toggle',
+              default: false,
+              busyText: 'Asking Firefox for access…',
+              // Firefox only grants permissions.request() while it is handling
+              // user input, so this toggle has to act on the click itself.
+              gesture: true,
+              note: 'Reads each site\'s markup and web manifest to find its sharpest '
+                  + 'logo. Firefox will ask for access to the sites you save.'
+            }
+          ]
+        }
       ]
     },
     {
@@ -125,55 +183,6 @@ const Schema = (() => {
         { key: 'showClock', label: 'Show the clock', type: 'toggle', default: true },
         { key: 'clock24', label: '24-hour time', type: 'toggle', default: true },
         { key: 'showDate', label: 'Show the date', type: 'toggle', default: false }
-      ]
-    },
-    {
-      id: 'tiles',
-      label: 'Tiles',
-      icon: 'globe',
-      tint: 'var(--system-blue)',
-      fields: [
-        {
-          key: 'tileShape',
-          label: 'Shape',
-          type: 'choice',
-          default: 'square',
-          options: [
-            { value: 'square', label: 'Square' },
-            { value: 'circle', label: 'Circular' },
-            { value: '3:2', label: '3:2' },
-            { value: '16:10', label: '16:10' },
-            { value: '16:9', label: '16:9' }
-          ],
-          note: 'Tile size sets the width; the shape sets the height to match. '
-              + 'A wide tile is a short one, so it has less room for a site name.'
-        },
-        {
-          key: 'logoPad',
-          label: 'Logo padding',
-          type: 'range',
-          default: 20,
-          min: 0,
-          max: 40,
-          step: 5,
-          unit: '%',
-          note: 'How much of the room inside a tile is left clear around its '
-              + 'icon. At 0% the icon fills what the shape and the name leave.'
-        },
-        { key: 'showLabels', label: 'Show site names', type: 'toggle', default: true },
-        { key: 'openInNewTab', label: 'Open sites in a new tab', type: 'toggle', default: false },
-        {
-          key: 'deepIcons',
-          label: 'Deep icon lookup',
-          type: 'toggle',
-          default: false,
-          busyText: 'Asking Firefox for access…',
-          // Firefox only grants permissions.request() while it is handling
-          // user input, so this toggle has to act on the click itself.
-          gesture: true,
-          note: 'Reads each site\'s markup and web manifest to find its sharpest '
-              + 'logo. Firefox will ask for access to the sites you save.'
-        }
       ]
     },
     {
@@ -253,6 +262,21 @@ const Schema = (() => {
       ]
     }
   ];
+
+  /**
+   * Gives every section both halves of its shape: `groups` (the boxes the
+   * dialog draws, in order) and `fields` (the flat list everything else reads
+   * for defaults, validation and lookups). A section written as a plain run of
+   * fields becomes the one unnamed group holding them.
+   */
+  function normalize(section) {
+    const groups = (section.groups || [{ label: null, fields: section.fields }])
+      .map(group => ({ label: group.label || null, fields: group.fields }));
+
+    return { ...section, groups, fields: groups.flatMap(group => group.fields) };
+  }
+
+  const SECTIONS = RAW_SECTIONS.map(normalize);
 
   const FIELDS = SECTIONS.flatMap(section => section.fields);
 

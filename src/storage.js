@@ -41,12 +41,69 @@ const Store = (() => {
   }
 
   async function set(key, value) {
+    noteOwnWrite(key, value);
     if (ext) {
       await ext.set({ [key]: value });
     } else {
       localStorage.setItem(key, JSON.stringify(value));
     }
     return value;
+  }
+
+  // --------------------------------------------------------------- own writes
+
+  /**
+   * Every write here comes straight back through `storage.onChanged` - the API
+   * makes no distinction between the page that wrote and the pages that only
+   * need telling. Left alone, that echo makes the page treat its own slider
+   * drag as somebody else's edit and rebuild itself mid-gesture.
+   *
+   * So each write leaves the signature of what it wrote behind, and the change
+   * feed drops the event that carries it back. A real edit from another new-tab
+   * page has a different signature and still gets through.
+   *
+   * `onChanged` cannot be relied on to fire before or after the write settles,
+   * which is why this is a value comparison rather than a flag held over the
+   * write.
+   */
+  const echoes = new Map();
+
+  function signature(key, value) {
+    // The picture is megabytes of data URI. Its stamp and length identify it
+    // as well as the whole string would, at none of the cost.
+    if (key === BACKGROUND) return value ? value.savedAt + ':' + value.src.length : 'null';
+    try {
+      const json = JSON.stringify(value);
+      return json === undefined ? null : json;
+    } catch {
+      return null;
+    }
+  }
+
+  function noteOwnWrite(key, value) {
+    const sig = signature(key, value);
+    if (sig === null) return;
+
+    const queue = echoes.get(key) || [];
+    queue.push(sig);
+    // A short queue, because a signature that never comes back - a cache key
+    // nothing listens for, a write that failed - would otherwise sit here for
+    // the life of the page.
+    while (queue.length > 4) queue.shift();
+    echoes.set(key, queue);
+  }
+
+  /** True when this event is the return leg of a write made on this page. */
+  function isEcho(key, value) {
+    const queue = echoes.get(key);
+    if (!queue || !queue.length) return false;
+
+    const at = queue.indexOf(signature(key, value));
+    if (at === -1) return false;
+
+    // Anything written before the one that just came back is never coming.
+    queue.splice(0, at + 1);
+    return true;
   }
 
   // ------------------------------------------------------------------ tiles
@@ -190,20 +247,31 @@ const Store = (() => {
 
   // ------------------------------------------------------------- change feed
 
-  /** Fires when another new-tab page changes any of what is stored here. */
+  /**
+   * Fires when *another* new-tab page changes any of what is stored here. This
+   * page's own writes come back through the same feed and are dropped - see
+   * `isEcho` above.
+   */
   function onExternalChange(handler) {
     const runtime = (typeof browser !== 'undefined' && browser.storage)
       || (typeof chrome !== 'undefined' && chrome.storage)
       || null;
     if (!runtime || !runtime.onChanged) return;
+
+    const READ = [
+      [TILES, sanitizeTiles],
+      [GROUPS, sanitizeGroups],
+      [SETTINGS, Schema.coerce],
+      [BACKGROUND, sanitizeBackground]
+    ];
+
     runtime.onChanged.addListener((changes, area) => {
       if (area !== 'local') return;
-      if (changes[TILES]) handler(TILES, sanitizeTiles(changes[TILES].newValue));
-      if (changes[GROUPS]) handler(GROUPS, sanitizeGroups(changes[GROUPS].newValue));
-      if (changes[SETTINGS]) handler(SETTINGS, Schema.coerce(changes[SETTINGS].newValue));
-      if (changes[BACKGROUND]) {
-        handler(BACKGROUND, sanitizeBackground(changes[BACKGROUND].newValue));
-      }
+      READ.forEach(([key, read]) => {
+        if (!changes[key]) return;
+        const value = read(changes[key].newValue);
+        if (!isEcho(key, value)) handler(key, value);
+      });
     });
   }
 

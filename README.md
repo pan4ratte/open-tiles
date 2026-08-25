@@ -24,6 +24,7 @@ overridden — accept it, otherwise the default page stays.
 - **right-click a tile** — edit or delete it (opens as a sheet)
 - **+ New group** — start a group; **click a group** to show only its tiles
 - **drag a tile onto a group** — move it there (or onto *All* to take it out)
+- **drag a group** — put the groups in whatever order you like
 - **right-click a group** — rename or delete it
 - **gear, top right** — settings, in a window of their own (it moves into
   the status bar when the group block is set to one)
@@ -89,25 +90,38 @@ them and are written to storage in the background.
 | Background | Picture — a file from this computer | none |
 | | Blur — 0–40px | 0px |
 | | Dim — 0–90% | 35% |
-| Layout | Columns — auto, or 3–12 | Auto |
+| Layout · Grid | Columns — auto, or 3–12 | Auto |
 | | Tile size — 72–200px (the width) | 116px |
 | | Spacing — 4–48px | 18px |
-| Header | Show the clock | on |
-| | 24-hour time | on |
-| | Show the date | off |
-| Tiles | Shape — square / circular / 3:2 / 16:10 / 16:9 | Square |
+| Layout · Tiles | Shape — square / circular / 3:2 / 16:10 / 16:9 | Square |
 | | Logo padding — 0–40% | 20% |
 | | Show site names | on |
 | | Open sites in a new tab | off |
 | | Deep icon lookup | off |
+| Header | Show the clock | on |
+| | 24-hour time | on |
+| | Show the date | off |
 | Groups | Appearance — floating / status bar | Floating |
 | | Display — always / on hover | Always |
 | | Alignment — left / centre / right *(status bar)* | Centre |
 | | Position — top / bottom *(status bar)* | Top |
 | Other | Reset all | — |
 
+*Layout* covers two decisions that are really one — how the tiles are arranged
+and how each one is drawn — so it is a single section split into two named
+boxes down the same panel rather than two sidebar rows. Any section may be
+written that way: give it `groups` instead of `fields` in the schema and each
+group becomes a box under its own heading.
+
 The window is a fixed size, so moving between sections does not make it jump
-about; a panel taller than the pane scrolls on its own.
+about; a panel taller than the pane scrolls on its own, and it keeps its place
+if the dialog has to be rebuilt under it.
+
+**Accent colour** opens a picker of this add-on's own rather than the operating
+system's: the ten named macOS accents along the top, then a saturation and
+brightness square, a hue strip and a hex field for anything else. It is a
+popover, so it hangs off the colour well and closes on Escape, on a click
+outside, or as soon as the pane behind it scrolls.
 
 **Other → Reset all** puts every setting back to its default and takes the
 background picture away. Tiles and groups are left alone.
@@ -181,6 +195,10 @@ Settings → *Groups* decides how the block looks:
 - **On hover** fades the block out until the pointer reaches it — with two
   exceptions, because both would otherwise look like a bug: while a group is
   being shown, and while a tile is being dragged.
+
+Chips are put in order by dragging them about the block, the same way tiles are
+ordered in the grid — the chip travels under the pointer and where it is let go
+is where it stays. "All" and the **+** hold the two ends and do not move.
 
 Groups live under their own storage key and sync across open new tab pages like
 everything else. There is room for 24 of them, each with a name of up to 32
@@ -314,6 +332,7 @@ permissions are needed. Leaving the field empty falls back to the system font.
 | `test/gesture.test.js` | Guards the permission user-gesture chain |
 | `test/background.test.js` | Guards the background picker and the settings tabs |
 | `test/groups.test.js` | Guards groups, conditional fields and the markup's ids |
+| `test/live.test.js` | Guards the change feed, the subsections and the accent picker |
 | `test/dom-shim.js` | The scrap of DOM both tests run the dialog against |
 | `fonts/` | Bundled Inter (variable) + its `@font-face` rules |
 | `icons/icon.svg` | Toolbar / add-on manager icon (Lucide `layout-grid`) |
@@ -329,7 +348,13 @@ permissions are needed. Leaving the field empty falls back to the system font.
 | `fontCache` | `{ [family]: { css, savedAt } }` |
 | `iconCache` | `{ [origin]: { url, size, mode, savedAt } }` |
 
-Open new tab pages stay in sync through `storage.onChanged`. Because
+Open new tab pages stay in sync through `storage.onChanged`. That feed reports
+a page's *own* writes back to it as well as everybody else's, so `storage.js`
+leaves the signature of each write behind and drops the event carrying it back.
+Without that, changing a setting looks to the page like an edit made in another
+tab: it rebuilds the grid and the open dialog under the pointer, and a slider
+cannot be dragged through more than one step. A real edit from another page has
+a different signature and still gets through. Because
 `src/storage.js` falls back to `localStorage`, you can also open
 `src/newtab.html` directly in a browser to iterate on the UI without reloading
 the extension — only the Google Fonts fetch and the deep icon lookup behave
@@ -347,6 +372,7 @@ shim — no browser, no dependencies:
 node test/gesture.test.js      # the permission user-gesture chain
 node test/background.test.js   # the background picker and the settings tabs
 node test/groups.test.js       # groups, conditional fields, markup ids
+node test/live.test.js         # the change feed, subsections, the accent picker
 ```
 
 The last of those also checks that every `getElementById` in `src/newtab.js`

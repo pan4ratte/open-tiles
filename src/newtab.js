@@ -49,6 +49,8 @@
   let editingGroupId = null;
   /** element being dragged, or null */
   let dragEl = null;
+  /** the group chip being dragged to a new place in the block, or null */
+  let dragChip = null;
   /** set when a drag ended on a group chip, so the drop is saved as a move */
   let movedGroup = false;
   /** whether the add-on currently holds access to all sites (deep icon lookup).
@@ -189,7 +191,7 @@
     chip.append(name);
 
     chip.title = group.id
-      ? group.name + '\nRight-click to rename or delete'
+      ? group.name + '\nDrag to reorder, right-click to rename or delete'
       : 'Every tile';
 
     const on = activeGroup === group.id;
@@ -203,6 +205,11 @@
     });
 
     if (group.id) {
+      // "All" is not a group and cannot be moved; the real ones can, and each
+      // carries its id so the new order can be read straight off the block.
+      chip.dataset.groupId = group.id;
+      chip.draggable = true;
+
       chip.addEventListener('contextmenu', e => {
         e.preventDefault();
         openGroupModal(group.id);
@@ -238,6 +245,79 @@
     // tiles with nothing to say why would just look like missing ones.
     groupBar.classList.toggle('is-active', Boolean(activeGroup));
   }
+
+  // -------------------------------------------------- reordering the chips
+
+  /*
+   * Groups are put in order the same way tiles are: the chip travels through
+   * the block under the pointer, and where it is let go is where it stays.
+   * Nothing is drawn to stand in for it - what is already on screen is the
+   * answer, so there is nothing to reconcile when the drag ends.
+   *
+   * `dragChip` is what holds this apart from the other drag the block takes -
+   * a *tile* dropped on a chip to be filed in that group. Exactly one of the
+   * two is ever set, and each handler bows out when it is not its turn.
+   */
+
+  groupChips.addEventListener('dragstart', e => {
+    const chip = e.target.closest('.chip[data-group-id]');
+    if (!chip) return;
+
+    dragChip = chip;
+    e.dataTransfer.effectAllowed = 'move';
+    // Firefox only starts a drag when some data is attached.
+    e.dataTransfer.setData('text/plain', chip.dataset.groupId);
+    // Keeps the block out of hiding for as long as the drag lasts.
+    document.body.classList.add('is-dragging');
+    requestAnimationFrame(() => chip.classList.add('is-dragging'));
+  });
+
+  groupChips.addEventListener('dragover', e => {
+    if (!dragChip) return;
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+
+    const over = e.target.closest('.chip[data-group-id]');
+    if (!over || over === dragChip) return;
+
+    const rect = over.getBoundingClientRect();
+    const before = e.clientX < rect.left + rect.width / 2;
+
+    // Only ever moved among the other groups: "All" holds the front of the
+    // block and the + holds the back, and neither has a data-group-id.
+    if (before && over.previousElementSibling !== dragChip) {
+      groupChips.insertBefore(dragChip, over);
+    } else if (!before && over.nextElementSibling !== dragChip) {
+      groupChips.insertBefore(dragChip, over.nextElementSibling);
+    }
+  });
+
+  groupChips.addEventListener('drop', e => {
+    if (dragChip) e.preventDefault();
+  });
+
+  groupChips.addEventListener('dragend', async () => {
+    if (!dragChip) return;
+
+    dragChip.classList.remove('is-dragging');
+    document.body.classList.remove('is-dragging');
+    dragChip = null;
+
+    const order = [...groupChips.querySelectorAll('.chip[data-group-id]')]
+      .map(chip => chip.dataset.groupId);
+
+    const byId = new Map(groups.map(group => [group.id, group]));
+    const next = order.map(id => byId.get(id)).filter(Boolean);
+
+    // A short read means the block and the list have drifted apart - another
+    // new-tab page deleting a group mid-drag, say. Leaving the saved order
+    // alone is better than writing a truncated one.
+    if (next.length !== groups.length) return;
+
+    groups = next;
+    await persistGroups();
+    renderGroups();
+  });
 
   // ---------------------------------------------------------------- rendering
 
@@ -331,23 +411,17 @@
 
   // ---------------------------------------------------------------- persistence
 
-  let ownWrite = false;
-
-  async function withOwnWrite(fn) {
-    ownWrite = true;
-    try {
-      return await fn();
-    } finally {
-      ownWrite = false;
-    }
-  }
+  /* Nothing here guards against the page hearing its own writes back: storage.js
+     drops that echo at the source, by the value written, which is the only way
+     to tell it apart that does not depend on when the browser gets round to
+     firing the event. */
 
   async function persistTiles() {
-    await withOwnWrite(async () => { tiles = await Store.save(tiles); });
+    tiles = await Store.save(tiles);
   }
 
   async function persistGroups() {
-    await withOwnWrite(async () => { groups = await Store.saveGroups(groups); });
+    groups = await Store.saveGroups(groups);
   }
 
   let persistTimer;
@@ -359,9 +433,7 @@
     applySettings();
 
     clearTimeout(persistTimer);
-    persistTimer = setTimeout(() => {
-      withOwnWrite(() => Store.saveSettings(settings));
-    }, 250);
+    persistTimer = setTimeout(() => Store.saveSettings(settings), 250);
 
     return settings[key];
   }
@@ -702,7 +774,7 @@
     const previous = background;
     try {
       if (payload.action === 'clear') {
-        background = await withOwnWrite(() => Backgrounds.clear());
+        background = await Backgrounds.clear();
         Backgrounds.apply(background);
         return { value: { record: null } };
       }
@@ -716,7 +788,7 @@
       try {
         // Same `src`, so this does not repaint - it is the stored record, name
         // and timestamp included, that the rest of the page goes on to use.
-        background = await withOwnWrite(() => Backgrounds.save(record));
+        background = await Backgrounds.save(record);
       } catch (err) {
         Backgrounds.apply(previous);
         throw err;
@@ -742,8 +814,8 @@
    * control at its default - which is the confirmation, no status line needed.
    */
   async function resetSettings() {
-    settings = await withOwnWrite(() => Store.resetSettings());
-    background = await withOwnWrite(() => Backgrounds.clear());
+    settings = await Store.resetSettings();
+    background = await Backgrounds.clear();
 
     Backgrounds.apply(background);
     applySettings();
@@ -854,22 +926,28 @@
     setInterval(tick, 10000);
 
     Store.onExternalChange((key, value) => {
-      if (ownWrite) return;
       if (key === 'tiles' && !dragEl) {
         tiles = value;
         render();
-      } else if (key === 'groups') {
+      } else if (key === 'groups' && !dragChip) {
         groups = value;
         // The group being shown may be the one that just went.
         if (activeGroup && !groups.some(g => g.id === activeGroup)) activeGroup = null;
         renderGroups();
         render();
       } else if (key === 'settings') {
+        const before = settings;
         settings = value;
         applySettings();
-        Fonts.use(settings.font).catch(() => {});
+
+        // Almost every setting is a custom property the stylesheet reads, so
+        // applySettings() has already done the whole job. Only the two that are
+        // baked into a tile's markup are worth tearing the grid down for -
+        // rebuilding it sends every icon back to the network.
+        if (before.font !== settings.font) Fonts.use(settings.font).catch(() => {});
+        if (before.openInNewTab !== settings.openInNewTab
+            || before.deepIcons !== settings.deepIcons) render();
         if (!settingsModal.hidden) mountSettings();
-        render();
       } else if (key === 'background') {
         background = value;
         Backgrounds.apply(background);
