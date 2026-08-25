@@ -74,8 +74,8 @@ const SettingsUI = (() => {
 
     field.options.forEach(option => {
       const el = document.createElement('option');
-      el.value = String(option);
-      el.textContent = option === 'auto' ? 'Auto' : String(option);
+      el.value = String(Schema.optionValue(option));
+      el.textContent = Schema.optionLabel(option);
       select.append(el);
     });
     select.value = String(value);

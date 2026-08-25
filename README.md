@@ -90,12 +90,14 @@ them and are written to storage in the background.
 | | Blur — 0–40px | 0px |
 | | Dim — 0–90% | 35% |
 | Layout | Columns — auto, or 3–12 | Auto |
-| | Tile size — 72–200px | 116px |
+| | Tile size — 72–200px (the width) | 116px |
 | | Spacing — 4–48px | 18px |
 | Header | Show the clock | on |
 | | 24-hour time | on |
 | | Show the date | off |
-| Tiles | Show site names | on |
+| Tiles | Shape — square / circular / 3:2 / 16:10 / 16:9 | Square |
+| | Logo padding — 0–40% | 20% |
+| | Show site names | on |
 | | Open sites in a new tab | off |
 | | Deep icon lookup | off |
 | Groups | Appearance — floating / status bar | Floating |
@@ -132,6 +134,25 @@ a **ceiling on the row, not a fixed width**: six columns with four tiles gives
 one row of four, centred, rather than four tiles pushed to the left of a
 six-wide box. If the window cannot hold the count asked for, the grid drops to
 the columns that fit rather than running off the edge.
+
+## Tile shape
+
+Settings → *Tiles* → **Shape** gives a tile one of five outlines: **square**,
+**circular**, or one of the three wide ratios **3:2**, **16:10** and **16:9**.
+
+*Tile size* sets the **width**; the shape sets the height from it. So a 16:9
+tile 116px wide is 65px tall — the grid's columns do not move when the shape
+changes, only the depth of the rows. A wide tile is a short tile, and a short
+tile has less height to share between the icon and the site name, so the icon
+shrinks to suit rather than pushing the name out of the box. Turning *Show site
+names* off gives that height back to the icon.
+
+**Logo padding** is how much of the room inside a tile is kept clear around the
+icon, on every side. At 0% the icon fills whatever the shape and the site name
+leave; at 40% it is a small mark in a large tile. It is a share of the room
+rather than a number of pixels, so a tile keeps its proportions as *Tile size*
+changes. A circle keeps everything further from its edge than a rounded square
+does, because a circle cuts its own corners off.
 
 Each section also carries a `tint` — the colour of its sidebar square. Adding a
 field to [`src/schema.js`](src/schema.js) is all it takes to add a

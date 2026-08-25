@@ -98,6 +98,15 @@
 
   // ---------------------------------------------------------- applying settings
 
+  /** Tile shape -> the width : height ratio the tile's box takes. */
+  const TILE_RATIOS = {
+    square: 1,
+    circle: 1,
+    '3:2': 3 / 2,
+    '16:10': 16 / 10,
+    '16:9': 16 / 9
+  };
+
   function applySettings() {
     const root = document.documentElement;
 
@@ -105,6 +114,11 @@
     root.style.setProperty('--accent', settings.accent);
     root.style.setProperty('--tile-size', settings.tileSize + 'px');
     root.style.setProperty('--gap', settings.gap + 'px');
+    // The shape is a ratio plus, for a circle, a border radius the stylesheet
+    // cannot work out from the ratio alone.
+    root.style.setProperty('--tile-ratio', TILE_RATIOS[settings.tileShape] || 1);
+    root.style.setProperty('--logo-pad', settings.logoPad / 100);
+    document.body.classList.toggle('tile-round', settings.tileShape === 'circle');
     root.style.setProperty('--bg-blur', settings.bgBlur + 'px');
     root.style.setProperty('--bg-dim', settings.bgDim / 100);
 

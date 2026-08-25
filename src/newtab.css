@@ -242,6 +242,11 @@
 
   /* -- written at runtime from the settings -- */
   --tile-size: 116px;
+  /* Width : height. Written from the Shape setting; a plain number, so the
+     stylesheet can both feed it to aspect-ratio and divide by it. */
+  --tile-ratio: 1;
+  /* The share of the room inside a tile left clear on each side of its icon. */
+  --logo-pad: .2;
   --gap: 18px;
   --columns: 6;
   --bg-blur: 0px;
@@ -805,20 +810,44 @@ body.gb-bar .chip { border-radius: var(--r-control); }
                   + var(--grid-bleed) * 2);
 }
 
+/* The shape, worked out once and read by everything below it.
+
+   Tile size sets the width; the ratio sets the height. The logo is measured
+   against whichever of the two runs out first, once the tile's own inset and
+   the line the name sits on have been taken out of the height - so a 16:9
+   tile, which is a short tile, shrinks its icon to suit instead of pushing the
+   name out of the box. */
 .tile {
+  --tile-h: calc(var(--tile-size) / var(--tile-ratio));
+  --tile-short: min(var(--tile-size), var(--tile-h));
+  --tile-inset: clamp(5px, calc(var(--tile-size) * .07), 14px);
+  --logo-gap: calc(var(--tile-short) * .06);
+  /* The same expression .tile__label sets its own size from, times a line
+     height with a hair of slack, plus the gap above it. */
+  --label-line: clamp(10px, calc(var(--tile-size) * .1), 13px);
+  --label-room: calc(var(--label-line) * 1.4 + var(--logo-gap));
+  --logo-room: min(
+    calc(var(--tile-size) - var(--tile-inset) * 2),
+    calc(var(--tile-h) - var(--tile-inset) * 2 - var(--label-room))
+  );
+  /* The floor keeps a very small tile, or a very wide one, from losing its
+     icon altogether. */
+  --logo-size: max(14px, calc(var(--logo-room) * (1 - var(--logo-pad) * 2)));
+
   position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: calc(var(--tile-size) * .075);
+  gap: var(--logo-gap);
   width: var(--tile-size);
-  aspect-ratio: 1 / 1;
-  padding: 10px;
+  aspect-ratio: var(--tile-ratio);
+  padding: var(--tile-inset);
   border: 0;
   /* Widget-proportioned: Apple keeps the corner a constant fraction of the
-     card, so a large tile is not a small tile with a tight corner. */
-  border-radius: clamp(12px, calc(var(--tile-size) * .17), 26px);
+     card, so a large tile is not a small tile with a tight corner. It follows
+     the short side, so a wide tile does not end up a lozenge. */
+  border-radius: clamp(10px, calc(var(--tile-short) * .18), 26px);
   background: var(--mat-thin);
   -webkit-backdrop-filter: var(--mat-filter);
   backdrop-filter: var(--mat-filter);
@@ -853,8 +882,9 @@ body.gb-bar .chip { border-radius: var(--r-control); }
    objectBoundingBox units, so the one path fits every size. */
 .tile__icon,
 .tile__fallback {
-  width: calc(var(--tile-size) * .38);
-  height: calc(var(--tile-size) * .38);
+  flex: none;
+  width: var(--logo-size);
+  height: var(--logo-size);
   clip-path: url(#squircle);
   /* Where a clip-path reference is unavailable, the radius alone still reads
      as an app icon. */
@@ -872,16 +902,23 @@ body.gb-bar .chip { border-radius: var(--r-control); }
   display: grid;
   place-items: center;
   font-family: var(--font-family);
-  font-size: calc(var(--tile-size) * .17);
+  font-size: calc(var(--logo-size) * .45);
   font-weight: 600;
   letter-spacing: -.02em;
   color: #fff;
 }
 
+/* The globe stands in for a monogram when a site's name starts with neither a
+   letter nor a digit; it is drawn at a fixed size, so it is scaled here. */
+.tile__fallback .icon {
+  width: 50%;
+  height: 50%;
+}
+
 .tile__label {
   max-width: 100%;
   font-family: var(--font-family);
-  font-size: clamp(10px, calc(var(--tile-size) * .1), 13px);
+  font-size: var(--label-line);
   font-weight: 500;
   letter-spacing: -.005em;
   color: var(--label-secondary);
@@ -896,6 +933,14 @@ body.gb-bar .chip { border-radius: var(--r-control); }
 .tile:hover .tile__label { color: var(--label); }
 
 body.no-labels .tile__label { display: none; }
+body.no-labels .tile { --label-room: 0px; }
+
+/* A circle cuts its own corners off, so what stands inside has to keep
+   further from the edge than a rounded square would need. */
+body.tile-round .tile {
+  --tile-inset: calc(var(--tile-size) * .12);
+  border-radius: 50%;
+}
 
 /* -- drag -- */
 
@@ -932,6 +977,11 @@ body.no-labels .tile__label { display: none; }
 }
 
 .tile--add:active { transform: scale(.96); }
+
+.tile--add .icon {
+  width: calc(var(--logo-size) * .58);
+  height: calc(var(--logo-size) * .58);
+}
 
 .empty {
   grid-row: 3;

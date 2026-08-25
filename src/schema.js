@@ -9,7 +9,8 @@
  *
  * Field types
  *   segmented   one of `options`, rendered as a row of buttons
- *   choice      one of `options`, rendered as a macOS pop-up button
+ *   choice      one of `options`, rendered as a macOS pop-up button. An
+ *               option is a bare value, or { value, label } to name it
  *   range       number between min and max
  *   toggle      boolean
  *   color       hex colour
@@ -132,6 +133,33 @@ const Schema = (() => {
       icon: 'globe',
       tint: 'var(--system-blue)',
       fields: [
+        {
+          key: 'tileShape',
+          label: 'Shape',
+          type: 'choice',
+          default: 'square',
+          options: [
+            { value: 'square', label: 'Square' },
+            { value: 'circle', label: 'Circular' },
+            { value: '3:2', label: '3:2' },
+            { value: '16:10', label: '16:10' },
+            { value: '16:9', label: '16:9' }
+          ],
+          note: 'Tile size sets the width; the shape sets the height to match. '
+              + 'A wide tile is a short one, so it has less room for a site name.'
+        },
+        {
+          key: 'logoPad',
+          label: 'Logo padding',
+          type: 'range',
+          default: 20,
+          min: 0,
+          max: 40,
+          step: 5,
+          unit: '%',
+          note: 'How much of the room inside a tile is left clear around its '
+              + 'icon. At 0% the icon fills what the shape and the name leave.'
+        },
         { key: 'showLabels', label: 'Show site names', type: 'toggle', default: true },
         { key: 'openInNewTab', label: 'Open sites in a new tab', type: 'toggle', default: false },
         {
@@ -233,6 +261,20 @@ const Schema = (() => {
 
   const DEFAULTS = Object.fromEntries(STORED.map(f => [f.key, f.default]));
 
+/**
+   * A `choice` option is either the value itself - `6`, `'auto'` - or a
+   * `{ value, label }` pair, for when the stored value is not what should be
+   * read off the menu.
+   */
+  function optionValue(option) {
+    return option && typeof option === 'object' ? option.value : option;
+  }
+
+  function optionLabel(option) {
+    if (option && typeof option === 'object') return option.label;
+    return option === 'auto' ? 'Auto' : String(option);
+  }
+
   function coerceField(field, value) {
     switch (field.type) {
       case 'toggle':
@@ -245,9 +287,11 @@ const Schema = (() => {
       }
 
       case 'choice': {
-        if (value === 'auto') return 'auto';
-        const n = Number(value);
-        return field.options.includes(n) ? n : field.default;
+        // A <select> hands its value back as a string whatever went in, so the
+        // match is made on the rendered form and the option's own value - a
+        // number for Columns, a string for Shape - is what comes out.
+        const hit = field.options.find(o => String(optionValue(o)) === String(value));
+        return hit === undefined ? field.default : optionValue(hit);
       }
 
       case 'segmented':
@@ -281,5 +325,5 @@ const Schema = (() => {
     return out;
   }
 
-  return { SECTIONS, FIELDS, STORED, DEFAULTS, coerce };
+  return { SECTIONS, FIELDS, STORED, DEFAULTS, coerce, optionValue, optionLabel };
 })();
