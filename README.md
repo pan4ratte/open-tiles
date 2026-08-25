@@ -22,6 +22,9 @@ overridden — accept it, otherwise the default page stays.
 - **+** tile — add a site (`example.com` is enough, `https://` is filled in)
 - **drag a tile** — reorder; the new order is saved automatically
 - **right-click a tile** — edit or delete it
+- **+ New group** — start a group; **click a group** to show only its tiles
+- **drag a tile onto a group** — move it there (or onto *All* to take it out)
+- **right-click a group** — rename or delete it
 - **gear, top right** — settings, including the background picture
 - **Esc** — close a dialog
 
@@ -49,9 +52,21 @@ written to storage in the background.
 | Tiles | Show site names | on |
 | | Open sites in a new tab | off |
 | | Deep icon lookup | off |
+| Groups | Appearance — floating / status bar | Floating |
+| | Display — always / on hover | Always |
+| | Alignment — left / centre / right *(status bar)* | Centre |
+| | Position — top / bottom *(status bar)* | Top |
+| Other | Reset all | — |
 
-**Reset all** puts every setting back to its default and takes the background
-picture away.
+The dialog is a fixed size, so moving between tabs does not make it jump about;
+a panel taller than the box scrolls on its own.
+
+**Other → Reset all** puts every setting back to its default and takes the
+background picture away. Tiles and groups are left alone.
+
+The two status-bar-only options carry a `when` in the schema and appear only
+while *Appearance* is set to *Status bar* — a field is hidden, not disabled, so
+the panel never shows a control that does nothing.
 
 Tiles are centred at every size. *Auto* columns fit as many tiles per row as the
 window allows; a fixed count keeps the grid at exactly that width, centred,
@@ -62,6 +77,29 @@ setting — the dialog, the defaults and the validation all read from there. A
 field marked `external` renders in the dialog but keeps its value somewhere
 other than `settings`, which is how the background picture stays out of an
 object that is rewritten on every slider drag.
+
+## Groups
+
+A group is a name and the tiles put into it. They show as chips in a block at
+the top of the page: click one to narrow the grid to its tiles, click **All** to
+see everything again. A tile can be dragged straight onto a chip to move it
+there, which is usually quicker than opening the tile dialog and picking a group
+from the list. Deleting a group leaves its tiles alone — they simply go loose
+and show under *All*.
+
+Settings → *Groups* decides how the block looks:
+
+- **Floating** — a rounded pill above the clock (frosted glass over a picture).
+- **Status bar** — a full-width bar pinned to the **top** or **bottom** of the
+  window, with its chips to the **left**, **centre** or **right**. A bar along
+  the top pushes the settings button and the page down out of its way.
+- **On hover** fades the block out until the pointer reaches it — with two
+  exceptions, because both would otherwise look like a bug: while a group is
+  being shown, and while a tile is being dragged.
+
+Groups live under their own storage key and sync across open new tab pages like
+everything else. There is room for 24 of them, each with a name of up to 32
+characters.
 
 ## Background
 
@@ -77,9 +115,12 @@ which keeps SVGs and animated GIFs whole. The picture is stored as a `data:`
 URI, so the new tab paints offline and no request goes out when you open one.
 
 The picture appears behind the tiles the moment it is chosen — it goes on screen
-before it is written to storage, not after. The preview in the dialog is shaped
-like the window and cropped the same way (`cover`, centred), so what it shows is
-what ends up behind the tiles.
+before it is written to storage, not after. The preview in the dialog runs the
+full width of the panel, is shaped like the window and is cropped the same way
+(`cover`, centred), so what it shows is what ends up behind the tiles — *Blur*
+and *Dim* included. The blur radius is scaled by the preview's width against the
+window's, so a 40px blur reads at the same strength in a 500px preview as it
+does full size.
 
 *Blur* and *Dim* apply to the picture only, not to what stands on it. Dim fades
 towards the theme colour rather than towards black, so it keeps the text legible
@@ -175,7 +216,7 @@ permissions are needed. Leaving the field empty falls back to the system font.
 | File | Purpose |
 | --- | --- |
 | `manifest.json` | MV3 manifest; overrides `newtab` and `homepage` |
-| `src/newtab.html` | Page markup, tile dialog, settings dialog |
+| `src/newtab.html` | Page markup, group block, tile / group / settings dialogs |
 | `src/newtab.css` | Styling, theme tokens, grid geometry |
 | `src/icons.js` | `Icons` — the Lucide set used by the UI, inlined |
 | `src/schema.js` | `Schema` — settings definitions, defaults, validation |
@@ -187,6 +228,7 @@ permissions are needed. Leaving the field empty falls back to the system font.
 | `src/newtab.js` | Rendering, drag & drop reordering, wiring |
 | `test/gesture.test.js` | Guards the permission user-gesture chain |
 | `test/background.test.js` | Guards the background picker and the settings tabs |
+| `test/groups.test.js` | Guards groups, conditional fields and the markup's ids |
 | `test/dom-shim.js` | The scrap of DOM both tests run the dialog against |
 | `fonts/` | Bundled Inter (variable) + its `@font-face` rules |
 | `icons/icon.svg` | Toolbar / add-on manager icon (Lucide `layout-grid`) |
@@ -195,7 +237,8 @@ permissions are needed. Leaving the field empty falls back to the system font.
 
 | Key | Shape |
 | --- | --- |
-| `tiles` | `[{ id, url, title }]` |
+| `tiles` | `[{ id, url, title, groupId }]` — `groupId` is `null` when loose |
+| `groups` | `[{ id, name }]` |
 | `settings` | see `src/schema.js` |
 | `background` | `{ src, name, savedAt }`, or `null` |
 | `fontCache` | `{ [family]: { css, savedAt } }` |
@@ -211,14 +254,19 @@ with a large photo.
 
 ## Tests
 
-Two things in the settings dialog fail quietly rather than loudly, so both are
-guarded. They run the real `schema.js` and `settings.js` against a small DOM
+Several things here fail quietly rather than loudly, so each is guarded. They
+run the real `schema.js`, `settings.js` and `storage.js` against a small DOM
 shim — no browser, no dependencies:
 
 ```
 node test/gesture.test.js      # the permission user-gesture chain
 node test/background.test.js   # the background picker and the settings tabs
+node test/groups.test.js       # groups, conditional fields, markup ids
 ```
+
+The last of those also checks that every `getElementById` in `src/newtab.js`
+still finds an id in `src/newtab.html` — moving a control between the two (the
+reset button, say) otherwise throws on load and takes the whole page with it.
 
 ## Licences
 

@@ -15,24 +15,42 @@
   const fieldTitle = document.getElementById('fieldTitle');
   const btnCancel = document.getElementById('btnCancel');
   const btnDelete = document.getElementById('btnDelete');
+  const fieldGroup = document.getElementById('fieldGroup');
+
+  const groupBar = document.getElementById('groupBar');
+  const groupChips = document.getElementById('groupChips');
+  const groupModal = document.getElementById('groupModal');
+  const groupForm = document.getElementById('groupForm');
+  const groupModalTitle = document.getElementById('groupModalTitle');
+  const fieldGroupName = document.getElementById('fieldGroupName');
+  const groupError = document.getElementById('groupError');
+  const btnGroupCancel = document.getElementById('btnGroupCancel');
+  const btnGroupDelete = document.getElementById('btnGroupDelete');
 
   const settingsModal = document.getElementById('settings');
   const settingsForm = document.getElementById('settingsForm');
   const settingsBody = document.getElementById('settingsBody');
   const btnSettings = document.getElementById('btnSettings');
   const btnSettingsClose = document.getElementById('btnSettingsClose');
-  const btnResetSettings = document.getElementById('btnResetSettings');
 
-  /** @type {{id:string,url:string,title:string}[]} */
+  /** @type {{id:string,url:string,title:string,groupId:?string}[]} */
   let tiles = [];
+  /** @type {{id:string,name:string}[]} the chips across the top */
+  let groups = [];
+  /** id of the group being shown, or null for all of them */
+  let activeGroup = null;
   /** @type {object} see schema.js */
   let settings = { ...Schema.DEFAULTS };
   /** @type {?{src:string,name:string,savedAt:number}} page picture */
   let background = null;
   /** id of the tile currently open in the modal, or null when adding */
   let editingId = null;
+  /** id of the group currently open in its dialog, or null when adding */
+  let editingGroupId = null;
   /** element being dragged, or null */
   let dragEl = null;
+  /** set when a drag ended on a group chip, so the drop is saved as a move */
+  let movedGroup = false;
   /** whether the add-on currently holds access to all sites (deep icon lookup).
    *  Cached because the permission request must not be preceded by an await. */
   let siteAccessGranted = false;
@@ -93,11 +111,115 @@
 
     document.body.classList.toggle('no-labels', !settings.showLabels);
 
+    const bar = settings.groupStyle === 'bar';
+    document.body.classList.toggle('gb-bar', bar);
+    document.body.classList.toggle('gb-floating', !bar);
+    // Only a status bar can sit at the bottom; the floating block is a lid.
+    document.body.classList.toggle('gb-bottom', bar && settings.groupEdge === 'bottom');
+    document.body.classList.toggle('gb-hover', settings.groupShow === 'hover');
+    root.style.setProperty('--groupbar-align', ALIGNMENT[settings.groupAlign]);
+
     clock.hidden = !settings.showClock;
     dateLine.hidden = !settings.showDate;
     header.hidden = !settings.showClock && !settings.showDate;
 
     tick();
+  }
+
+  // ------------------------------------------------------------------ groups
+
+  const ALIGNMENT = { start: 'flex-start', center: 'center', end: 'flex-end' };
+
+  /** The group a tile is in, or null when it is loose or its group has gone. */
+  function groupOf(tile) {
+    return groups.some(group => group.id === tile.groupId) ? tile.groupId : null;
+  }
+
+  function tilesInView() {
+    return activeGroup ? tiles.filter(tile => groupOf(tile) === activeGroup) : tiles;
+  }
+
+  /** Dropping a tile on a chip moves it into that group - or, on "All", out. */
+  function acceptTiles(chip, id) {
+    chip.addEventListener('dragover', e => {
+      if (!dragEl) return;
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'move';
+      chip.classList.add('is-drop');
+    });
+    chip.addEventListener('dragleave', () => chip.classList.remove('is-drop'));
+    chip.addEventListener('drop', e => {
+      e.preventDefault();
+      chip.classList.remove('is-drop');
+
+      const tile = dragEl && tiles.find(t => t.id === dragEl.dataset.id);
+      if (!tile || tile.groupId === id) return;
+      tile.groupId = id;
+      // dragend is still to come, and it is what saves and redraws.
+      movedGroup = true;
+    });
+  }
+
+  function buildChip(group) {
+    const chip = document.createElement('button');
+    chip.type = 'button';
+    chip.className = 'chip';
+    // The name sits in its own box: a flex item is what an ellipsis needs to
+    // trim, and a long group name would otherwise be cut off mid-letter.
+    const name = document.createElement('span');
+    name.className = 'chip__name';
+    name.textContent = group.name;
+    chip.append(name);
+
+    chip.title = group.id
+      ? group.name + '\nRight-click to rename or delete'
+      : 'Every tile';
+
+    const on = activeGroup === group.id;
+    chip.classList.toggle('is-on', on);
+    chip.setAttribute('aria-pressed', String(on));
+
+    chip.addEventListener('click', () => {
+      activeGroup = group.id;
+      renderGroups();
+      render();
+    });
+
+    if (group.id) {
+      chip.addEventListener('contextmenu', e => {
+        e.preventDefault();
+        openGroupModal(group.id);
+      });
+    }
+
+    acceptTiles(chip, group.id);
+    return chip;
+  }
+
+  /** Spelt out while there are no groups yet, a bare + once there are. */
+  function buildAddChip(compact) {
+    const chip = document.createElement('button');
+    chip.type = 'button';
+    chip.className = 'chip chip--add';
+    chip.title = 'New group';
+    chip.setAttribute('aria-label', 'New group');
+    chip.append(Icons.create('plus', { size: 15 }));
+    if (!compact) chip.append(document.createTextNode('New group'));
+    chip.addEventListener('click', () => openGroupModal(null));
+    return chip;
+  }
+
+  function renderGroups() {
+    groupChips.textContent = '';
+
+    const any = groups.length > 0;
+    if (any) groupChips.append(buildChip({ id: null, name: 'All' }));
+    groups.forEach(group => groupChips.append(buildChip(group)));
+    groupChips.append(buildAddChip(any));
+
+    // A picked group keeps the block on screen even in hover mode: filtered
+    // tiles with nothing to say why would just look like missing ones.
+    groupBar.classList.toggle('is-active', Boolean(activeGroup));
   }
 
   // ---------------------------------------------------------------- rendering
@@ -176,10 +298,18 @@
 
   function render() {
     const token = ++renderToken;
+    const shown = tilesInView();
+
     grid.textContent = '';
-    tiles.forEach(tile => grid.append(buildTile(tile, token)));
+    shown.forEach(tile => grid.append(buildTile(tile, token)));
     grid.append(buildAddButton());
-    empty.hidden = tiles.length > 0;
+
+    empty.hidden = shown.length > 0;
+    if (!shown.length) {
+      empty.textContent = activeGroup
+        ? 'Nothing in this group yet - drag a tile onto its name to put it here.'
+        : 'No tiles yet. Hit + to add your first site.';
+    }
   }
 
   // ---------------------------------------------------------------- persistence
@@ -199,6 +329,10 @@
     await withOwnWrite(async () => { tiles = await Store.save(tiles); });
   }
 
+  async function persistGroups() {
+    await withOwnWrite(async () => { groups = await Store.saveGroups(groups); });
+  }
+
   let persistTimer;
 
   /** Settings apply instantly; the write is batched so dragging a slider
@@ -215,12 +349,22 @@
     return settings[key];
   }
 
-  /** Reads the current DOM order back into `tiles`. */
+  /**
+   * Reads the current DOM order back into `tiles`.
+   *
+   * Only the tiles on screen can have moved, so they are poured back into the
+   * slots they held between them - which leaves the ones a group filter is
+   * hiding exactly where they were.
+   */
   function syncOrderFromDom() {
     const byId = new Map(tiles.map(t => [t.id, t]));
-    tiles = [...grid.querySelectorAll('.tile[data-id]')]
+    const shown = [...grid.querySelectorAll('.tile[data-id]')]
       .map(el => byId.get(el.dataset.id))
       .filter(Boolean);
+
+    const ids = new Set(shown.map(t => t.id));
+    let next = 0;
+    tiles = tiles.map(tile => (ids.has(tile.id) ? shown[next++] : tile));
   }
 
   // ---------------------------------------------------------------- drag & drop
@@ -230,6 +374,8 @@
     if (!el) return;
     dragEl = el;
     grid.classList.add('is-dragging');
+    // Brings the group block out of hiding, so a tile can be dropped on it.
+    document.body.classList.add('is-dragging');
     e.dataTransfer.effectAllowed = 'move';
     // Firefox only starts a drag when some data is attached.
     e.dataTransfer.setData('text/plain', el.dataset.id);
@@ -264,13 +410,21 @@
     if (dragEl) e.preventDefault();
   });
 
-  grid.addEventListener('dragend', () => {
+  grid.addEventListener('dragend', async () => {
     if (!dragEl) return;
     dragEl.classList.remove('is-dragging');
     grid.classList.remove('is-dragging');
+    document.body.classList.remove('is-dragging');
     dragEl = null;
+
     syncOrderFromDom();
-    persistTiles();
+    await persistTiles();
+
+    // The drop landed on a group chip, so what is on screen has changed.
+    if (movedGroup) {
+      movedGroup = false;
+      render();
+    }
   });
 
   // ---------------------------------------------------------------- dialogs
@@ -287,7 +441,7 @@
     el.hidden = true;
   }
 
-  [modal, settingsModal].forEach(el => {
+  [modal, groupModal, settingsModal].forEach(el => {
     el.addEventListener('mousedown', e => {
       if (e.target === el) closeDialog(el);
     });
@@ -296,10 +450,31 @@
   document.addEventListener('keydown', e => {
     if (e.key !== 'Escape') return;
     if (!settingsModal.hidden) closeDialog(settingsModal);
+    else if (!groupModal.hidden) closeDialog(groupModal);
     else if (!modal.hidden) closeDialog(modal);
   });
 
   // ---------------------------------------------------------------- tile dialog
+
+  /** "No group" plus one option per group; nothing at all until there are any. */
+  function fillGroupSelect(selected) {
+    fieldGroup.textContent = '';
+
+    const none = document.createElement('option');
+    none.value = '';
+    none.textContent = 'No group';
+    fieldGroup.append(none);
+
+    groups.forEach(group => {
+      const option = document.createElement('option');
+      option.value = group.id;
+      option.textContent = group.name;
+      fieldGroup.append(option);
+    });
+
+    fieldGroup.value = selected || '';
+    fieldGroup.closest('.field').hidden = groups.length === 0;
+  }
 
   function openTileModal(id) {
     editingId = id;
@@ -308,6 +483,8 @@
     modalTitle.textContent = tile ? 'Edit tile' : 'Add tile';
     fieldUrl.value = tile ? tile.url : '';
     fieldTitle.value = tile ? tile.title : '';
+    // A tile added while a group is being shown belongs to that group.
+    fillGroupSelect(tile ? groupOf(tile) : activeGroup);
     btnDelete.hidden = !tile;
     modalError.hidden = true;
 
@@ -326,11 +503,13 @@
     }
 
     const title = fieldTitle.value.trim();
+    const groupId = fieldGroup.value || null;
+
     if (editingId) {
       const tile = tiles.find(t => t.id === editingId);
-      if (tile) Object.assign(tile, { url, title });
+      if (tile) Object.assign(tile, { url, title, groupId });
     } else {
-      tiles.push({ id: crypto.randomUUID(), url, title });
+      tiles.push({ id: crypto.randomUUID(), url, title, groupId });
     }
 
     await persistTiles();
@@ -353,6 +532,67 @@
     if (!el) return;
     e.preventDefault();
     openTileModal(el.dataset.id);
+  });
+
+  // --------------------------------------------------------------- group dialog
+
+  function openGroupModal(id) {
+    editingGroupId = id;
+    const group = id ? groups.find(g => g.id === id) : null;
+
+    groupModalTitle.textContent = group ? 'Edit group' : 'New group';
+    fieldGroupName.value = group ? group.name : '';
+    btnGroupDelete.hidden = !group;
+    groupError.hidden = true;
+
+    openDialog(groupModal, fieldGroupName);
+  }
+
+  groupForm.addEventListener('submit', async e => {
+    e.preventDefault();
+
+    const name = fieldGroupName.value.trim();
+    if (!name) {
+      SettingsUI.setStatus(groupError, { kind: 'error', text: 'Give the group a name.' });
+      return;
+    }
+    if (!editingGroupId && groups.length >= Store.MAX_GROUPS) {
+      SettingsUI.setStatus(groupError, {
+        kind: 'error',
+        text: `That is as many groups as there is room for (${Store.MAX_GROUPS}).`
+      });
+      return;
+    }
+
+    if (editingGroupId) {
+      const group = groups.find(g => g.id === editingGroupId);
+      if (group) group.name = name;
+    } else {
+      // The view stays where it is: a brand new group is empty, and tiles are
+      // dragged into it from whatever is on screen now.
+      groups.push({ id: crypto.randomUUID(), name });
+    }
+
+    await persistGroups();
+    renderGroups();
+    render();
+    closeDialog(groupModal);
+  });
+
+  btnGroupCancel.addEventListener('click', () => closeDialog(groupModal));
+
+  btnGroupDelete.addEventListener('click', async () => {
+    const id = editingGroupId;
+    groups = groups.filter(g => g.id !== id);
+    // The group goes; its tiles stay, loose.
+    tiles.forEach(tile => { if (tile.groupId === id) tile.groupId = null; });
+    if (activeGroup === id) activeGroup = null;
+
+    await persistGroups();
+    await persistTiles();
+    renderGroups();
+    render();
+    closeDialog(groupModal);
   });
 
   // ---------------------------------------------------------------- settings
@@ -479,8 +719,27 @@
     }
   }
 
+  /**
+   * Reset lives in the dialog's "Other" section now, so it comes through as a
+   * field change like everything else. It re-mounts the dialog to show every
+   * control at its default - which is the confirmation, no status line needed.
+   */
+  async function resetSettings() {
+    settings = await withOwnWrite(() => Store.resetSettings());
+    background = await withOwnWrite(() => Backgrounds.clear());
+
+    Backgrounds.apply(background);
+    applySettings();
+    Fonts.use(settings.font).catch(() => {});
+    mountSettings();
+    render();
+
+    return { value: null };
+  }
+
   async function onSettingChange(key, value) {
     if (key === 'font') return changeFont(value);
+    if (key === 'reset') return resetSettings();
     if (key === 'deepIcons') return changeDeepIcons(value);
     if (key === 'background') return changeBackground(value);
 
@@ -528,16 +787,6 @@
     closeDialog(settingsModal);
   });
 
-  btnResetSettings.addEventListener('click', async () => {
-    settings = await withOwnWrite(() => Store.resetSettings());
-    background = await withOwnWrite(() => Backgrounds.clear());
-    Backgrounds.apply(background);
-    applySettings();
-    Fonts.use(settings.font).catch(() => {});
-    mountSettings();
-    render();
-  });
-
   // ------------------------------------------------------------ page shape
 
   /** Lets the settings preview crop the picture exactly as the page does. */
@@ -571,14 +820,15 @@
   (async function init() {
     Icons.hydrate();
 
-    [tiles, settings, background] = await Promise.all([
-      Store.load(), Store.loadSettings(), Store.loadBackground()
+    [tiles, groups, settings, background] = await Promise.all([
+      Store.load(), Store.loadGroups(), Store.loadSettings(), Store.loadBackground()
     ]);
 
     trackPageShape();
     applySettings();
     Backgrounds.apply(background);
     Fonts.use(settings.font).catch(() => Fonts.applyStack(Schema.DEFAULTS.font));
+    renderGroups();
     render();
 
     syncSiteAccess();
@@ -590,6 +840,12 @@
       if (ownWrite) return;
       if (key === 'tiles' && !dragEl) {
         tiles = value;
+        render();
+      } else if (key === 'groups') {
+        groups = value;
+        // The group being shown may be the one that just went.
+        if (activeGroup && !groups.some(g => g.id === activeGroup)) activeGroup = null;
+        renderGroups();
         render();
       } else if (key === 'settings') {
         settings = value;

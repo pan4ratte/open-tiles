@@ -6,7 +6,8 @@
  * makes the page testable by opening src/newtab.html directly in a browser.
  *
  * Keys
- *   tiles      - [{ id, url, title }]
+ *   tiles      - [{ id, url, title, groupId }]  groupId is null when loose
+ *   groups     - [{ id, name }]                 the bar across the top
  *   settings   - see schema.js
  *   background - { src, name, savedAt }            the page background
  *   fontCache  - { [family]: { css, savedAt } }     CSS with the woff2 inlined
@@ -14,6 +15,7 @@
  */
 const Store = (() => {
   const TILES = 'tiles';
+  const GROUPS = 'groups';
   const SETTINGS = 'settings';
   const BACKGROUND = 'background';
   const FONT_CACHE = 'fontCache';
@@ -56,7 +58,10 @@ const Store = (() => {
       .map(t => ({
         id: String(t.id || crypto.randomUUID()),
         url: t.url,
-        title: typeof t.title === 'string' ? t.title : ''
+        title: typeof t.title === 'string' ? t.title : '',
+        // A tile in no group, or in one that has since been deleted, is loose:
+        // it shows under "All" and nowhere else.
+        groupId: typeof t.groupId === 'string' && t.groupId ? t.groupId : null
       }));
   }
 
@@ -67,6 +72,32 @@ const Store = (() => {
   async function save(list) {
     const clean = sanitizeTiles(list);
     await set(TILES, clean);
+    return clean;
+  }
+
+  // ----------------------------------------------------------------- groups
+
+  /** A short list of short names - anything longer is somebody's accident. */
+  const MAX_GROUPS = 24;
+
+  function sanitizeGroups(list) {
+    if (!Array.isArray(list)) return [];
+    return list
+      .filter(g => g && typeof g.name === 'string')
+      .slice(0, MAX_GROUPS)
+      .map(g => ({
+        id: String(g.id || crypto.randomUUID()),
+        name: g.name.trim().slice(0, 32) || 'Group'
+      }));
+  }
+
+  async function loadGroups() {
+    return sanitizeGroups(await get(GROUPS));
+  }
+
+  async function saveGroups(list) {
+    const clean = sanitizeGroups(list);
+    await set(GROUPS, clean);
     return clean;
   }
 
@@ -159,7 +190,7 @@ const Store = (() => {
 
   // ------------------------------------------------------------- change feed
 
-  /** Fires when another new-tab page changes tiles, settings or the background. */
+  /** Fires when another new-tab page changes any of what is stored here. */
   function onExternalChange(handler) {
     const runtime = (typeof browser !== 'undefined' && browser.storage)
       || (typeof chrome !== 'undefined' && chrome.storage)
@@ -168,6 +199,7 @@ const Store = (() => {
     runtime.onChanged.addListener((changes, area) => {
       if (area !== 'local') return;
       if (changes[TILES]) handler(TILES, sanitizeTiles(changes[TILES].newValue));
+      if (changes[GROUPS]) handler(GROUPS, sanitizeGroups(changes[GROUPS].newValue));
       if (changes[SETTINGS]) handler(SETTINGS, Schema.coerce(changes[SETTINGS].newValue));
       if (changes[BACKGROUND]) {
         handler(BACKGROUND, sanitizeBackground(changes[BACKGROUND].newValue));
@@ -177,6 +209,7 @@ const Store = (() => {
 
   return {
     load, save,
+    loadGroups, saveGroups, MAX_GROUPS,
     loadSettings, saveSettings, resetSettings,
     loadBackground, saveBackground, clearBackground,
     getFontCss, putFontCss,

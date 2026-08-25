@@ -94,7 +94,15 @@ const SettingsUI = (() => {
       button.setAttribute('aria-label', option.label);
       button.setAttribute('role', 'radio');
       button.dataset.value = option.value;
-      if (option.icon) button.append(Icons.create(option.icon, { size: 16 }));
+
+      // Icon where there is one, the label itself where there is not: some
+      // choices ("Status bar", "On hover") have no picture worth drawing.
+      if (option.icon) {
+        button.append(Icons.create(option.icon, { size: 16 }));
+      } else {
+        button.classList.add('segmented__item--text');
+        button.append(document.createTextNode(option.label));
+      }
 
       button.addEventListener('click', async () => {
         const effective = await commit(option.value);
@@ -164,6 +172,21 @@ const SettingsUI = (() => {
     return { control: wrap, focusId: input.id };
   }
 
+  /** A button that does something once - reset - rather than holding a value. */
+  function buildAction(field, value, commit) {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'btn btn--sm' + (field.danger ? ' btn--danger' : '');
+    button.id = 'set-' + field.key;
+    if (field.buttonIcon) button.append(Icons.create(field.buttonIcon, { size: 15 }));
+    button.append(document.createTextNode(field.buttonLabel || field.label));
+
+    button.addEventListener('click', () => commit(true));
+
+    // No `focusId`: a <label for> only reaches a control that holds a value.
+    return { control: button };
+  }
+
   function buildText(field, value, commit) {
     const input = document.createElement('input');
     input.type = 'text';
@@ -195,12 +218,31 @@ const SettingsUI = (() => {
   }
 
   /**
+   * Blur is a length, so a 40px blur on a 1920px page has to become a 10px one
+   * on a 480px preview to look the same. The preview measures itself against
+   * the window and writes the ratio out for the stylesheet to multiply by.
+   */
+  function trackPreviewScale(preview) {
+    const update = () => {
+      const width = preview.clientWidth;
+      if (!width) return;
+      preview.style.setProperty('--preview-scale', String(width / window.innerWidth));
+    };
+
+    // The dialog is display:none until it opens, so there is nothing to
+    // measure at build time - the observer catches the moment there is.
+    if (typeof ResizeObserver !== 'undefined') new ResizeObserver(update).observe(preview);
+    update();
+  }
+
+  /**
    * The background picker: what is on screen now, and a file button that
    * doubles as a drop target.
    *
    * The preview is shaped like the window (see --page-ratio) and covers, the
    * same way the page paints the picture, so the crop on show here is the crop
-   * that ends up behind the tiles.
+   * that ends up behind the tiles - blur and dim included, both scaled down to
+   * the size of the preview so they look the way they will full size.
    *
    * `commit` is handed one of `{action:'file'|'clear'}` and answers with
    * `{record}` - the picture that took effect, or null. A refusal comes back
@@ -245,7 +287,13 @@ const SettingsUI = (() => {
         img.className = 'bgfield__thumb';
         img.alt = '';
         img.src = record.src;
-        preview.append(img);
+
+        // The same veil the page lays over the picture, reading the same
+        // custom properties - so the Dim slider moves both at once.
+        const veil = document.createElement('div');
+        veil.className = 'bgfield__veil';
+
+        preview.append(img, veil);
         caption.textContent = record.name || 'Local image';
       } else {
         preview.append(Icons.create('image', { size: 22 }));
@@ -292,6 +340,7 @@ const SettingsUI = (() => {
 
     wrap.append(preview, caption, actions);
     showRecord(value);
+    trackPreviewScale(preview);
 
     return { control: wrap, wide: true };
   }
@@ -351,7 +400,8 @@ const SettingsUI = (() => {
     color: buildColor,
     text: buildText,
     font: buildFont,
-    background: buildBackground
+    background: buildBackground,
+    action: buildAction
   };
 
   // ---------------------------------------------------------------- layout
@@ -359,6 +409,7 @@ const SettingsUI = (() => {
   function buildField(field, value, ctx) {
     const row = document.createElement('div');
     row.className = 'row';
+    row.dataset.field = field.key;
 
     const main = document.createElement('div');
     main.className = 'row__main';
@@ -402,6 +453,9 @@ const SettingsUI = (() => {
   /** The tab left open, so a re-mount does not throw the user back to the top. */
   let openSection = null;
 
+  /** Keys that hold no value in `settings`, so nothing to track for a `when`. */
+  const EXTERNAL = new Set(Schema.FIELDS.filter(f => f.external).map(f => f.key));
+
   /**
    * Builds the dialog: the sections as tabs down the side, one panel each.
    *
@@ -414,6 +468,28 @@ const SettingsUI = (() => {
    */
   function mount(container, ctx) {
     container.textContent = '';
+
+    // A field with a `when` follows another field, so the dialog keeps its own
+    // copy of what took effect and re-reads the conditions after every change.
+    const current = { ...ctx.values };
+    const conditional = [];
+
+    function refresh() {
+      conditional.forEach(({ field, row }) => {
+        row.hidden = !Object.entries(field.when)
+          .every(([key, value]) => current[key] === value);
+      });
+    }
+
+    const inner = {
+      values: ctx.values,
+      onChange: async (key, value) => {
+        const result = await ctx.onChange(key, value);
+        if (!EXTERNAL.has(key)) current[key] = result.value;
+        refresh();
+        return result;
+      }
+    };
 
     const nav = document.createElement('nav');
     nav.className = 'tabs';
@@ -448,7 +524,9 @@ const SettingsUI = (() => {
       panel.append(heading);
 
       section.fields.forEach(field => {
-        panel.append(buildField(field, ctx.values[field.key], ctx));
+        const row = buildField(field, ctx.values[field.key], inner);
+        if (field.when) conditional.push({ field, row });
+        panel.append(row);
       });
 
       tab.addEventListener('click', () => show(section.id));
@@ -480,6 +558,8 @@ const SettingsUI = (() => {
       show(next.id);
       next.tab.focus();
     });
+
+    refresh();
 
     const known = tabs.some(entry => entry.id === openSection);
     show(known ? openSection : tabs[0].id);

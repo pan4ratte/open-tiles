@@ -57,6 +57,8 @@
   --columns: 6;
   --bg-blur: 0px;
   --bg-dim: .35;
+  --groupbar-h: 42px;
+  --groupbar-align: center;
   /* The window's shape, so the background preview crops the way the page does.
      JS keeps it up to date; the fallback is only for a stylesheet on its own. */
   --page-ratio: 16 / 9;
@@ -143,6 +145,149 @@ body.has-bg .page__date,
 body.has-bg .tile__label {
   color: var(--text);
   opacity: .82;
+}
+
+/* ---------- group bar ----------
+   One element, two shapes: a pill floating above the clock, or a bar pinned
+   across the top or bottom of the window. Which one is a body class, written
+   from the settings. */
+
+.groupbar {
+  position: fixed;
+  z-index: 6;
+  display: flex;
+  transition: opacity .18s;
+}
+
+.groupbar__inner {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  min-width: 0;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.groupbar__inner::-webkit-scrollbar { display: none; }
+
+/* floating */
+
+body.gb-floating .groupbar {
+  top: 14px;
+  left: 50%;
+  transform: translateX(-50%);
+  max-width: min(70vw, 860px);
+}
+
+body.gb-floating .groupbar__inner {
+  padding: 5px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--tile);
+  box-shadow: 0 12px 32px var(--shadow);
+}
+
+body.has-bg.gb-floating .groupbar__inner {
+  background: rgba(var(--veil), .42);
+  border-color: rgba(var(--veil), .5);
+  backdrop-filter: blur(12px);
+}
+
+/* status bar */
+
+body.gb-bar .groupbar {
+  left: 0;
+  right: 0;
+  top: 0;
+  height: var(--groupbar-h);
+  background: var(--bg-accent);
+  border-bottom: 1px solid var(--border);
+}
+
+body.gb-bar.gb-bottom .groupbar {
+  top: auto;
+  bottom: 0;
+  border-bottom: 0;
+  border-top: 1px solid var(--border);
+}
+
+body.has-bg.gb-bar .groupbar {
+  background: rgba(var(--veil), .42);
+  backdrop-filter: blur(12px);
+}
+
+body.gb-bar .groupbar__inner {
+  flex: 1;
+  justify-content: var(--groupbar-align);
+  padding: 0 16px;
+}
+
+/* Out of the way of a bar along the top: the settings button drops below it,
+   and the page starts under it. */
+body.gb-bar:not(.gb-bottom) .topbar { top: calc(var(--groupbar-h) + 10px); }
+body.gb-bar:not(.gb-bottom) .page { padding-top: calc(11vh + var(--groupbar-h)); }
+body.gb-bar.gb-bottom .page { padding-bottom: calc(60px + var(--groupbar-h)); }
+
+/* on hover */
+
+body.gb-hover .groupbar { opacity: 0; }
+
+body.gb-hover .groupbar:hover,
+body.gb-hover .groupbar:focus-within,
+/* A group is being shown: hiding the reason half the tiles are missing would
+   just look like the tiles had gone. */
+body.gb-hover .groupbar.is-active,
+/* And a tile is being dragged, which is the moment the chips are wanted. */
+body.gb-hover.is-dragging .groupbar { opacity: 1; }
+
+/* chips */
+
+.chip {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 190px;
+  padding: 7px 13px;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--text-dim);
+  font: inherit;
+  font-size: 13px;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background .15s, color .15s, border-color .15s;
+}
+
+.chip__name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.chip:hover {
+  background: var(--tile-hover);
+  color: var(--text);
+}
+
+.chip.is-on {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: #fff;
+}
+
+.chip:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.chip--add { padding: 7px 10px; }
+
+/* A tile is over this chip and will land in its group. */
+.chip.is-drop {
+  border-style: dashed;
+  border-color: var(--accent);
+  color: var(--text);
 }
 
 /* ---------- icons (Lucide) ---------- */
@@ -375,10 +520,13 @@ body.no-labels .tile__label { display: none; }
 }
 
 /* The settings dialog: room for the tab strip beside a panel that is still
-   comfortable to read. */
+   comfortable to read. Its height is fixed rather than fitted to whichever
+   panel is open, so switching tabs does not make the box jump about - the
+   panel on the right scrolls instead. */
 .modal__box--wide {
   width: min(880px, 100%);
-  max-height: min(92vh, 820px);
+  height: min(92vh, 760px);
+  max-height: 92vh;
 }
 
 .modal__head {
@@ -423,7 +571,6 @@ body.no-labels .tile__label { display: none; }
   /* Each half scrolls on its own, so the body itself never does. */
   overflow: hidden;
   padding-right: 0;
-  min-height: min(360px, 46vh);
 }
 
 .tabs {
@@ -522,6 +669,12 @@ body.no-labels .tile__label { display: none; }
 }
 
 .panel .row:last-child { border-bottom: 0; }
+
+/* A row whose `when` is not met, and the tile dialog's group picker while
+   there are no groups: both are display:grid or display:block, which the
+   browser's own [hidden] rule cannot beat. */
+.row[hidden],
+.field[hidden] { display: none; }
 
 .row--wide {
   grid-template-columns: 1fr;
@@ -677,6 +830,15 @@ body.no-labels .tile__label { display: none; }
   transition: background .15s, color .15s;
 }
 
+/* Options with no icon carry their label instead, so the button has to grow
+   to fit the words. */
+.segmented__item--text {
+  width: auto;
+  padding: 0 11px;
+  font: inherit;
+  font-size: 12.5px;
+}
+
 .segmented__item:hover { color: var(--text); }
 
 .segmented__item.is-on {
@@ -730,17 +892,23 @@ body.no-labels .tile__label { display: none; }
 
 /* Shaped like the window and covering, exactly as the page paints the
    picture, so the crop on show here is the crop that ends up behind the
-   tiles. The height is what is capped; the width follows from the shape. */
+   tiles - and full width, so there is something to look at.
+
+   Blur and dim are shown too: `--preview-scale` (written by settings.js from
+   the measured width) shrinks the blur radius in the same proportion as the
+   picture itself, so 40px on a 1920px page reads as 40px here. */
 .bgfield__preview {
+  --preview-blur: calc(var(--bg-blur) * var(--preview-scale, .3));
+
+  position: relative;
   display: grid;
   /* A track that may be narrower than the picture in it - without this the
      image's own width sets the track, and the dialog grows to match. */
   grid-template-columns: minmax(0, 1fr);
   grid-template-rows: minmax(0, 1fr);
   place-items: center;
-  width: min(100%, calc(210px * var(--page-ratio)));
+  width: 100%;
   aspect-ratio: var(--page-ratio);
-  margin: 0 auto;
   overflow: hidden;
   border: 1px dashed var(--border);
   border-radius: 12px;
@@ -753,12 +921,25 @@ body.no-labels .tile__label { display: none; }
   border-style: solid;
 }
 
+/* Grown by the blur radius on every side, exactly as .bg__image is, so a
+   blurred picture keeps its edges instead of fading into a grey frame. */
 .bgfield__thumb {
-  grid-area: 1 / 1;
-  width: 100%;
-  height: 100%;
+  position: absolute;
+  top: calc(var(--preview-blur) * -2.5);
+  left: calc(var(--preview-blur) * -2.5);
+  width: calc(100% + var(--preview-blur) * 5);
+  height: calc(100% + var(--preview-blur) * 5);
   object-fit: cover;
   object-position: center;
+  filter: blur(var(--preview-blur));
+}
+
+/* The page's veil, reading the same properties, so the Dim slider moves the
+   preview and the page together. */
+.bgfield__veil {
+  position: absolute;
+  inset: 0;
+  background: rgba(var(--veil), var(--bg-dim));
 }
 
 .bgfield__caption {

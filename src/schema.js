@@ -14,11 +14,17 @@
  *   text        free text, trimmed and capped at `max` characters
  *   font        family name, with the Google Fonts picker attached
  *   background  the page picture: a file from this computer
+ *   action      a button that does something once, storing nothing
  *
  * A field marked `external: true` has no value in `settings` - it is a control
  * for something stored elsewhere (the background image is megabytes of data
- * URI, far too big to rewrite on every slider drag). It still renders in the
- * dialog; the page hands its current value in through `ctx.values`.
+ * URI, far too big to rewrite on every slider drag), or no value at all, like
+ * the reset button. It still renders in the dialog; the page hands its current
+ * value in through `ctx.values`.
+ *
+ * A field with a `when` only shows while every key in it holds the value
+ * named - that is how the status-bar options stay out of the way of somebody
+ * using the floating group block.
  */
 const Schema = (() => {
   const columnChoices = ['auto', 3, 4, 5, 6, 7, 8, 9, 10, 12];
@@ -132,6 +138,80 @@ const Schema = (() => {
           gesture: true,
           note: 'Reads each site\'s markup and web manifest to find its sharpest '
               + 'logo. Firefox will ask for access to the sites you save.'
+        }
+      ]
+    },
+    {
+      id: 'groups',
+      label: 'Groups',
+      icon: 'tag',
+      fields: [
+        {
+          key: 'groupStyle',
+          label: 'Appearance',
+          type: 'segmented',
+          default: 'floating',
+          options: [
+            { value: 'floating', label: 'Floating' },
+            { value: 'bar', label: 'Status bar' }
+          ],
+          note: 'Floating sits in a pill above the clock; a status bar spans the '
+              + 'whole window.'
+        },
+        {
+          key: 'groupShow',
+          label: 'Display',
+          type: 'segmented',
+          default: 'always',
+          options: [
+            { value: 'always', label: 'Always' },
+            { value: 'hover', label: 'On hover' }
+          ],
+          note: 'On hover keeps the block out of the way until the pointer '
+              + 'reaches it - or until a group is picked.'
+        },
+        {
+          key: 'groupAlign',
+          label: 'Alignment',
+          type: 'segmented',
+          default: 'center',
+          when: { groupStyle: 'bar' },
+          options: [
+            { value: 'start', label: 'Left' },
+            { value: 'center', label: 'Centre' },
+            { value: 'end', label: 'Right' }
+          ]
+        },
+        {
+          key: 'groupEdge',
+          label: 'Position',
+          type: 'segmented',
+          default: 'top',
+          when: { groupStyle: 'bar' },
+          options: [
+            { value: 'top', label: 'Top' },
+            { value: 'bottom', label: 'Bottom' }
+          ]
+        }
+      ]
+    },
+    {
+      id: 'other',
+      label: 'Other',
+      icon: 'settings',
+      fields: [
+        {
+          key: 'reset',
+          label: 'Reset all settings',
+          // Nothing to store: the button just does the deed - see `external`.
+          type: 'action',
+          external: true,
+          danger: true,
+          buttonLabel: 'Reset all',
+          buttonIcon: 'rotate-ccw',
+          busyText: 'Putting everything back…',
+          note: 'Puts every setting back to its default and takes the background '
+              + 'picture away. Your tiles and groups are left alone.'
         }
       ]
     }
