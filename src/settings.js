@@ -613,7 +613,7 @@ const SettingsUI = (() => {
     const file = document.createElement('input');
     file.type = 'file';
     file.accept = 'image/*';
-    file.className = 'bgfield__file';
+    file.className = 'file-input';
     file.id = 'set-' + field.key;
 
     const choose = document.createElement('button');
@@ -697,6 +697,59 @@ const SettingsUI = (() => {
     return { control: wrap, wide: true };
   }
 
+  /**
+   * Export and import, as the pair of buttons they are: one writes a file, the
+   * other reads one back.
+   *
+   * Like the background picker this field holds no value - it sends
+   * `{action:'export'}` or `{action:'import', file}` and the page does the
+   * work, answering with the status line. Nothing here comes back to paint,
+   * because a finished import re-mounts the whole dialog: every control on
+   * every page is showing a value that just changed underneath it.
+   */
+  function buildBackup(field, value, commit) {
+    const wrap = document.createElement('div');
+    wrap.className = 'backupfield';
+
+    const file = document.createElement('input');
+    file.type = 'file';
+    file.accept = 'application/json,.json';
+    file.className = 'file-input';
+    file.id = 'set-' + field.key;
+
+    const exportBtn = document.createElement('button');
+    exportBtn.type = 'button';
+    exportBtn.className = 'btn btn--sm';
+    exportBtn.append(
+      Icons.create('download', { size: 15 }),
+      document.createTextNode('Export…')
+    );
+
+    const importBtn = document.createElement('button');
+    importBtn.type = 'button';
+    importBtn.className = 'btn btn--sm';
+    importBtn.append(
+      Icons.create('upload', { size: 15 }),
+      document.createTextNode('Import…')
+    );
+
+    exportBtn.addEventListener('click', () => commit({ action: 'export' }));
+    importBtn.addEventListener('click', () => file.click());
+
+    file.addEventListener('change', () => {
+      const picked = file.files && file.files[0];
+      // Cleared before the commit, so picking the same file twice running is
+      // still a change the input will report.
+      file.value = '';
+      if (picked) commit({ action: 'import', file: picked });
+    });
+
+    wrap.append(exportBtn, importBtn, file);
+
+    // No `focusId`: a <label for> only reaches a control that holds a value.
+    return { control: wrap, wide: true };
+  }
+
   function buildFont(field, value, commit) {
     const wrap = document.createElement('div');
     wrap.className = 'fontfield';
@@ -753,6 +806,7 @@ const SettingsUI = (() => {
     text: buildText,
     font: buildFont,
     background: buildBackground,
+    backup: buildBackup,
     action: buildAction
   };
 
@@ -799,7 +853,7 @@ const SettingsUI = (() => {
     control.append(built.control);
 
     row.append(main, control, status);
-    return row;
+    return { row, status };
   }
 
   /**
@@ -820,8 +874,14 @@ const SettingsUI = (() => {
    * Every panel is built up front and the inactive ones are hidden, so the
    * controls are all reachable (and testable) whichever tab is showing.
    *
+   * `ctx.status` is for the message a change cannot deliver itself: an import
+   * re-mounts the dialog from inside its own commit, which throws away the row
+   * that was waiting to be told how it went. Handing the line to the new mount
+   * puts it back under the right field.
+   *
    * @param {HTMLElement} container
-   * @param {{values: object, onChange: (key:string, value:*) =>
+   * @param {{values: object, status?: Object<string, Status>,
+   *   onChange: (key:string, value:*) =>
    *   Promise<{value:*, status?: Status}>}} ctx
    */
   function mount(container, ctx) {
@@ -832,6 +892,7 @@ const SettingsUI = (() => {
     // copy of what took effect and re-reads the conditions after every change.
     const current = { ...ctx.values };
     const conditional = [];
+    const statusOf = {};
 
     function refresh() {
       conditional.forEach(({ field, row }) => {
@@ -913,8 +974,9 @@ const SettingsUI = (() => {
         box.className = 'box';
 
         group.fields.forEach(field => {
-          const row = buildField(field, ctx.values[field.key], inner);
+          const { row, status } = buildField(field, ctx.values[field.key], inner);
           if (field.when) conditional.push({ field, row });
+          statusOf[field.key] = status;
           box.append(row);
         });
 
@@ -961,6 +1023,10 @@ const SettingsUI = (() => {
 
     const known = tabs.some(entry => entry.id === openSection);
     show(known ? openSection : tabs[0].id);
+
+    Object.entries(ctx.status || {}).forEach(([key, status]) => {
+      if (statusOf[key]) setStatus(statusOf[key], status);
+    });
   }
 
   return { mount, setStatus };

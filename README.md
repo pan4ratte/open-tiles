@@ -105,7 +105,8 @@ them and are written to storage in the background.
 | | Display — always / on hover | Always |
 | | Alignment — left / centre / right *(status bar)* | Centre |
 | | Position — top / bottom *(status bar)* | Top |
-| Other | Reset all | — |
+| Other | Backup — export / import | — |
+| | Reset all | — |
 
 *Layout* covers two decisions that are really one — how the tiles are arranged
 and how each one is drawn — so it is a single section split into two named
@@ -122,6 +123,10 @@ system's: the ten named macOS accents along the top, then a saturation and
 brightness square, a hue strip and a hex field for anything else. It is a
 popover, so it hangs off the colour well and closes on Escape, on a click
 outside, or as soon as the pane behind it scrolls.
+
+**Other → Backup** writes everything this add-on keeps — tiles, groups,
+settings and the background picture — to a single `.json` file, and reads one
+back. See [Backup](#backup) below.
 
 **Other → Reset all** puts every setting back to its default and takes the
 background picture away. Tiles and groups are left alone.
@@ -230,6 +235,55 @@ towards the theme colour rather than towards black, so it keeps the text legible
 in light and dark alike. The tiles and the group block are frosted glass either
 way; over a picture they thin out further, so more of it shows through.
 
+## Backup
+
+Settings → *Other* → **Export** saves everything the add-on keeps to one
+`tiles-backup-YYYY-MM-DD.json` file: your tiles, your groups, every setting and
+the background picture, data URI and all. It is indented, so it is a file you
+can open and read. **Import** reads one back.
+
+A backup is an envelope — `format`, `version`, `savedAt` — around four optional
+sections:
+
+```json
+{
+  "format": "tiles-backup",
+  "version": 1,
+  "savedAt": "2026-08-26T09:00:00.000Z",
+  "settings": { "accent": "#34c759", "columns": 7 },
+  "groups":   [{ "id": "g1", "name": "Work" }],
+  "tiles":    [{ "id": "t1", "url": "https://example.com", "title": "Example", "groupId": "g1" }],
+  "background": null
+}
+```
+
+Two rules make an import predictable:
+
+- **A section the file does not carry is left alone.** A backup holding only
+  `settings` restores the settings and does not touch your tiles. `"background":
+  null` is not the same as no `background` key at all — the first takes the
+  picture away, the second leaves whatever is there.
+- **A section it does carry replaces what is there**, rather than merging into
+  it. A setting the file is silent about comes back as its *default*, not as
+  whatever the profile happens to hold — a restore puts the page back the way
+  the file describes it, with nothing of the old one showing through.
+
+Nothing is trusted on the way in. Each section goes back through the same call
+the page uses to save it normally — `Store.save`, `Store.saveGroups`,
+`Schema.coerce` — so a hand-edited or older file cannot put anything into
+storage that the page would not have written itself: unknown keys are dropped,
+out-of-range numbers are clamped, malformed tiles are discarded. That is also
+why a file from a *later* version is read rather than refused: it degrades to
+the parts this build understands.
+
+The picture is the one part that can be refused on its own, if it will not fit
+in the storage area. When that happens the rest of the restore still stands and
+the status line says so, rather than the whole import failing over the least of
+what it carried.
+
+Import replaces without asking, the same way **Reset all** and deleting a tile
+do. Export first if there is anything on the page you would want back.
+
 ## Icons
 
 Every icon in the UI is [Lucide](https://lucide.dev). They are not loaded from a
@@ -326,6 +380,7 @@ permissions are needed. Leaving the field empty falls back to the system font.
 | `src/storage.js` | `Store` — `browser.storage.local` with a localStorage fallback |
 | `src/fonts.js` | `Fonts` — Google Fonts loading and caching |
 | `src/backgrounds.js` | `Backgrounds` — the page picture: encoding, limits, painting |
+| `src/transfer.js` | `Transfer` — backup files: the envelope, reading and writing |
 | `src/favicons.js` | `Favicons` — site icon discovery and caching |
 | `src/settings.js` | `SettingsUI` — renders the settings dialog from the schema |
 | `src/newtab.js` | Rendering, drag & drop reordering, wiring |
@@ -333,7 +388,8 @@ permissions are needed. Leaving the field empty falls back to the system font.
 | `test/background.test.js` | Guards the background picker and the settings tabs |
 | `test/groups.test.js` | Guards groups, conditional fields and the markup's ids |
 | `test/live.test.js` | Guards the change feed, the subsections and the accent picker |
-| `test/dom-shim.js` | The scrap of DOM both tests run the dialog against |
+| `test/transfer.test.js` | Guards the backup envelope, its refusals and the buttons |
+| `test/dom-shim.js` | The scrap of DOM every test runs the dialog against |
 | `fonts/` | Bundled Inter (variable) + its `@font-face` rules |
 | `icons/icon.svg` | Toolbar / add-on manager icon (Lucide `layout-grid`) |
 
@@ -365,14 +421,15 @@ with a large photo.
 ## Tests
 
 Several things here fail quietly rather than loudly, so each is guarded. They
-run the real `schema.js`, `settings.js` and `storage.js` against a small DOM
-shim — no browser, no dependencies:
+run the real `schema.js`, `settings.js`, `storage.js` and `transfer.js` against
+a small DOM shim — no browser, no dependencies:
 
 ```
 node test/gesture.test.js      # the permission user-gesture chain
 node test/background.test.js   # the background picker and the settings tabs
 node test/groups.test.js       # groups, conditional fields, markup ids
 node test/live.test.js         # the change feed, subsections, the accent picker
+node test/transfer.test.js     # the backup envelope, its refusals, the buttons
 ```
 
 The last of those also checks that every `getElementById` in `src/newtab.js`

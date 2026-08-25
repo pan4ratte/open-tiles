@@ -22,6 +22,7 @@
  *   text        free text, trimmed and capped at `max` characters
  *   font        family name, with the Google Fonts picker attached
  *   background  the page picture: a file from this computer
+ *   backup      export and import, as a pair of buttons
  *   action      a button that does something once, storing nothing
  *
  * A field marked `external: true` has no value in `settings` - it is a control
@@ -246,6 +247,18 @@ const Schema = (() => {
       icon: 'settings',
       tint: 'var(--system-gray)',
       fields: [
+        {
+          key: 'backup',
+          label: 'Backup',
+          // Reads and writes four storage keys, none of them its own - see
+          // `external`.
+          type: 'backup',
+          external: true,
+          busyText: 'Working on it…',
+          note: 'Saves your tiles, groups, settings and background picture to a '
+              + 'file. Importing one puts back whatever that file holds, over '
+              + 'what is here now.'
+        },
         {
           key: 'reset',
           label: 'Reset all settings',

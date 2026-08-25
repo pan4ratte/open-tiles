@@ -1920,14 +1920,23 @@ body.tile-round .tile {
   margin-top: 10px;
 }
 
-/* The real file input: reachable, but the button in front of it is what
-   anybody sees. */
-.bgfield__file {
+/* The real file input, wherever a button stands in front of one: reachable,
+   but what anybody sees is the button. */
+.file-input {
   width: 0;
   height: 0;
   opacity: 0;
   pointer-events: none;
 }
+
+/* Export and import: two equal buttons, because neither is the one you
+   reach for more often. */
+.backupfield {
+  display: flex;
+  gap: 8px;
+}
+
+.backupfield .btn { flex: 1; }
 
 .fontfield .field__input { margin-bottom: 10px; }
 

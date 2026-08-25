@@ -40,8 +40,23 @@ class El {
     return this._text + this.children.map(kid => kid.textContent || kid.text || '').join('');
   }
 
-  append(...kids) { this.children.push(...kids); }
-  prepend(...kids) { this.children.unshift(...kids); }
+  append(...kids) {
+    kids.forEach(kid => { kid.parent = this; });
+    this.children.push(...kids);
+  }
+
+  prepend(...kids) {
+    kids.forEach(kid => { kid.parent = this; });
+    this.children.unshift(...kids);
+  }
+
+  /** Enough of it for the download link, which mounts itself and leaves. */
+  remove() {
+    if (!this.parent) return;
+    const at = this.parent.children.indexOf(this);
+    if (at !== -1) this.parent.children.splice(at, 1);
+    this.parent = null;
+  }
   addEventListener(type, fn) { (this.listeners[type] ||= []).push(fn); }
   setAttribute(k, v) { this.attrs[k] = v; }
   click() { this.fire('click', event('click')); }
@@ -91,6 +106,8 @@ function event(type, props = {}) {
 }
 
 const document = {
+  // Somewhere for a transient element - the download link - to be appended to.
+  body: new El('body'),
   createElement: tag => new El(tag),
   createTextNode: text => ({ text, children: [] }),
   createElementNS: () => new El('svg')

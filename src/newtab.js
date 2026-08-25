@@ -809,6 +809,115 @@
   }
 
   /**
+   * Export and import.
+   *
+   * Export is a file the browser saves; there is nothing to change on the page,
+   * so it answers with a status line and no more.
+   *
+   * Import puts a whole page's worth of state back at once. Each section goes
+   * in through the same call the page uses to save it normally, so a file that
+   * has been hand-edited, or written by an older build, is sanitized exactly
+   * as anything else is - and the value that comes back is the cleaned one to
+   * carry on with. A section the file does not carry is left alone.
+   */
+  async function changeTransfer(payload) {
+    if (payload.action === 'export') {
+      try {
+        const name = Transfer.save({ settings, tiles, groups, background });
+        return { value: null, status: { kind: 'ok', text: `Saved as ${name}.` } };
+      } catch (err) {
+        return { value: null, status: { kind: 'error', text: err.message } };
+      }
+    }
+
+    let doc;
+    try {
+      doc = await Transfer.read(payload.file);
+    } catch (err) {
+      return { value: null, status: { kind: 'error', text: err.message } };
+    }
+
+    try {
+      return await applyImport(doc.sections);
+    } catch (err) {
+      // A storage area with no room left in it, most likely. Whatever landed
+      // before it gave out is on screen, so the dialog is rebuilt around what
+      // is really there rather than left showing the values it started with.
+      mountSettings({
+        backup: {
+          kind: 'error',
+          text: `The restore stopped part way through: ${err.message}`
+        }
+      });
+      return { value: null };
+    }
+  }
+
+  /** "3 groups, 12 tiles and your settings" - what an import actually did. */
+  function summarize(parts) {
+    if (parts.length < 2) return parts[0] || 'nothing';
+    return parts.slice(0, -1).join(', ') + ' and ' + parts[parts.length - 1];
+  }
+
+  const plural = (n, word) => `${n} ${word}${n === 1 ? '' : 's'}`;
+
+  async function applyImport(sections) {
+    const done = [];
+    // The picture is the one part that can be refused on its own (too big for
+    // the storage area), and the least of what a backup carries - so it is
+    // reported beside the restore rather than sinking it.
+    let pictureFailed = false;
+
+    if ('groups' in sections) {
+      groups = await Store.saveGroups(sections.groups);
+      if (activeGroup && !groups.some(g => g.id === activeGroup)) activeGroup = null;
+      done.push(plural(groups.length, 'group'));
+    }
+
+    if ('tiles' in sections) {
+      tiles = await Store.save(sections.tiles);
+      done.push(plural(tiles.length, 'tile'));
+    }
+
+    if ('settings' in sections) {
+      // Coerced first, so a key the file is missing comes back as its default
+      // rather than keeping whatever is set now: this is a restore, not a merge.
+      settings = await Store.saveSettings(Schema.coerce(sections.settings));
+      done.push('your settings');
+    }
+
+    if ('background' in sections) {
+      try {
+        background = sections.background
+          ? await Backgrounds.save(sections.background)
+          : await Backgrounds.clear();
+        done.push('the background');
+      } catch {
+        pictureFailed = true;
+      }
+    }
+
+    Backgrounds.apply(background);
+    applySettings();
+    Fonts.use(settings.font).catch(() => {});
+    renderGroups();
+    render();
+
+    const refused = 'The background picture would not fit, so it was left as it is.';
+    // A backup of nothing but a picture that was then refused restored nothing
+    // at all, so there is only the refusal to report.
+    const text = done.length
+      ? `Restored ${summarize(done)}.` + (pictureFailed ? ' ' + refused : '')
+      : refused;
+
+    // Every control in the dialog is now showing a value that changed under it,
+    // so the whole thing is rebuilt - which takes the row waiting on this
+    // status with it. The new mount is handed the line instead.
+    mountSettings({ backup: { kind: pictureFailed ? 'error' : 'ok', text } });
+    return { value: null };
+  }
+
+  /**
    * Reset lives in the dialog's "Other" section now, so it comes through as a
    * field change like everything else. It re-mounts the dialog to show every
    * control at its default - which is the confirmation, no status line needed.
@@ -831,6 +940,7 @@
     if (key === 'reset') return resetSettings();
     if (key === 'deepIcons') return changeDeepIcons(value);
     if (key === 'background') return changeBackground(value);
+    if (key === 'backup') return changeTransfer(value);
 
     const effective = updateSetting(key, value);
     // These change the tile markup itself, not just a variable.
@@ -838,11 +948,17 @@
     return { value: effective };
   }
 
-  function mountSettings() {
+  /**
+   * @param {Object<string, {kind:string, text:string}>} [status] lines to show
+   *   under named fields, for a change that re-mounted the dialog out from
+   *   under the row that would have shown its own.
+   */
+  function mountSettings(status) {
     // `background` is an external field: it has no place in `settings`, so it
     // is handed to the dialog on the side.
     SettingsUI.mount(settingsBody, {
       values: { ...settings, background },
+      status,
       onChange: onSettingChange
     });
   }
