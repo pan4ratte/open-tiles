@@ -6,9 +6,12 @@
  * makes the page testable by opening src/newtab.html directly in a browser.
  *
  * Keys
- *   tiles      - [{ id, url, title, groupId }]  groupId is null when loose
+ *   tiles      - [{ id, url, title, groupId, icon, visits }]
+ *                groupId is null when loose; icon is '' when the site's own
+ *                is to be looked up; visits counts opens from this add-on
  *   groups     - [{ id, name }]                 the bar across the top
  *   settings   - see schema.js
+ *   activeGroup- id of the group last shown, or null for "All"
  *   background - { src, name, savedAt }            the page background
  *   fontCache  - { [family]: { css, savedAt } }     CSS with the woff2 inlined
  *   iconCache  - { [origin]: { url, size, source, savedAt } }
@@ -16,6 +19,7 @@
 const Store = (() => {
   const TILES = 'tiles';
   const GROUPS = 'groups';
+  const ACTIVE_GROUP = 'activeGroup';
   const SETTINGS = 'settings';
   const BACKGROUND = 'background';
   const FONT_CACHE = 'fontCache';
@@ -108,6 +112,29 @@ const Store = (() => {
 
   // ------------------------------------------------------------------ tiles
 
+  /**
+   * A tile's own picture: a web address, or a small image stored inline. Empty
+   * for the usual case, where the site's icon is looked up instead.
+   *
+   * The cap is per tile and generous for an icon but far short of a
+   * photograph - a tile list is rewritten on every drag, so nothing here may
+   * be allowed to grow to the size of a background.
+   */
+  const MAX_ICON = 256 * 1024;
+
+  function sanitizeIcon(raw) {
+    if (typeof raw !== 'string') return '';
+    const icon = raw.trim();
+    if (icon.length > MAX_ICON) return '';
+    return /^(https?:\/\/|data:image\/)/i.test(icon) ? icon : '';
+  }
+
+  /** Opens counted by this add-on. Never negative, never a fraction. */
+  function sanitizeVisits(raw) {
+    const n = Math.floor(Number(raw));
+    return Number.isFinite(n) && n > 0 ? n : 0;
+  }
+
   function sanitizeTiles(list) {
     if (!Array.isArray(list)) return [];
     return list
@@ -118,7 +145,9 @@ const Store = (() => {
         title: typeof t.title === 'string' ? t.title : '',
         // A tile in no group, or in one that has since been deleted, is loose:
         // it shows under "All" and nowhere else.
-        groupId: typeof t.groupId === 'string' && t.groupId ? t.groupId : null
+        groupId: typeof t.groupId === 'string' && t.groupId ? t.groupId : null,
+        icon: sanitizeIcon(t.icon),
+        visits: sanitizeVisits(t.visits)
       }));
   }
 
@@ -158,6 +187,20 @@ const Store = (() => {
     return clean;
   }
 
+  // ----------------------------------------------------------- active group
+
+  /**
+   * Which group was last being looked at. Its own key rather than a setting:
+   * it is a place in the page, not a preference, and it is written every time
+   * a chip is clicked - which is no reason to rewrite the settings object.
+   */
+  async function loadActiveGroup() {
+    const id = await get(ACTIVE_GROUP);
+    return typeof id === 'string' && id ? id : null;
+  }
+
+  const saveActiveGroup = id => set(ACTIVE_GROUP, typeof id === 'string' && id ? id : null);
+
   // --------------------------------------------------------------- settings
 
   async function loadSettings() {
@@ -177,11 +220,17 @@ const Store = (() => {
 
   // ------------------------------------------------------------- background
 
-  /** Only a stored data: URI is ever painted onto the page. */
+  /**
+   * A picture stored inline, or one named by web address.
+   *
+   * A data: URI is the offline case and the default; an http(s) address is
+   * fetched by the browser on every new tab, which is the cost of naming a
+   * picture that lives somewhere else.
+   */
   function sanitizeBackground(raw) {
     if (!raw || typeof raw !== 'object') return null;
-    const src = typeof raw.src === 'string' ? raw.src : '';
-    if (!/^data:image\//i.test(src)) return null;
+    const src = typeof raw.src === 'string' ? raw.src.trim() : '';
+    if (!/^(data:image\/|https?:\/\/)/i.test(src)) return null;
 
     return {
       src,
@@ -262,7 +311,8 @@ const Store = (() => {
       [TILES, sanitizeTiles],
       [GROUPS, sanitizeGroups],
       [SETTINGS, Schema.coerce],
-      [BACKGROUND, sanitizeBackground]
+      [BACKGROUND, sanitizeBackground],
+      [ACTIVE_GROUP, id => (typeof id === 'string' && id ? id : null)]
     ];
 
     runtime.onChanged.addListener((changes, area) => {
@@ -278,6 +328,7 @@ const Store = (() => {
   return {
     load, save,
     loadGroups, saveGroups, MAX_GROUPS,
+    loadActiveGroup, saveActiveGroup,
     loadSettings, saveSettings, resetSettings,
     loadBackground, saveBackground, clearBackground,
     getFontCss, putFontCss,

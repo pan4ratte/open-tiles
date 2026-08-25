@@ -16,6 +16,11 @@
   const btnCancel = document.getElementById('btnCancel');
   const btnDelete = document.getElementById('btnDelete');
   const fieldGroup = document.getElementById('fieldGroup');
+  const fieldIcon = document.getElementById('fieldIcon');
+  const fieldIconFile = document.getElementById('fieldIconFile');
+  const btnIconFile = document.getElementById('btnIconFile');
+  const iconPreview = document.getElementById('iconPreview');
+  const btnAddTile = document.getElementById('btnAddTile');
 
   const groupBar = document.getElementById('groupBar');
   const groupChips = document.getElementById('groupChips');
@@ -33,7 +38,8 @@
   const btnSettings = document.getElementById('btnSettings');
   const btnSettingsClose = document.getElementById('btnSettingsClose');
 
-  /** @type {{id:string,url:string,title:string,groupId:?string}[]} */
+  /** @type {{id:string,url:string,title:string,groupId:?string,
+   *   icon:string,visits:number}[]} */
   let tiles = [];
   /** @type {{id:string,name:string}[]} the chips across the top */
   let groups = [];
@@ -129,6 +135,9 @@
     if (fixedColumns) root.style.setProperty('--columns', settings.columns);
 
     document.body.classList.toggle('no-labels', !settings.showLabels);
+    // With the + gone from the grid there has to be one somewhere, or a tile
+    // cannot be added at all.
+    btnAddTile.hidden = settings.showAddButton;
 
     const bar = settings.groupStyle === 'bar';
     document.body.classList.toggle('gb-bar', bar);
@@ -154,8 +163,26 @@
     return groups.some(group => group.id === tile.groupId) ? tile.groupId : null;
   }
 
+  /**
+   * The tiles on screen: the group filter, then the order.
+   *
+   * Sorting by visits is a view of the list, not a rewrite of it - the stored
+   * order stays the one that was dragged, so turning "Most visited" back off
+   * puts the grid back exactly as it was rather than baked into a new order.
+   */
   function tilesInView() {
-    return activeGroup ? tiles.filter(tile => groupOf(tile) === activeGroup) : tiles;
+    const shown = activeGroup
+      ? tiles.filter(tile => groupOf(tile) === activeGroup)
+      : tiles;
+
+    if (settings.tileOrder !== 'visits') return shown;
+
+    // Slice first: sort is in place, and `shown` is the live array when no
+    // group is picked. Ties keep the manual order behind them.
+    return shown
+      .map((tile, at) => ({ tile, at }))
+      .sort((a, b) => (b.tile.visits - a.tile.visits) || (a.at - b.at))
+      .map(entry => entry.tile);
   }
 
   /** Dropping a tile on a chip moves it into that group - or, on "All", out. */
@@ -200,6 +227,9 @@
 
     chip.addEventListener('click', () => {
       activeGroup = group.id;
+      // Remembered whether or not the setting is on, so turning it on later
+      // picks up where the last tab left off rather than starting blank.
+      Store.saveActiveGroup(activeGroup);
       renderGroups();
       render();
     });
@@ -336,11 +366,12 @@
     return el;
   }
 
-  /** Swaps the monogram for the sharpest icon the site offers, once found. */
-  async function attachIcon(el, tile, token) {
-    const found = await Favicons.resolve(tile.url, { deep: settings.deepIcons });
-    if (!found || token !== renderToken || !el.isConnected) return;
-
+  /**
+   * Puts a picture on a tile, and takes the monogram away once it has loaded -
+   * not before, so a picture that never arrives leaves the letter standing
+   * rather than an empty square.
+   */
+  function paintIcon(el, url) {
     const img = document.createElement('img');
     img.className = 'tile__icon';
     img.alt = '';
@@ -352,9 +383,22 @@
       if (fallback) fallback.remove();
     });
     img.addEventListener('error', () => img.remove());
-    img.src = found.url;
+    img.src = url;
 
     el.prepend(img);
+  }
+
+  /**
+   * Swaps the monogram for the sharpest icon the site offers, once found.
+   *
+   * Only tiles without a picture of their own come here. The lookup is slow
+   * enough that the grid may have been rebuilt, or this tile dropped from it,
+   * by the time it answers - hence both guards.
+   */
+  async function attachIcon(el, tile, token) {
+    const found = await Favicons.resolve(tile.url, { deep: settings.deepIcons });
+    if (!found || token !== renderToken || !el.isConnected) return;
+    paintIcon(el, found.url);
   }
 
   function buildTile(tile, token) {
@@ -377,8 +421,46 @@
     text.textContent = label;
 
     el.append(buildFallback(label, tile.url), text);
-    attachIcon(el, tile, token);
+
+    if (settings.showVisits && tile.visits > 0) {
+      const badge = document.createElement('span');
+      badge.className = 'tile__visits';
+      // Past a thousand the exact number stops meaning anything and the badge
+      // stops fitting, which is the same point to round at.
+      badge.textContent = tile.visits > 999
+        ? Math.round(tile.visits / 100) / 10 + 'k'
+        : String(tile.visits);
+      badge.title = tile.visits + ' visits from here';
+      el.append(badge);
+    }
+
+    // A tile that names its own picture uses it and asks the network nothing;
+    // that is the point of setting one. It goes on now rather than later,
+    // because there is nothing to wait for.
+    if (tile.icon) paintIcon(el, tile.icon);
+    else attachIcon(el, tile, token);
+
     return el;
+  }
+
+  /**
+   * Counts an open.
+   *
+   * The write is not awaited and not batched: this page is usually on its way
+   * out when a tile is clicked, so the call has to be made while there is
+   * still a page to make it from. A count that misses now and then is the
+   * cost, and it is the right thing to lose.
+   */
+  function countVisit(id) {
+    const tile = tiles.find(t => t.id === id);
+    if (!tile) return;
+
+    tile.visits += 1;
+    Store.save(tiles).catch(() => {});
+
+    // Re-sorting the grid under the pointer mid-click would be startling, so
+    // the new order waits for the next new tab.
+    if (settings.showVisits) render();
   }
 
   function buildAddButton() {
@@ -399,7 +481,7 @@
 
     grid.textContent = '';
     shown.forEach(tile => grid.append(buildTile(tile, token)));
-    grid.append(buildAddButton());
+    if (settings.showAddButton) grid.append(buildAddButton());
 
     empty.hidden = shown.length > 0;
     if (!shown.length) {
@@ -446,6 +528,10 @@
    * hiding exactly where they were.
    */
   function syncOrderFromDom() {
+    // What is on screen is a sort, not the list: reading it back would write
+    // the sorted order over the one that was dragged into place.
+    if (settings.tileOrder !== 'manual') return;
+
     const byId = new Map(tiles.map(t => [t.id, t]));
     const shown = [...grid.querySelectorAll('.tile[data-id]')]
       .map(el => byId.get(el.dataset.id))
@@ -565,6 +651,38 @@
     fieldGroup.closest('.field').hidden = groups.length === 0;
   }
 
+  /** The icon as it will be drawn, or nothing when the site's own is to be used. */
+  function showIconPreview(src) {
+    iconPreview.textContent = '';
+    iconPreview.classList.toggle('is-empty', !src);
+    if (!src) return;
+
+    const img = document.createElement('img');
+    img.alt = '';
+    img.referrerPolicy = 'no-referrer';
+    // A bad address should read as "nothing set", not as a broken picture.
+    img.addEventListener('error', () => iconPreview.classList.add('is-empty'));
+    img.src = src;
+    iconPreview.append(img);
+  }
+
+  fieldIcon.addEventListener('input', () => showIconPreview(fieldIcon.value.trim()));
+
+  btnIconFile.addEventListener('click', () => fieldIconFile.click());
+
+  fieldIconFile.addEventListener('change', async () => {
+    const picked = fieldIconFile.files && fieldIconFile.files[0];
+    fieldIconFile.value = '';
+    if (!picked) return;
+
+    try {
+      fieldIcon.value = await Favicons.fromFile(picked);
+      showIconPreview(fieldIcon.value);
+    } catch (err) {
+      SettingsUI.setStatus(modalError, { kind: 'error', text: err.message });
+    }
+  });
+
   function openTileModal(id) {
     editingId = id;
     const tile = id ? tiles.find(t => t.id === id) : null;
@@ -572,6 +690,8 @@
     modalTitle.textContent = tile ? 'Edit tile' : 'Add tile';
     fieldUrl.value = tile ? tile.url : '';
     fieldTitle.value = tile ? tile.title : '';
+    fieldIcon.value = tile ? tile.icon : '';
+    showIconPreview(tile ? tile.icon : '');
     // A tile added while a group is being shown belongs to that group.
     fillGroupSelect(tile ? groupOf(tile) : activeGroup);
     btnDelete.hidden = !tile;
@@ -593,12 +713,13 @@
 
     const title = fieldTitle.value.trim();
     const groupId = fieldGroup.value || null;
+    const icon = fieldIcon.value.trim();
 
     if (editingId) {
       const tile = tiles.find(t => t.id === editingId);
-      if (tile) Object.assign(tile, { url, title, groupId });
+      if (tile) Object.assign(tile, { url, title, groupId, icon });
     } else {
-      tiles.push({ id: crypto.randomUUID(), url, title, groupId });
+      tiles.push({ id: crypto.randomUUID(), url, title, groupId, icon, visits: 0 });
     }
 
     await persistTiles();
@@ -614,6 +735,15 @@
     render();
     closeDialog(modal);
   });
+
+  // Opening a tile is what a visit is. The click is not intercepted - the link
+  // does its own navigating - only counted on the way past.
+  grid.addEventListener('click', e => {
+    const el = e.target.closest('.tile[data-id]');
+    if (el) countVisit(el.dataset.id);
+  });
+
+  btnAddTile.addEventListener('click', () => openTileModal(null));
 
   // Right-click a tile to edit it.
   grid.addEventListener('contextmenu', e => {
@@ -779,7 +909,9 @@
         return { value: { record: null } };
       }
 
-      const record = await Backgrounds.fromFile(payload.file);
+      const record = payload.action === 'url'
+        ? await Backgrounds.fromUrl(payload.url)
+        : await Backgrounds.fromFile(payload.file);
 
       // On screen first. Writing megabytes to storage is the slow half and the
       // half that can fail; the picture should not wait on it, and the settings
@@ -800,7 +932,9 @@
           kind: 'ok',
           text: settings.bgDim >= 80
             ? 'Set — turn Dim down to see more of it.'
-            : 'Background set.'
+            : payload.action === 'url'
+              ? 'Background set. It is fetched from that address on every new tab.'
+              : 'Background set.'
         }
       };
     } catch (err) {
@@ -838,7 +972,7 @@
     }
 
     try {
-      return await applyImport(doc.sections);
+      return await applyImport(doc);
     } catch (err) {
       // A storage area with no room left in it, most likely. Whatever landed
       // before it gave out is on screen, so the dialog is rebuilt around what
@@ -853,6 +987,22 @@
     }
   }
 
+  /**
+   * What a file from another add-on held that there is nowhere to put. Saying
+   * so is the point: an icon that silently turned into a different icon is the
+   * kind of thing somebody notices a week later and cannot explain.
+   */
+  function leftBehind(dropped) {
+    if (!dropped) return '';
+
+    const lost = [];
+    if (dropped.stats) lost.push('the time-of-day split behind the visit counts');
+    if (dropped.colours) lost.push('group colours');
+    if (!lost.length) return '';
+
+    return ` It also held ${summarize(lost)}, which this add-on has nowhere to keep.`;
+  }
+
   /** "3 groups, 12 tiles and your settings" - what an import actually did. */
   function summarize(parts) {
     if (parts.length < 2) return parts[0] || 'nothing';
@@ -861,7 +1011,8 @@
 
   const plural = (n, word) => `${n} ${word}${n === 1 ? '' : 's'}`;
 
-  async function applyImport(sections) {
+  async function applyImport(doc) {
+    const sections = doc.sections;
     const done = [];
     // The picture is the one part that can be refused on its own (too big for
     // the storage area), and the least of what a backup carries - so it is
@@ -880,10 +1031,17 @@
     }
 
     if ('settings' in sections) {
-      // Coerced first, so a key the file is missing comes back as its default
-      // rather than keeping whatever is set now: this is a restore, not a merge.
-      settings = await Store.saveSettings(Schema.coerce(sections.settings));
-      done.push('your settings');
+      // One of ours is coerced first, so a key it is missing comes back as its
+      // default rather than keeping whatever is set now: a restore, not a merge.
+      //
+      // A file from another add-on is the other way about. It speaks to a
+      // handful of settings and says nothing at all about the rest, so it is
+      // merged in - importing one should not put the accent colour back to
+      // blue on the way past.
+      settings = await Store.saveSettings(doc.partialSettings
+        ? sections.settings
+        : Schema.coerce(sections.settings));
+      done.push(doc.partialSettings ? 'some settings' : 'your settings');
     }
 
     if ('background' in sections) {
@@ -904,10 +1062,13 @@
     render();
 
     const refused = 'The background picture would not fit, so it was left as it is.';
+    const from = doc.source ? ` from a ${doc.source} backup` : '';
     // A backup of nothing but a picture that was then refused restored nothing
     // at all, so there is only the refusal to report.
     const text = done.length
-      ? `Restored ${summarize(done)}.` + (pictureFailed ? ' ' + refused : '')
+      ? `Restored ${summarize(done)}${from}.`
+        + (pictureFailed ? ' ' + refused : '')
+        + leftBehind(doc.dropped)
       : refused;
 
     // Every control in the dialog is now showing a value that changed under it,
@@ -935,6 +1096,16 @@
     return { value: null };
   }
 
+  /**
+   * Settings the grid is built from rather than styled by: a custom property
+   * cannot add a badge, take the + away or put the tiles in another order, so
+   * these are the ones worth tearing the grid down for. Everything else is a
+   * variable the stylesheet already reads.
+   */
+  const REBUILDS_GRID = new Set([
+    'openInNewTab', 'showVisits', 'showAddButton', 'tileOrder'
+  ]);
+
   async function onSettingChange(key, value) {
     if (key === 'font') return changeFont(value);
     if (key === 'reset') return resetSettings();
@@ -943,8 +1114,7 @@
     if (key === 'backup') return changeTransfer(value);
 
     const effective = updateSetting(key, value);
-    // These change the tile markup itself, not just a variable.
-    if (key === 'openInNewTab') render();
+    if (REBUILDS_GRID.has(key)) render();
     return { value: effective };
   }
 
@@ -1025,9 +1195,17 @@
   (async function init() {
     Icons.hydrate();
 
-    [tiles, groups, settings, background] = await Promise.all([
-      Store.load(), Store.loadGroups(), Store.loadSettings(), Store.loadBackground()
+    let remembered;
+    [tiles, groups, settings, background, remembered] = await Promise.all([
+      Store.load(), Store.loadGroups(), Store.loadSettings(), Store.loadBackground(),
+      Store.loadActiveGroup()
     ]);
+
+    // A group that has since been deleted is no group at all, and starting on
+    // it would show an empty grid with no way to tell why.
+    if (settings.keepGroup && groups.some(group => group.id === remembered)) {
+      activeGroup = remembered;
+    }
 
     trackPageShape();
     applySettings();
@@ -1061,13 +1239,20 @@
         // baked into a tile's markup are worth tearing the grid down for -
         // rebuilding it sends every icon back to the network.
         if (before.font !== settings.font) Fonts.use(settings.font).catch(() => {});
-        if (before.openInNewTab !== settings.openInNewTab
-            || before.deepIcons !== settings.deepIcons) render();
+        if (before.deepIcons !== settings.deepIcons
+            || [...REBUILDS_GRID].some(key => before[key] !== settings[key])) render();
         if (!settingsModal.hidden) mountSettings();
       } else if (key === 'background') {
         background = value;
         Backgrounds.apply(background);
         if (!settingsModal.hidden) mountSettings();
+      } else if (key === 'activeGroup') {
+        // Which group is being looked at is shared, the way everything else
+        // here is - so picking one moves every open new tab to it.
+        if (!settings.keepGroup) return;
+        activeGroup = groups.some(group => group.id === value) ? value : null;
+        renderGroups();
+        render();
       }
     });
   })();

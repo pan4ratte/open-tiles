@@ -87,15 +87,18 @@ them and are written to storage in the background.
 | Appearance | Theme — system / dark / light | System |
 | | Accent colour | `#007AFF` (systemBlue) |
 | | Font — any Google Fonts family | Inter |
-| Background | Picture — a file from this computer | none |
+| Background | Picture — a file, or a web address | none |
 | | Blur — 0–40px | 0px |
 | | Dim — 0–90% | 35% |
 | Layout · Grid | Columns — auto, or 3–12 | Auto |
 | | Tile size — 72–200px (the width) | 116px |
 | | Spacing — 4–48px | 18px |
+| | Order — manual / most visited | Manual |
 | Layout · Tiles | Shape — square / circular / 3:2 / 16:10 / 16:9 | Square |
 | | Logo padding — 0–40% | 20% |
 | | Show site names | on |
+| | Show visit counts | off |
+| | Show the add button | on |
 | | Open sites in a new tab | off |
 | | Deep icon lookup | off |
 | Header | Show the clock | on |
@@ -103,6 +106,7 @@ them and are written to storage in the background.
 | | Show the date | off |
 | Groups | Appearance — floating / status bar | Floating |
 | | Display — always / on hover | Always |
+| | Remember the open group | on |
 | | Alignment — left / centre / right *(status bar)* | Centre |
 | | Position — top / bottom *(status bar)* | Top |
 | Other | Backup — export / import | — |
@@ -222,6 +226,13 @@ extension storage at full size. Files under 800 KB are stored byte for byte,
 which keeps SVGs and animated GIFs whole. The picture is stored as a `data:`
 URI, so the new tab paints offline and no request goes out when you open one.
 
+A picture can also be named by **web address** instead — paste one under the
+*Choose file* button. Nothing is downloaded into storage, only the address, so
+there is no size limit and no re-encoding; the cost is that the browser fetches
+it on every new tab, and an address that stops working takes the background with
+it. The address is loaded once before it is accepted, so a typo is caught there
+rather than becoming a blank page nobody can explain.
+
 The picture appears behind the tiles the moment it is chosen — it goes on screen
 before it is written to storage, not after. The preview in the dialog runs the
 full width of the panel, is shaped like the window and is cropped the same way
@@ -283,6 +294,94 @@ what it carried.
 
 Import replaces without asking, the same way **Reset all** and deleting a tile
 do. Export first if there is anything on the page you would want back.
+
+### Coming from another add-on
+
+**Import** also reads a backup written by **Speed Dial 2** — the same button,
+no separate menu item. When the envelope is not ours, `src/importers.js` is
+asked whether it knows the shape, and what it hands back is the same set of
+sections, sanitized on the way in exactly like a native file.
+
+| Speed Dial 2 | Tiles |
+| --- | --- |
+| `dials[].title` / `.url` | the tile |
+| `dials[].thumbnail` | its [own icon](#tile-icons) |
+| `dials[].visits` | its [visit count](#visit-counts) |
+| `dials[].idgroup` | its group |
+| `dials[].position` | its place in the grid |
+| `groups[].title` / `.position` | the group and its place in the bar |
+| `preferences.columns` | Columns |
+| `preferences.spacing` | Spacing |
+| `preferences.openInNewTab` | Open sites in a new tab |
+| `preferences.showAddButton` | Show the add button |
+| `preferences.keepActiveGroup` | Remember the open group |
+| `preferences.orderBy` — `visits` | Order — *Most visited* |
+| `bookmarks.showTitle` | Show site names |
+| `bookmarks.showVisits` | Show visit counts |
+| `bookmarks.thumbnailRatio` | Logo padding *(the same number, inverted)* |
+| `theme.theme` — `auto` | Theme — *System* |
+| `theme.font` | Font, unless it is `default` |
+| `theme.dark.backgroundImage` | the background, as a web address |
+
+Two things are worth knowing about the shape of that conversion:
+
+- **Order.** Speed Dial 2 numbers each dial *within* its group; Tiles keeps one
+  flat list and filters it. So the dials are laid out group by group, in the
+  file's group order and by `position` inside each — which is what makes every
+  group's page read the way it did over there. Dials sharing a position (it
+  happens) keep their file order behind it.
+- **The default group.** `home` is a real group there, holding a set of tiles
+  that is *not* the same as "All", so it comes across as a group of its own
+  rather than being flattened into the loose pile.
+- **The background.** Speed Dial 2 keeps one picture per theme; Tiles has a
+  single background, so the dark one wins where both are set — it is the one
+  chosen against tiles rather than against a white page.
+
+Settings are the one section that arrives **partial**. Another add-on's
+preferences overlap ours in a handful of places and say nothing about the rest,
+so they are merged into what is already set rather than replacing it — importing
+one does not put the accent colour back to blue on the way past. That is what
+`partialSettings` on the read result carries.
+
+What Tiles still has nowhere to keep is named in the status line rather than
+dropped in silence: the **time-of-day split** behind the visit totals
+(`visits_morning` and friends — the totals themselves come across), **group
+colours**, and `ts_created`. Preferences with no counterpart here —
+`maxWidth`, `fontSize`, `borderRadius`, `padding`, `shadow`, the sidebar
+options, the per-theme text and interface colours — are simply not read.
+
+## Tile icons
+
+A tile normally finds its own picture — see [Site icons](#site-icons) below.
+Any tile can override that with one of its own: right-click it and fill in
+**Icon**, either as a web address or by choosing a file. A set icon is drawn
+straight away and the lookup never runs, so it is also the way to fix a site
+whose own icon is wrong, ugly, or missing.
+
+A chosen file is scaled to fit 256px and kept inline as a PNG — transparent, so
+a logo sits on the tile rather than in a white box, and fitted rather than
+cropped so a wide wordmark keeps its ends. Files under 32 KB are stored byte
+for byte, which keeps SVGs sharp. An icon is capped at 256 KB: the tile list is
+rewritten on every drag, so nothing on it may grow to the size of a background.
+
+Only `https:`, `http:` and `data:image/` are accepted. Anything else — a
+`javascript:` address in a hand-edited or imported file, most of all — is
+dropped on the way into storage.
+
+## Visit counts
+
+Opening a site from the new tab counts a visit against its tile. Turn
+**Layout → Tiles → Show visit counts** on to see the number in the corner of
+each tile, and **Layout → Grid → Order → Most visited** to sort the grid by it.
+
+Sorting is a *view*, not a rewrite: the order you dragged tiles into is left in
+storage untouched, so turning *Most visited* back off puts the grid back exactly
+as it was. While it is on, dragging a tile to a new place no longer sticks —
+there is nothing for it to stick to.
+
+The count is written as the click happens rather than batched, because this page
+is usually on its way out at that moment. A count lost now and then is the
+price, and it is the right thing to lose.
 
 ## Icons
 
@@ -381,6 +480,7 @@ permissions are needed. Leaving the field empty falls back to the system font.
 | `src/fonts.js` | `Fonts` — Google Fonts loading and caching |
 | `src/backgrounds.js` | `Backgrounds` — the page picture: encoding, limits, painting |
 | `src/transfer.js` | `Transfer` — backup files: the envelope, reading and writing |
+| `src/importers.js` | `Importers` — backups written by other add-ons |
 | `src/favicons.js` | `Favicons` — site icon discovery and caching |
 | `src/settings.js` | `SettingsUI` — renders the settings dialog from the schema |
 | `src/newtab.js` | Rendering, drag & drop reordering, wiring |
@@ -389,6 +489,7 @@ permissions are needed. Leaving the field empty falls back to the system font.
 | `test/groups.test.js` | Guards groups, conditional fields and the markup's ids |
 | `test/live.test.js` | Guards the change feed, the subsections and the accent picker |
 | `test/transfer.test.js` | Guards the backup envelope, its refusals and the buttons |
+| `test/importers.test.js` | Guards reading another add-on's backup |
 | `test/dom-shim.js` | The scrap of DOM every test runs the dialog against |
 | `fonts/` | Bundled Inter (variable) + its `@font-face` rules |
 | `icons/icon.svg` | Toolbar / add-on manager icon (Lucide `layout-grid`) |
@@ -397,10 +498,11 @@ permissions are needed. Leaving the field empty falls back to the system font.
 
 | Key | Shape |
 | --- | --- |
-| `tiles` | `[{ id, url, title, groupId }]` — `groupId` is `null` when loose |
+| `tiles` | `[{ id, url, title, groupId, icon, visits }]` — `groupId` is `null` when loose; `icon` is `''` when the site's own is looked up |
 | `groups` | `[{ id, name }]` |
+| `activeGroup` | id of the group last shown, or `null` for *All* |
 | `settings` | see `src/schema.js` |
-| `background` | `{ src, name, savedAt }`, or `null` |
+| `background` | `{ src, name, savedAt }`, or `null` — `src` is a `data:` URI or a web address |
 | `fontCache` | `{ [family]: { css, savedAt } }` |
 | `iconCache` | `{ [origin]: { url, size, mode, savedAt } }` |
 
@@ -421,8 +523,8 @@ with a large photo.
 ## Tests
 
 Several things here fail quietly rather than loudly, so each is guarded. They
-run the real `schema.js`, `settings.js`, `storage.js` and `transfer.js` against
-a small DOM shim — no browser, no dependencies:
+run the real `schema.js`, `settings.js`, `storage.js`, `transfer.js` and
+`importers.js` against a small DOM shim — no browser, no dependencies:
 
 ```
 node test/gesture.test.js      # the permission user-gesture chain
@@ -430,6 +532,7 @@ node test/background.test.js   # the background picker and the settings tabs
 node test/groups.test.js       # groups, conditional fields, markup ids
 node test/live.test.js         # the change feed, subsections, the accent picker
 node test/transfer.test.js     # the backup envelope, its refusals, the buttons
+node test/importers.test.js    # reading a Speed Dial 2 backup
 ```
 
 The last of those also checks that every `getElementById` in `src/newtab.js`

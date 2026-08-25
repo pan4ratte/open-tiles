@@ -87,8 +87,9 @@ const Schema = (() => {
           // Stored under its own key, not in settings - see the header above.
           external: true,
           busyText: 'Working on it…',
-          note: 'A file from this computer, up to 6 MB. Large pictures are '
-              + 'scaled down to fit; the preview shows the crop you will get.'
+          note: 'A file from this computer, up to 6 MB — or a web address, which '
+              + 'is fetched fresh on every new tab. Large files are scaled down '
+              + 'to fit; the preview shows the crop you will get.'
         },
         { key: 'bgBlur', label: 'Blur', type: 'range', default: 0, min: 0, max: 40, step: 2, unit: 'px' },
         {
@@ -124,7 +125,20 @@ const Schema = (() => {
               note: 'Auto fits as many tiles per row as the window allows.'
             },
             { key: 'tileSize', label: 'Tile size', type: 'range', default: 116, min: 72, max: 200, step: 4, unit: 'px' },
-            { key: 'gap', label: 'Spacing', type: 'range', default: 18, min: 4, max: 48, step: 2, unit: 'px' }
+            { key: 'gap', label: 'Spacing', type: 'range', default: 18, min: 4, max: 48, step: 2, unit: 'px' },
+            {
+              key: 'tileOrder',
+              label: 'Order',
+              type: 'segmented',
+              default: 'manual',
+              options: [
+                { value: 'manual', label: 'Manual' },
+                { value: 'visits', label: 'Most visited' }
+              ],
+              note: 'Manual is the order you drag them into. Most visited sorts '
+                  + 'by how often you have opened each one from here, so dragging '
+                  + 'a tile to a new place stops sticking.'
+            }
           ]
         },
         {
@@ -158,6 +172,22 @@ const Schema = (() => {
                   + 'icon. At 0% the icon fills what the shape and the name leave.'
             },
             { key: 'showLabels', label: 'Show site names', type: 'toggle', default: true },
+            {
+              key: 'showVisits',
+              label: 'Show visit counts',
+              type: 'toggle',
+              default: false,
+              note: 'Puts the number of times you have opened a site from here '
+                  + 'in the corner of its tile.'
+            },
+            {
+              key: 'showAddButton',
+              label: 'Show the add button',
+              type: 'toggle',
+              default: true,
+              note: 'The dotted + at the end of the grid. With it off, the + in '
+                  + 'the toolbar is how a tile gets added.'
+            },
             { key: 'openInNewTab', label: 'Open sites in a new tab', type: 'toggle', default: false },
             {
               key: 'deepIcons',
@@ -215,6 +245,14 @@ const Schema = (() => {
           ],
           note: 'On hover keeps the block out of the way until the pointer '
               + 'reaches it - or until a group is picked.'
+        },
+        {
+          key: 'keepGroup',
+          label: 'Remember the open group',
+          type: 'toggle',
+          default: true,
+          note: 'Opens a new tab on the group you were last looking at. With it '
+              + 'off, every new tab starts on All.'
         },
         {
           key: 'groupAlign',

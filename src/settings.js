@@ -596,7 +596,7 @@ const SettingsUI = (() => {
    * that ends up behind the tiles - blur and dim included, both scaled down to
    * the size of the preview so they look the way they will full size.
    *
-   * `commit` is handed one of `{action:'file'|'clear'}` and answers with
+   * `commit` is handed one of `{action:'file'|'url'|'clear'}` and answers with
    * `{record}` - the picture that took effect, or null. A refusal comes back
    * without a `record`, so the preview keeps showing what is really on screen.
    */
@@ -686,11 +686,45 @@ const SettingsUI = (() => {
       if (dropped) send({ action: 'file', file: dropped });
     });
 
+    // A picture that lives on the web rather than on this computer. It is the
+    // second row, not the first: a local file is the case that works offline
+    // and the one most people want.
+    const address = document.createElement('div');
+    address.className = 'bgfield__url';
+
+    const url = document.createElement('input');
+    url.type = 'text';
+    url.className = 'field__input';
+    url.placeholder = 'or paste a web address…';
+    url.autocomplete = 'off';
+    url.spellcheck = false;
+
+    const useUrl = document.createElement('button');
+    useUrl.type = 'button';
+    useUrl.className = 'btn btn--sm';
+    useUrl.append(document.createTextNode('Use'));
+
+    const sendUrl = () => {
+      const value = url.value.trim();
+      if (value) send({ action: 'url', url: value });
+    };
+
+    useUrl.addEventListener('click', sendUrl);
+    url.addEventListener('keydown', e => {
+      if (e.key !== 'Enter') return;
+      // The dialog is inside a <form>; Enter here means "use this address",
+      // not "submit and close".
+      e.preventDefault();
+      sendUrl();
+    });
+
+    address.append(url, useUrl);
+
     const actions = document.createElement('div');
     actions.className = 'bgfield__actions';
     actions.append(choose, remove, file);
 
-    wrap.append(preview, caption, actions);
+    wrap.append(preview, caption, actions, address);
     showRecord(value);
     trackPreviewScale(preview);
 

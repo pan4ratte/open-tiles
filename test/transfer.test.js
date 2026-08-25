@@ -16,7 +16,8 @@
  *     the row that was waiting to report how it went - so the restore lands
  *     with no word of what happened.
  *
- * Runs the real schema.js, transfer.js and settings.js against the DOM shim.
+ * Runs the real schema.js, importers.js, transfer.js and settings.js against
+ * the DOM shim.
  *
  *   node test/transfer.test.js [path/to/src]
  */
@@ -68,7 +69,7 @@ const sandbox = {
 };
 vm.createContext(sandbox);
 
-for (const file of ['schema.js', 'transfer.js', 'settings.js']) {
+for (const file of ['schema.js', 'importers.js', 'transfer.js', 'settings.js']) {
   vm.runInContext(fs.readFileSync(path.join(SRC, file), 'utf8'), sandbox, { filename: file });
 }
 
@@ -83,7 +84,10 @@ const check = (name, pass, detail = '') => results.push({ name, pass, detail });
 
 const STATE = {
   settings: { ...Schema.DEFAULTS, accent: '#ff9500', columns: 6 },
-  tiles: [{ id: 't1', url: 'https://example.com', title: 'Example', groupId: 'g1' }],
+  tiles: [{
+    id: 't1', url: 'https://example.com', title: 'Example', groupId: 'g1',
+    icon: 'https://example.com/logo.svg', visits: 17
+  }],
   groups: [{ id: 'g1', name: 'Work' }],
   background: { src: 'data:image/png;base64,AAA', name: 'holiday.png', savedAt: 1 }
 };
@@ -204,8 +208,9 @@ const settle = () => new Promise(resolve => setTimeout(resolve, 5));
 
   await reject('a file that is not JSON is refused', fileOf('hello'), 'valid JSON');
   await reject('another program’s JSON is refused',
-    fileOf('{"format":"other"}'), 'not a Tiles backup');
-  await reject('a bare array is refused', fileOf('[1,2,3]'), 'not a Tiles backup');
+    fileOf('{"format":"other"}'), 'not a backup file this add-on can read');
+  await reject('a bare array is refused', fileOf('[1,2,3]'),
+    'not a backup file this add-on can read');
   await reject('an empty backup is refused',
     fileOf(JSON.stringify({ format: 'tiles-backup', version: 1 })), 'nothing in it');
   await reject('an unreadable file is refused', { name: 'x', size: 10 }, 'could not be read');
@@ -218,7 +223,28 @@ const settle = () => new Promise(resolve => setTimeout(resolve, 5));
     Object.keys(back.sections).join(', '));
   check('its tiles survive the trip',
     back.sections.tiles[0].url === 'https://example.com');
+  check('a tile’s own icon and visit count survive the trip',
+    back.sections.tiles[0].icon === 'https://example.com/logo.svg'
+      && back.sections.tiles[0].visits === 17,
+    back.sections.tiles[0].icon + ' / ' + back.sections.tiles[0].visits);
   check('its version comes back with it', back.version === Transfer.VERSION);
+  check('one of ours is not a foreign file',
+    back.source === null && back.partialSettings === false, String(back.source));
+
+  // A file another add-on wrote comes in through the same call and comes out
+  // as the same sections - see importers.js.
+  const foreign = await Transfer.read(fileOf(JSON.stringify({
+    dials: [{ id: 1, title: 'A', url: 'https://a.example', position: 0, idgroup: 0 }],
+    groups: [{ id: 0, title: 'home', position: 0 }],
+    preferences: { columns: 6 }
+  })));
+  check('a Speed Dial 2 file is read by the same call',
+    foreign.source === 'Speed Dial 2', String(foreign.source));
+  check('and comes out as ordinary sections',
+    foreign.sections.tiles[0].url === 'https://a.example'
+      && foreign.sections.groups[0].name === 'home');
+  check('its settings are marked partial, so they merge rather than replace',
+    foreign.partialSettings === true);
 
   const some = await Transfer.read(fileOf(Transfer.serialize({ groups: STATE.groups })));
   check('a partial backup reports only what it holds',

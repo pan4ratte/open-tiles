@@ -17,6 +17,11 @@
  * of a backup - a picture is megabytes where the rest is kilobytes. It is the
  * half of "how my new tab looks" that would be tedious to set up again, so it
  * travels with the rest.
+ *
+ * A file another add-on wrote is read through the same door: when the envelope
+ * is not ours, importers.js is asked whether it knows the shape, and what it
+ * hands back is the same set of sections. So there is one Import button, not
+ * one per add-on somebody might be coming from.
  */
 const Transfer = (() => {
   const FORMAT = 'tiles-backup';
@@ -105,7 +110,9 @@ const Transfer = (() => {
    * re-sanitized downstream, a file from a later build degrades to the parts
    * this one understands instead of being refused outright.
    *
-   * @returns {Promise<{version:number, savedAt:string, sections:object}>}
+   * @returns {Promise<{version:number, savedAt:string, source:?string,
+   *   partialSettings:boolean, dropped:?object, sections:object}>}
+   *   `source` names the add-on a foreign file came from, and is null for ours
    * @throws {Error} with a message fit to show the user
    */
   async function read(file) {
@@ -121,8 +128,25 @@ const Transfer = (() => {
       throw err instanceof SyntaxError ? new Error('That file is not valid JSON.') : err;
     }
 
-    if (!doc || typeof doc !== 'object' || doc.format !== FORMAT) {
-      throw new Error('That is not a Tiles backup file.');
+    if (!doc || typeof doc !== 'object') {
+      throw new Error('That is not a backup file this add-on can read.');
+    }
+
+    // Ours by its envelope; otherwise, one somebody else wrote that the
+    // importers know how to turn into the same sections.
+    if (doc.format !== FORMAT) {
+      const foreign = Importers.read(doc);
+      if (!foreign) {
+        throw new Error('That is not a backup file this add-on can read.');
+      }
+      return {
+        version: 0,
+        savedAt: '',
+        source: foreign.source,
+        partialSettings: foreign.partialSettings,
+        dropped: foreign.dropped,
+        sections: foreign.sections
+      };
     }
 
     const sections = {};
@@ -137,6 +161,11 @@ const Transfer = (() => {
     return {
       version: Number(doc.version) || 0,
       savedAt: typeof doc.savedAt === 'string' ? doc.savedAt : '',
+      source: null,
+      // Ours describes the whole of what it carries, so its settings replace
+      // rather than merge - see importers.js.
+      partialSettings: false,
+      dropped: null,
       sections
     };
   }

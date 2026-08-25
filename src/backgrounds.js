@@ -102,6 +102,52 @@ const Backgrounds = (() => {
     };
   }
 
+  /** How long to wait for a named picture to prove it is one. */
+  const PROBE_TIMEOUT = 10000;
+
+  /**
+   * A picture named by web address rather than stored.
+   *
+   * Nothing is downloaded into storage - only the address is kept, and the
+   * browser fetches the picture on every new tab. That is the trade: no size
+   * limit and no re-encoding, against a page that needs the network to look
+   * right and an address that can stop working without warning.
+   *
+   * It is loaded once before being accepted, so a typo is caught here rather
+   * than becoming a blank background nobody can explain.
+   */
+  async function fromUrl(raw) {
+    const address = String(raw == null ? '' : raw).trim();
+    if (!/^https?:\/\//i.test(address)) {
+      throw new Error('That needs to be a web address starting http:// or https://.');
+    }
+
+    await new Promise((resolve, reject) => {
+      const probe = new Image();
+      const timer = setTimeout(() => {
+        probe.src = '';
+        reject(new Error('That address took too long to answer.'));
+      }, PROBE_TIMEOUT);
+
+      probe.onload = () => { clearTimeout(timer); resolve(); };
+      probe.onerror = () => {
+        clearTimeout(timer);
+        reject(new Error('Nothing loaded from that address — is it a picture?'));
+      };
+      probe.referrerPolicy = 'no-referrer';
+      probe.src = address;
+    });
+
+    let name = address;
+    try {
+      name = new URL(address).hostname;
+    } catch {
+      // Loaded, so it is usable; only the caption is the poorer for it.
+    }
+
+    return { src: address, name: name.slice(0, 80) };
+  }
+
   // -------------------------------------------------------------- painting
 
   function cssUrl(src) {
@@ -134,5 +180,5 @@ const Backgrounds = (() => {
 
   const clear = () => Store.clearBackground();
 
-  return { MAX_FILE, formatSize, fromFile, apply, load, save, clear };
+  return { MAX_FILE, formatSize, fromFile, fromUrl, apply, load, save, clear };
 })();

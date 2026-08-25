@@ -320,8 +320,68 @@ const Favicons = (() => {
     return job;
   }
 
+  // ------------------------------------------------- an icon from a file
+
+  /** As wide as a tile's logo ever needs to be, on the densest screen. */
+  const OWN_ICON_DIM = 256;
+  /** Files at or under this are kept byte for byte, which keeps SVGs whole. */
+  const OWN_ICON_DIRECT = 32 * 1024;
+  /** Refused outright: an icon is not a photograph. */
+  const OWN_ICON_MAX = 4 * 1024 * 1024;
+
+  function readAsDataUrl(blob) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(String(reader.result));
+      reader.onerror = () => reject(new Error('That file could not be read.'));
+      reader.readAsDataURL(blob);
+    });
+  }
+
+  /**
+   * Turns a picked file into a data: URI small enough to sit on a tile record.
+   *
+   * Kept square and transparent - PNG, not JPEG - because a logo on a tile is
+   * drawn over whatever the tile's background is, and a white box around it
+   * would show. The picture is fitted inside the square rather than cropped to
+   * it, so a wide wordmark keeps its ends.
+   *
+   * @returns {Promise<string>} a data: URI
+   * @throws {Error} with a message fit to show the user
+   */
+  async function fromFile(blob) {
+    if (!blob || !/^image\//.test(blob.type || '')) {
+      throw new Error('That is not an image file.');
+    }
+    if (blob.size > OWN_ICON_MAX) {
+      throw new Error('That picture is too large for an icon — pick a smaller one.');
+    }
+    if (blob.size <= OWN_ICON_DIRECT) return readAsDataUrl(blob);
+
+    let bitmap;
+    try {
+      bitmap = await createImageBitmap(blob);
+    } catch {
+      // A format the browser will not decode (some SVGs) is stored as it came.
+      return readAsDataUrl(blob);
+    }
+
+    const scale = Math.min(1, OWN_ICON_DIM / Math.max(bitmap.width, bitmap.height));
+    const width = Math.max(1, Math.round(bitmap.width * scale));
+    const height = Math.max(1, Math.round(bitmap.height * scale));
+
+    const canvas = document.createElement('canvas');
+    canvas.width = width;
+    canvas.height = height;
+    canvas.getContext('2d').drawImage(bitmap, 0, 0, width, height);
+    bitmap.close();
+
+    return canvas.toDataURL('image/png');
+  }
+
   return {
     resolve,
+    fromFile,
     clearCache: () => Store.icons.clear(),
     hasSiteAccess,
     requestSiteAccess,
