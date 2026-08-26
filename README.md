@@ -89,7 +89,7 @@ them and are written to storage in the background.
 | Appearance | Theme — system / dark / light | System |
 | | Accent colour | `#007AFF` (systemBlue) |
 | | Font — any Google Fonts family | Inter |
-| Background | Picture — a file, or a web address | none |
+| Background | Picture or video — a file, or a web address | none |
 | | Blur — 0–40px | 0px |
 | | Dim — 0–90% | 35% |
 | Layout · Grid | Columns — auto, or 3–12 | Auto |
@@ -135,11 +135,11 @@ for a [tile's own background](#its-background), through
 fix.
 
 **Other → Backup** writes everything this add-on keeps — tiles, groups,
-settings and the background picture — to a single `.json` file, and reads one
-back. See [Backup](#backup) below.
+settings and the background — to a single `.json` file, and reads one back. See
+[Backup](#backup) below.
 
 **Other → Reset all** puts every setting back to its default and takes the
-background picture away. Tiles and groups are left alone.
+background away, recent ones included. Tiles and groups are left alone.
 
 The two status-bar-only options carry a `when` in the schema and appear only
 while *Appearance* is set to *Status bar* — a field is hidden, not disabled, so
@@ -187,7 +187,7 @@ Each section also carries a `tint` — the colour of its sidebar square. Adding 
 field to [`src/schema.js`](src/schema.js) is all it takes to add a
 setting — the dialog, the defaults and the validation all read from there. A
 field marked `external` renders in the dialog but keeps its value somewhere
-other than `settings`, which is how the background picture stays out of an
+other than `settings`, which is how the background stays out of an
 object that is rewritten on every slider drag.
 
 ## Groups
@@ -221,42 +221,77 @@ characters.
 
 ## Background
 
-Settings → *Background* → **Choose file** takes any image on this computer; you
-can also drop one straight onto the preview. **Six megabytes is the ceiling** —
-a file over it is refused on the spot, with a notice naming its size and the
-limit, rather than being read and quietly dropped later.
+Settings → *Background* → **Choose file** takes any image or video on this
+computer; you can also drop one straight onto the preview. **Six megabytes is
+the ceiling for a picture, sixteen for a video** — a file over it is refused on
+the spot, with a notice naming its size and the limit, rather than being read
+and quietly dropped later.
 
-Under that ceiling, anything larger than 2560px on its longest edge is scaled
+Under that ceiling, a picture larger than 2560px on its longest edge is scaled
 down to fit and re-encoded as JPEG, so a phone photo does not have to fit in
 extension storage at full size. Files under 800 KB are stored byte for byte,
-which keeps SVGs and animated GIFs whole. The picture is stored as a `data:`
+which keeps SVGs and animated GIFs whole. Either way it is stored as a `data:`
 URI, so the new tab paints offline and no request goes out when you open one.
 
-A picture can also be named by **web address** instead — paste one under the
+A video gets none of that treatment: nothing here can shorten one or re-encode
+it, so the only lever is the higher ceiling, which is why it is the one kind of
+file the add-on will refuse without offering to shrink it. It is opened once
+before it is accepted, so a container this browser cannot decode is caught there
+rather than becoming a black page. On screen it is muted, looped and played
+inline, which is what lets it start without a click.
+
+Either kind can be named by **web address** instead — paste one under the
 *Choose file* button. Nothing is downloaded into storage, only the address, so
 there is no size limit and no re-encoding; the cost is that the browser fetches
 it on every new tab, and an address that stops working takes the background with
-it. The address is loaded once before it is accepted, so a typo is caught there
-rather than becoming a blank page nobody can explain.
+it. For a video it is also the only way to have one longer than the storage
+ceiling allows. The address is loaded once before it is accepted, so a typo is
+caught there rather than becoming a blank page nobody can explain — and what
+loads is what decides which of the two it is. Both are tried at once rather than
+in turn, because an address need not end in anything that gives it away
+(`…/loop.mp4?v=2` and a CDN path with no extension both work), and a dead
+address should cost one wait rather than two.
 
-The picture appears behind the tiles the moment it is chosen — it goes on screen
-before it is written to storage, not after. The preview in the dialog runs the
-full width of the panel, is shaped like the window and is cropped the same way
-(`cover`, centred), so what it shows is what ends up behind the tiles — *Blur*
-and *Dim* included. The blur radius is scaled by the preview's width against the
-window's, so a 40px blur reads at the same strength in a 500px preview as it
-does full size.
+The **last five backgrounds** are kept in a strip under the picker, newest
+first, so one can be put back without going to find the file again. The one on
+screen is marked rather than left out, and moving ones carry a play badge, since
+a thumbnail of a video is a still. Choosing one again moves it up the strip
+rather than repeating it. Removing the background leaves the strip alone —
+putting back what was just taken away is most of what it is for — while *Reset
+all* clears it, because leaving five stored pictures a click from being back is
+not what "take the background away" says.
 
-*Blur* and *Dim* apply to the picture only, not to what stands on it. Dim fades
-towards the theme colour rather than towards black, so it keeps the text legible
-in light and dark alike. The tiles and the group block are frosted glass either
-way; over a picture they thin out further, so more of it shows through.
+The strip holds whole backgrounds, not thumbnails: a stored one *is* its data
+URI, and there would be nothing to put back from a thumbnail. That makes it the
+heaviest thing in the storage area, so it is capped twice over — five entries,
+and 64 MB between them. One named by web address costs only its address, so a
+strip of those never comes near the ceiling.
+
+The background appears behind the tiles the moment it is chosen — it goes on
+screen before it is written to storage, not after. The preview in the dialog
+runs the full width of the panel, is shaped like the window and is cropped the
+same way (`cover`, centred), so what it shows is what ends up behind the tiles —
+*Blur* and *Dim* included. The blur radius is scaled by the preview's width
+against the window's, so a 40px blur reads at the same strength in a 500px
+preview as it does full size. A video plays in the preview rather than being
+framed there, because what the preview is for is saying what the page will look
+like.
+
+*Blur* and *Dim* apply to the background only, not to what stands on it. Dim
+fades towards black in both themes: dimming towards white washes a picture out
+rather than settling it back. That is why the clock, the date and the settings
+button are lit in both themes once there is a background behind them — they
+stand on the picture with no material of their own, so their ink cannot follow
+the theme without going dark on dark. Everything that does have a material —
+tiles, the group block — is frosted glass either way, and over a picture it
+thins out further so more of it shows through.
 
 ## Backup
 
 Settings → *Other* → **Export** saves everything the add-on keeps to one
 `tiles-backup-YYYY-MM-DD.json` file: your tiles, your groups, every setting and
-the background picture, data URI and all. It is indented, so it is a file you
+the background, data URI and all — the last five are left out, being a history
+rather than a setting. It is indented, so it is a file you
 can open and read. **Import** reads one back.
 
 A backup is an envelope — `format`, `version`, `savedAt` — around four optional
@@ -512,7 +547,7 @@ permissions are needed. Leaving the field empty falls back to the system font.
 | `src/schema.js` | `Schema` — settings definitions, defaults, validation |
 | `src/storage.js` | `Store` — `browser.storage.local` with a localStorage fallback |
 | `src/fonts.js` | `Fonts` — Google Fonts loading and caching |
-| `src/backgrounds.js` | `Backgrounds` — the page picture: encoding, limits, painting |
+| `src/backgrounds.js` | `Backgrounds` — the page background: encoding, limits, painting |
 | `src/transfer.js` | `Transfer` — backup files: the envelope, reading and writing |
 | `src/importers.js` | `Importers` — backups written by other add-ons |
 | `src/favicons.js` | `Favicons` — site icon discovery and caching |
@@ -536,7 +571,8 @@ permissions are needed. Leaving the field empty falls back to the system font.
 | `groups` | `[{ id, name }]` |
 | `activeGroup` | id of the group last shown, or `null` for *All* |
 | `settings` | see `src/schema.js` |
-| `background` | `{ src, name, savedAt }`, or `null` — `src` is a `data:` URI or a web address |
+| `background` | `{ src, name, type, savedAt }`, or `null` — `src` is a `data:` URI or a web address, `type` is `image` or `video` |
+| `bgRecent` | `[background]` — the last five, newest first |
 | `fontCache` | `{ [family]: { css, savedAt } }` |
 | `iconCache` | `{ [origin]: { url, size, mode, savedAt } }` |
 
@@ -550,9 +586,10 @@ a different signature and still gets through. Because
 `src/storage.js` falls back to `localStorage`, you can also open
 `src/newtab.html` directly in a browser to iterate on the UI without reloading
 the extension — only the Google Fonts fetch and the deep icon lookup behave
-differently there. A background picture is the one thing that may not survive
-that route: `localStorage` holds about 5 MB, where extension storage is happy
-with a large photo.
+differently there. The background is the one thing that may not survive
+that route: `localStorage` holds about 5 MB, where extension storage — with
+`unlimitedStorage` asked for in the manifest — is happy with a large photo or a
+video, and with five more of them in the recent strip.
 
 ## Tests
 

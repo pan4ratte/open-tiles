@@ -14,9 +14,11 @@
  * whole job is the envelope: is it ours, and which sections did it bring.
  *
  * The background is carried too, data URI and all, which is most of the weight
- * of a backup - a picture is megabytes where the rest is kilobytes. It is the
- * half of "how my new tab looks" that would be tedious to set up again, so it
- * travels with the rest.
+ * of a backup - a picture is megabytes where the rest is kilobytes, and a
+ * video is more again. It is the half of "how my new tab looks" that would be
+ * tedious to set up again, so it travels with the rest. The list of recent
+ * ones does not: it is a history rather than a setting, and five backgrounds
+ * would make a backup an order of magnitude larger for nothing much.
  *
  * A file another add-on wrote is read through the same door: when the envelope
  * is not ours, importers.js is asked whether it knows the shape, and what it
@@ -27,8 +29,12 @@ const Transfer = (() => {
   const FORMAT = 'tiles-backup';
   const VERSION = 1;
 
-  /** Comfortably past a full backup: 6 MB of picture, base64'd into JSON. */
-  const MAX_FILE = 16 * 1024 * 1024;
+  /**
+   * Comfortably past a full backup. The background sets this: a 16 MB video is
+   * about 21 MB once base64'd into a data URI, and a file this add-on wrote
+   * has to be one it will read back.
+   */
+  const MAX_FILE = 32 * 1024 * 1024;
 
   /** The sections a document may carry, in the order they are written. */
   const SECTIONS = ['settings', 'groups', 'tiles', 'background'];

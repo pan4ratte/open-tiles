@@ -588,17 +588,51 @@ const SettingsUI = (() => {
   }
 
   /**
-   * The background picker: what is on screen now, and a file button that
-   * doubles as a drop target.
+   * A record as the element that can show it: an <img> for a picture, a
+   * <video> for a moving one.
+   *
+   * A video shows as a video in the big preview rather than as a frame of one,
+   * because what the preview is for is saying what the page will look like,
+   * and a still of a moving background does not. In the strip of recent ones
+   * it is the other way about: five films playing at once to pick one from is
+   * noise, so those are left on their first frame with a badge to mark them.
+   */
+  function buildMedia(record, className, live) {
+    const moving = record.type === 'video';
+    const media = document.createElement(moving ? 'video' : 'img');
+    media.className = className;
+
+    if (moving) {
+      // Set before the source, which is what lets a browser autoplay it at
+      // all - a video that is not known to be silent needs a click first.
+      media.muted = true;
+      media.loop = live;
+      media.autoplay = live;
+      media.playsInline = true;
+      media.preload = live ? 'auto' : 'metadata';
+    } else {
+      media.alt = '';
+    }
+
+    media.src = record.src;
+    return media;
+  }
+
+  /**
+   * The background picker: what is on screen now, a file button that doubles
+   * as a drop target, an address to fetch one from, and the last few to go
+   * back to.
    *
    * The preview is shaped like the window (see --page-ratio) and covers, the
-   * same way the page paints the picture, so the crop on show here is the crop
-   * that ends up behind the tiles - blur and dim included, both scaled down to
-   * the size of the preview so they look the way they will full size.
+   * same way the page paints the background, so the crop on show here is the
+   * crop that ends up behind the tiles - blur and dim included, both scaled
+   * down to the size of the preview so they look the way they will full size.
    *
-   * `commit` is handed one of `{action:'file'|'url'|'clear'}` and answers with
-   * `{record}` - the picture that took effect, or null. A refusal comes back
-   * without a `record`, so the preview keeps showing what is really on screen.
+   * `commit` is handed one of `{action:'file'|'url'|'recent'|'clear'}` and
+   * answers with `{record, recent}` - what took effect, and the list as it now
+   * stands. A refusal comes back with neither, so the field keeps showing what
+   * is really on screen; a change that touches only one of the two says only
+   * that much, which is how removing the background leaves the list alone.
    */
   function buildBackground(field, value, commit) {
     const wrap = document.createElement('div');
@@ -612,7 +646,7 @@ const SettingsUI = (() => {
 
     const file = document.createElement('input');
     file.type = 'file';
-    file.accept = 'image/*';
+    file.accept = 'image/*,video/*';
     file.className = 'file-input';
     file.id = 'set-' + field.key;
 
@@ -626,7 +660,16 @@ const SettingsUI = (() => {
     remove.className = 'btn btn--sm btn--danger';
     remove.append(Icons.create('trash-2', { size: 15 }), document.createTextNode('Remove'));
 
+    // The last few, newest first. Its own row under the buttons, and gone
+    // altogether until there is something in it.
+    const strip = document.createElement('div');
+    strip.className = 'bgfield__recent';
+
     // ------------------------------------------------------------ painting
+
+    /** What is on screen, and the list - held so either can be redrawn alone. */
+    let shown = null;
+    let recent = [];
 
     function showRecord(record) {
       const has = Boolean(record && record.src);
@@ -635,29 +678,60 @@ const SettingsUI = (() => {
       preview.classList.toggle('is-empty', !has);
 
       if (has) {
-        const img = document.createElement('img');
-        img.className = 'bgfield__thumb';
-        img.alt = '';
-        img.src = record.src;
-
-        // The same veil the page lays over the picture, reading the same
+        // The same veil the page lays over the background, reading the same
         // custom properties - so the Dim slider moves both at once.
         const veil = document.createElement('div');
         veil.className = 'bgfield__veil';
 
-        preview.append(img, veil);
-        caption.textContent = record.name || 'Local image';
+        preview.append(buildMedia(record, 'bgfield__thumb', true), veil);
+        caption.textContent = record.name || 'Local file';
       } else {
         preview.append(Icons.create('image', { size: 22 }));
-        caption.textContent = 'No picture — drop one here, or choose a file.';
+        caption.textContent = 'Nothing yet — drop a picture or video here, or choose a file.';
       }
 
       remove.hidden = !has;
     }
 
+    function showRecent(list) {
+      strip.textContent = '';
+      strip.hidden = list.length === 0;
+
+      list.forEach(record => {
+        const chip = document.createElement('button');
+        chip.type = 'button';
+        chip.className = 'bgfield__chip';
+        chip.title = record.name || 'Recent background';
+        chip.setAttribute('aria-label', 'Use ' + (record.name || 'this background') + ' again');
+        // The one already on screen is marked rather than left out: a strip
+        // that reshuffles itself as you click through it is hard to aim at.
+        chip.classList.toggle('is-on', Boolean(shown) && shown.src === record.src);
+
+        chip.append(buildMedia(record, 'bgfield__chipmedia', false));
+
+        if (record.type === 'video') {
+          const badge = document.createElement('span');
+          badge.className = 'bgfield__badge';
+          badge.append(Icons.create('play', { size: 9 }));
+          chip.append(badge);
+        }
+
+        chip.addEventListener('click', () => send({ action: 'recent', src: record.src }));
+        strip.append(chip);
+      });
+    }
+
     async function send(payload) {
       const state = (await commit(payload)) || {};
-      if ('record' in state) showRecord(state.record);
+
+      if ('record' in state) {
+        shown = state.record || null;
+        showRecord(shown);
+      }
+      if ('recent' in state) recent = state.recent || [];
+      // Redrawn either way: a new background moves the mark inside the strip
+      // even when the list itself has not changed.
+      if ('record' in state || 'recent' in state) showRecent(recent);
     }
 
     // ------------------------------------------------------------- wiring
@@ -686,9 +760,9 @@ const SettingsUI = (() => {
       if (dropped) send({ action: 'file', file: dropped });
     });
 
-    // A picture that lives on the web rather than on this computer. It is the
-    // second row, not the first: a local file is the case that works offline
-    // and the one most people want.
+    // One that lives on the web rather than on this computer. It is the second
+    // row, not the first: a local file is the case that works offline and the
+    // one most people want.
     const address = document.createElement('div');
     address.className = 'bgfield__url';
 
@@ -724,8 +798,13 @@ const SettingsUI = (() => {
     actions.className = 'bgfield__actions';
     actions.append(choose, remove, file);
 
-    wrap.append(preview, caption, actions, address);
-    showRecord(value);
+    wrap.append(preview, caption, actions, address, strip);
+
+    const held = value || {};
+    shown = held.record || null;
+    recent = held.recent || [];
+    showRecord(shown);
+    showRecent(recent);
     trackPreviewScale(preview);
 
     return { control: wrap, wide: true };

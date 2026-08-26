@@ -151,6 +151,50 @@ Store.onExternalChange((key, value) => heard.push({ key, value }));
     heard.length === 2 && heard[0].key === 'tiles' && heard[1].key === 'groups',
     heard.map(h => h.key).join(', '));
 
+  // ------------------------------------------------------ recent backgrounds
+
+  // What a record is has to survive the round trip, because the two kinds are
+  // painted by different elements: a video read back as a picture is a blank
+  // page with nothing to explain it.
+  const stored = await Store.saveBackground(
+    { src: 'data:video/mp4;base64,AAAA', name: 'loop.mp4', type: 'video' });
+  check('a video keeps its type through storage', stored.type === 'video', stored.type);
+
+  check('a record written before the type existed is read off its address',
+    (await Store.saveBackground({ src: 'https://films.example/loop.mp4' })).type === 'video');
+  check('and a stored picture still reads as one',
+    (await Store.saveBackground({ src: 'data:image/png;base64,AAA' })).type === 'image');
+
+  const remembered = key => ({ src: 'data:image/png;base64,' + key, name: key, type: 'image' });
+  /** One pick, and the moment the browser takes to report it back. */
+  const pick = async key => { await Store.rememberBackground(remembered(key)); await settle(); };
+  const listed = async () => (await Store.loadRecentBackgrounds()).map(r => r.name).join('');
+
+  heard.length = 0;
+  await Store.clearRecentBackgrounds();
+  for (const key of ['A', 'B', 'C']) await pick(key);
+
+  check('the newest background heads the recent list', await listed() === 'CBA', await listed());
+
+  await pick('A');
+  check('choosing one again moves it up rather than repeating it',
+    await listed() === 'ACB', await listed());
+
+  for (const key of ['D', 'E', 'F', 'G']) await pick(key);
+  const capped = await Store.loadRecentBackgrounds();
+  check('the list stops at its ceiling, dropping the oldest',
+    capped.length === Store.MAX_RECENT && await listed() === 'GFEDA',
+    capped.length + ': ' + await listed());
+
+  check('none of that came back as somebody else’s edit',
+    heard.length === 0, heard.map(h => h.key).join(', ') || 'nothing heard');
+
+  area.foreign('bgRecent', [remembered('Z')]);
+  await settle();
+  check('but another new tab page picking a background does arrive',
+    heard.length === 1 && heard[0].key === 'bgRecent' && heard[0].value[0].name === 'Z',
+    heard.map(h => h.key).join(', '));
+
   // ------------------------------------------------------------ subsections
 
   const layout = Schema.SECTIONS.find(section => section.id === 'layout');

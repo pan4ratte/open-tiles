@@ -2,13 +2,18 @@
  * Guards the background picker's side of the settings contract, and the tab
  * strip the dialog is laid out with.
  *
- * Three things here fail quietly rather than loudly:
+ * Five things here fail quietly rather than loudly:
  *
- *   - the picture is an *external* field. If it ever leaked into the settings
- *     object, every slider drag would rewrite megabytes of data URI to storage.
- *   - when a picture is refused (not an image, over the size limit, no room to
- *     store it) the page answers without a `record`, and the preview must keep
- *     showing what is really on screen.
+ *   - the background is an *external* field. If it ever leaked into the
+ *     settings object, every slider drag would rewrite megabytes of data URI
+ *     to storage.
+ *   - when one is refused (neither picture nor video, over the size limit, no
+ *     room to store it) the page answers without a `record`, and the preview
+ *     must keep showing what is really on screen.
+ *   - a moving background has to be built as a <video>. An <img> pointed at an
+ *     MP4 shows nothing, and shows nothing silently.
+ *   - taking the background away must not empty the list of recent ones -
+ *     putting back what was just removed is most of what the list is for.
  *   - every section's controls have to exist whichever tab is open, or the
  *     page's own lookups - and these tests - find nothing.
  *
@@ -46,7 +51,11 @@ const Schema = vm.runInContext('Schema', sandbox);
 const results = [];
 const check = (name, pass, detail = '') => results.push({ name, pass, detail });
 
-const LOCAL = { src: 'data:image/png;base64,AAA', name: 'holiday.png' };
+const LOCAL = { src: 'data:image/png;base64,AAA', name: 'holiday.png', type: 'image' };
+const MOVING = { src: 'https://films.example/loop.mp4', name: 'films.example', type: 'video' };
+const OLDER = { src: 'data:image/png;base64,CCC', name: 'hills.png', type: 'image' };
+const RECENT = [LOCAL, MOVING, OLDER];
+
 const FILE = { name: 'beach.jpg', type: 'image/jpeg', size: 1024 };
 
 /** Whatever the page should answer next, and every payload it was sent. */
@@ -55,7 +64,7 @@ let answer = {};
 
 const container = new El('div');
 SettingsUI.mount(container, {
-  values: { ...Schema.DEFAULTS, background: LOCAL },
+  values: { ...Schema.DEFAULTS, background: { record: LOCAL, recent: RECENT } },
   onChange: async (key, value) => {
     sent.push({ key, value });
     return { value: answer };
@@ -67,8 +76,12 @@ const at = cls => field.find(el => el.className.includes(cls));
 
 const preview = at('bgfield__preview');
 const caption = at('bgfield__caption');
+const strip = at('bgfield__recent');
 const fileInput = field.find(el => el.tagName === 'input' && el.type === 'file');
 const removeBtn = field.findAll(el => el.className.includes('btn--danger'))[0];
+
+const chips = () => strip.findAll(el => el.className.includes('bgfield__chip')
+  && !el.className.includes('chipmedia'));
 
 // ------------------------------------------------------------- the contract
 
@@ -100,8 +113,25 @@ check('the picker rendered', Boolean(field));
 check('it shows the picture it was handed',
   caption.textContent.includes('holiday.png'), caption.textContent);
 check('it offers a file input', Boolean(fileInput));
+check('the file button takes videos as well as pictures',
+  fileInput.accept === 'image/*,video/*', fileInput.accept);
 check('it offers no search box',
   !field.find(el => el.tagName === 'input' && el.type === 'search'));
+
+// ------------------------------------------------------------- recent ones
+
+check('the recent strip holds one chip per background',
+  chips().length === RECENT.length, chips().length + ' chips');
+check('the one on screen is marked',
+  chips()[0].className.includes('is-on') && !chips()[1].className.includes('is-on'));
+check('a moving one is badged, a still one is not',
+  Boolean(chips()[1].find(el => el.className.includes('bgfield__badge')))
+    && !chips()[0].find(el => el.className.includes('bgfield__badge')));
+check('a still one is drawn as an image, a moving one as a video',
+  Boolean(chips()[0].find(el => el.tagName === 'img'))
+    && Boolean(chips()[1].find(el => el.tagName === 'video')));
+check('the preview draws the still picture it was handed as an image',
+  Boolean(preview.find(el => el.tagName === 'img')));
 
 // ------------------------------------------------------------------- tabs
 
@@ -135,8 +165,10 @@ check('clicking a tab opens its panel and closes the last',
 const settle = () => new Promise(resolve => setTimeout(resolve, 0));
 
 (async () => {
-  // Choosing a file asks the page for it, and the page answers with the record.
-  answer = { record: { src: 'data:image/jpeg;base64,BBB', name: 'beach.jpg' } };
+  // Choosing a file asks the page for it, and the page answers with the record
+  // and the list it now heads.
+  const BEACH = { src: 'data:image/jpeg;base64,BBB', name: 'beach.jpg', type: 'image' };
+  answer = { record: BEACH, recent: [BEACH, ...RECENT.slice(0, 2)] };
   fileInput.files = [FILE];
   fileInput.fire('change');
   await settle();
@@ -147,8 +179,35 @@ const settle = () => new Promise(resolve => setTimeout(resolve, 0));
     String(call.value.action));
   check('the preview shows the picture that took',
     caption.textContent.includes('beach.jpg'), caption.textContent);
+  check('the new one heads the recent strip, and is the one marked',
+    chips().length === 3 && chips()[0].className.includes('is-on')
+      && !chips()[1].className.includes('is-on'),
+    chips().length + ' chips');
 
-  // A refusal answers without a record, so the preview must not budge.
+  // Clicking a recent one names it by address - the page holds the records.
+  chips()[1].fire('click');
+  await settle();
+
+  check('clicking a recent one asks the page for it by address',
+    sent[sent.length - 1].value.action === 'recent'
+      && sent[sent.length - 1].value.src === LOCAL.src,
+    String(sent[sent.length - 1].value.src));
+
+  // A moving background has to come out as a <video>, in the preview as well
+  // as in the strip. Answered with the record alone: the mark has to follow it
+  // even when the list itself did not change.
+  answer = { record: MOVING };
+  chips()[2].fire('click');
+  await settle();
+
+  check('a moving background is drawn as a video',
+    Boolean(preview.find(el => el.tagName === 'video'))
+      && !preview.find(el => el.tagName === 'img'),
+    caption.textContent);
+  check('and the mark follows it without the list being re-sent',
+    chips()[2].className.includes('is-on') && !chips()[0].className.includes('is-on'));
+
+  // A refusal answers with neither, so nothing must budge.
   answer = {};
   removeBtn.fire('click');
   await settle();
@@ -156,16 +215,20 @@ const settle = () => new Promise(resolve => setTimeout(resolve, 0));
   check('remove asks the page to clear',
     sent[sent.length - 1].value.action === 'clear');
   check('a refused change leaves the preview alone',
-    caption.textContent.includes('beach.jpg'), caption.textContent);
+    caption.textContent.includes('films.example'), caption.textContent);
 
-  // And an accepted clear puts the empty state back.
+  // And an accepted clear puts the empty state back - but keeps the list, so
+  // what was just taken away is one click from being back.
   answer = { record: null };
   removeBtn.fire('click');
   await settle();
 
-  check('a cleared picture empties the preview',
-    preview.className.includes('is-empty') && !caption.textContent.includes('beach'),
+  check('a cleared background empties the preview',
+    preview.className.includes('is-empty') && !caption.textContent.includes('films'),
     caption.textContent);
+  check('clearing leaves the recent ones alone',
+    chips().length === 3 && !chips().some(chip => chip.className.includes('is-on')),
+    chips().length + ' chips');
   check('remove hides itself once there is nothing to remove',
     removeBtn.hidden === true, 'hidden=' + removeBtn.hidden);
 

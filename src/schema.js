@@ -21,7 +21,8 @@
  *   color       hex colour
  *   text        free text, trimmed and capped at `max` characters
  *   font        family name, with the Google Fonts picker attached
- *   background  the page picture: a file from this computer
+ *   background  the page background: a picture or a video, from a file on
+ *               this computer or from a web address, and the last few of them
  *   backup      export and import, as a pair of buttons
  *   action      a button that does something once, storing nothing
  *
@@ -82,14 +83,16 @@ const Schema = (() => {
       fields: [
         {
           key: 'background',
-          label: 'Picture',
+          label: 'Picture or video',
           type: 'background',
           // Stored under its own key, not in settings - see the header above.
           external: true,
           busyText: 'Working on it…',
-          note: 'A file from this computer, up to 6 MB — or a web address, which '
-              + 'is fetched fresh on every new tab. Large files are scaled down '
-              + 'to fit; the preview shows the crop you will get.'
+          note: 'A picture or a video from this computer — up to 6 MB for a '
+              + 'picture, 16 MB for a video — or a web address, which is fetched '
+              + 'fresh on every new tab. Large pictures are scaled down to fit; '
+              + 'the preview shows the crop you will get. The last five are kept '
+              + 'underneath, to go back to.'
         },
         { key: 'bgBlur', label: 'Blur', type: 'range', default: 0, min: 0, max: 40, step: 2, unit: 'px' },
         {
@@ -101,7 +104,7 @@ const Schema = (() => {
           max: 90,
           step: 5,
           unit: '%',
-          note: 'Fades the picture towards the theme colour so tiles stay readable.'
+          note: 'Darkens the background so tiles stay readable, in either theme.'
         }
       ]
     },
@@ -316,7 +319,7 @@ const Schema = (() => {
           buttonIcon: 'rotate-ccw',
           busyText: 'Putting everything back…',
           note: 'Puts every setting back to its default and takes the background '
-              + 'picture away. Your tiles and groups are left alone.'
+              + 'away, recent ones included. Your tiles and groups are left alone.'
         }
       ]
     }

@@ -10,7 +10,8 @@
     }
   },
   "permissions": [
-    "storage"
+    "storage",
+    "unlimitedStorage"
   ],
   "chrome_url_overrides": {
     "newtab": "src/newtab.html"

@@ -45,8 +45,10 @@
   let activeGroup = null;
   /** @type {object} see schema.js */
   let settings = { ...Schema.DEFAULTS };
-  /** @type {?{src:string,name:string,savedAt:number}} page picture */
+  /** @type {?{src:string,name:string,type:string,savedAt:number}} page background */
   let background = null;
+  /** @type {object[]} the last few backgrounds, newest first - see storage.js */
+  let recentBackgrounds = [];
   /** id of the tile currently open in the modal, or null when adding */
   let editingId = null;
   /** id of the group currently open in its dialog, or null when adding */
@@ -1447,12 +1449,27 @@
     };
   }
 
+  /** The record a picker action names: one from the list, a file, an address. */
+  async function pickedBackground(payload) {
+    if (payload.action === 'recent') {
+      const found = recentBackgrounds.find(item => item.src === payload.src);
+      // Another new-tab page can have pushed it off the end between the strip
+      // being drawn and the chip being clicked.
+      if (!found) throw new Error('That one has dropped off the list.');
+      return found;
+    }
+
+    return payload.action === 'url'
+      ? Backgrounds.fromUrl(payload.url)
+      : Backgrounds.fromFile(payload.file);
+  }
+
   /**
    * The background picker sends an action rather than a value, and gets back
-   * `{record}` - what is on screen now. Anything that goes wrong (a file that
-   * is not an image, one over the size limit, no room to store it) comes back
-   * as the status line instead, with no `record`, so the preview keeps showing
-   * what is really on screen.
+   * `{record, recent}` - what is on screen now, and the last few. Anything that
+   * goes wrong (a file that is neither picture nor video, one over the size
+   * limit, no room to store it) comes back as the status line instead, with
+   * neither, so the field keeps showing what is really on screen.
    */
   async function changeBackground(payload) {
     const previous = background;
@@ -1460,16 +1477,16 @@
       if (payload.action === 'clear') {
         background = await Backgrounds.clear();
         Backgrounds.apply(background);
+        // The list is left as it was: being able to put back what was just
+        // taken away is most of what it is for.
         return { value: { record: null } };
       }
 
-      const record = payload.action === 'url'
-        ? await Backgrounds.fromUrl(payload.url)
-        : await Backgrounds.fromFile(payload.file);
+      const record = await pickedBackground(payload);
 
       // On screen first. Writing megabytes to storage is the slow half and the
-      // half that can fail; the picture should not wait on it, and the settings
-      // dialog is not the only place it has to show up.
+      // half that can fail; the background should not wait on it, and the
+      // settings dialog is not the only place it has to show up.
       Backgrounds.apply(record);
       try {
         // Same `src`, so this does not repaint - it is the stored record, name
@@ -1480,8 +1497,10 @@
         throw err;
       }
 
+      recentBackgrounds = await remember(background);
+
       return {
-        value: { record: background },
+        value: { record: background, recent: recentBackgrounds },
         status: {
           kind: 'ok',
           text: settings.bgDim >= 80
@@ -1493,6 +1512,19 @@
       };
     } catch (err) {
       return { value: {}, status: { kind: 'error', text: err.message } };
+    }
+  }
+
+  /**
+   * Adds a background to the list of recent ones, or leaves the list as it is
+   * when there is no room for it. A full storage area is not worth losing the
+   * background that did fit over - the list is a convenience, not the setting.
+   */
+  async function remember(record) {
+    try {
+      return await Backgrounds.remember(record);
+    } catch {
+      return recentBackgrounds;
     }
   }
 
@@ -1603,6 +1635,7 @@
         background = sections.background
           ? await Backgrounds.save(sections.background)
           : await Backgrounds.clear();
+        if (background) recentBackgrounds = await remember(background);
         done.push('the background');
       } catch {
         pictureFailed = true;
@@ -1640,6 +1673,10 @@
   async function resetSettings() {
     settings = await Store.resetSettings();
     background = await Backgrounds.clear();
+    // The list goes with it. Leaving five stored pictures behind - a click
+    // from being back on screen, and still taking up the room - is not what
+    // "take the background away" says.
+    recentBackgrounds = await Backgrounds.forget();
 
     Backgrounds.apply(background);
     applySettings();
@@ -1683,9 +1720,10 @@
    */
   function mountSettings(status) {
     // `background` is an external field: it has no place in `settings`, so it
-    // is handed to the dialog on the side.
+    // is handed to the dialog on the side - the picture on screen and the last
+    // few, which are the two things its picker draws.
     SettingsUI.mount(settingsBody, {
-      values: { ...settings, background },
+      values: { ...settings, background: { record: background, recent: recentBackgrounds } },
       status,
       onChange: onSettingChange
     });
@@ -1754,9 +1792,9 @@
     Icons.hydrate();
 
     let remembered;
-    [tiles, groups, settings, background, remembered] = await Promise.all([
+    [tiles, groups, settings, background, recentBackgrounds, remembered] = await Promise.all([
       Store.load(), Store.loadGroups(), Store.loadSettings(), Store.loadBackground(),
-      Store.loadActiveGroup()
+      Store.loadRecentBackgrounds(), Store.loadActiveGroup()
     ]);
 
     // A group that has since been deleted is no group at all, and starting on
@@ -1803,6 +1841,11 @@
       } else if (key === 'background') {
         background = value;
         Backgrounds.apply(background);
+        if (!settingsModal.hidden) mountSettings();
+      } else if (key === 'bgRecent') {
+        // Nothing on the page shows the list except the dialog, so there is
+        // nothing to repaint when it is closed.
+        recentBackgrounds = value;
         if (!settingsModal.hidden) mountSettings();
       } else if (key === 'activeGroup') {
         // Which group is being looked at is shared, the way everything else

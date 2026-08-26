@@ -13,7 +13,10 @@
  *   groups     - [{ id, name }]                 the bar across the top
  *   settings   - see schema.js
  *   activeGroup- id of the group last shown, or null for "All"
- *   background - { src, name, savedAt }            the page background
+ *   background - { src, name, type, savedAt }      the page background
+ *                type is 'image' or 'video'; src is a data: URI or an address
+ *   bgRecent   - [background]  the last few, newest first, so one can be put
+ *                back without finding the file again
  *   fontCache  - { [family]: { css, savedAt } }     CSS with the woff2 inlined
  *   iconCache  - { [origin]: { url, data, size, mode, savedAt } }
  *                url is the address the icon was found at; data is the picture
@@ -26,6 +29,7 @@ const Store = (() => {
   const ACTIVE_GROUP = 'activeGroup';
   const SETTINGS = 'settings';
   const BACKGROUND = 'background';
+  const BG_RECENT = 'bgRecent';
   const FONT_CACHE = 'fontCache';
   const ICON_CACHE = 'iconCache';
 
@@ -76,10 +80,15 @@ const Store = (() => {
    */
   const echoes = new Map();
 
+  /** A record's stamp and length - as telling as the whole data URI, for free. */
+  const stamp = record => record.savedAt + ':' + record.src.length;
+
   function signature(key, value) {
-    // The picture is megabytes of data URI. Its stamp and length identify it
-    // as well as the whole string would, at none of the cost.
-    if (key === BACKGROUND) return value ? value.savedAt + ':' + value.src.length : 'null';
+    // The picture is megabytes of data URI, and the recent list is several of
+    // them. Their stamps and lengths identify them as well as the whole
+    // strings would, at none of the cost.
+    if (key === BACKGROUND) return value ? stamp(value) : 'null';
+    if (key === BG_RECENT) return Array.isArray(value) ? value.map(stamp).join('|') : 'null';
     try {
       const json = JSON.stringify(value);
       return json === undefined ? null : json;
@@ -233,20 +242,36 @@ const Store = (() => {
   // ------------------------------------------------------------- background
 
   /**
-   * A picture stored inline, or one named by web address.
+   * What a record carrying no `type` of its own is. A data URI says outright;
+   * a web address is read off its path.
+   */
+  const LOOKS_MOVING = /^data:video\/|\.(mp4|webm|ogv|ogg|m4v|mov)(\?|#|$)/i;
+
+  /**
+   * A picture or a video, stored inline or named by web address.
    *
    * A data: URI is the offline case and the default; an http(s) address is
-   * fetched by the browser on every new tab, which is the cost of naming a
-   * picture that lives somewhere else.
+   * fetched by the browser on every new tab, which is the cost of naming
+   * something that lives somewhere else.
+   *
+   * `type` is what the page paints from: a still one is a background-image, a
+   * moving one is a <video>. Records written before that field existed - and
+   * hand-edited backups - are read from their `src` instead, so there is
+   * nothing to migrate.
    */
   function sanitizeBackground(raw) {
     if (!raw || typeof raw !== 'object') return null;
     const src = typeof raw.src === 'string' ? raw.src.trim() : '';
-    if (!/^(data:image\/|https?:\/\/)/i.test(src)) return null;
+    if (!/^(data:(image|video)\/|https?:\/\/)/i.test(src)) return null;
+
+    const type = raw.type === 'video' || raw.type === 'image'
+      ? raw.type
+      : (LOOKS_MOVING.test(src) ? 'video' : 'image');
 
     return {
       src,
       name: typeof raw.name === 'string' ? raw.name.slice(0, 80) : '',
+      type,
       savedAt: Number(raw.savedAt) || Date.now()
     };
   }
@@ -266,6 +291,64 @@ const Store = (() => {
   async function clearBackground() {
     await set(BACKGROUND, null);
     return null;
+  }
+
+  // ------------------------------------------------------ recent backgrounds
+
+  /**
+   * The last few backgrounds, newest first, so one can be put back without
+   * going to find the file again.
+   *
+   * Whole records rather than thumbnails: a stored picture *is* its data URI,
+   * and there would be nothing to put back from a thumbnail. That makes this
+   * the heaviest thing in the storage area, so it is capped twice over - by
+   * how many it holds, and by the room they may take between them. One named
+   * by web address costs only its address, so a list of those never comes near
+   * the ceiling; a list of stored videos reaches it after three or four.
+   */
+  const MAX_RECENT = 5;
+  const RECENT_BUDGET = 64 * 1024 * 1024;
+
+  /** Newest first, no repeats, inside both caps. */
+  function sanitizeRecent(list) {
+    if (!Array.isArray(list)) return [];
+
+    const out = [];
+    let room = RECENT_BUDGET;
+
+    for (const raw of list) {
+      const record = sanitizeBackground(raw);
+      // The same picture chosen twice is one entry, at the place the newer
+      // choice put it.
+      if (!record || out.some(kept => kept.src === record.src)) continue;
+
+      room -= record.src.length;
+      if (room < 0) break;
+
+      out.push(record);
+      if (out.length === MAX_RECENT) break;
+    }
+
+    return out;
+  }
+
+  async function loadRecentBackgrounds() {
+    return sanitizeRecent(await get(BG_RECENT));
+  }
+
+  /** Puts `record` at the front. @returns the list as it now stands */
+  async function rememberBackground(record) {
+    const clean = sanitizeBackground(record);
+    if (!clean) return loadRecentBackgrounds();
+
+    const list = sanitizeRecent([clean, ...(await loadRecentBackgrounds())]);
+    await set(BG_RECENT, list);
+    return list;
+  }
+
+  async function clearRecentBackgrounds() {
+    await set(BG_RECENT, []);
+    return [];
   }
 
   // ------------------------------------------------------- generic LRU cache
@@ -371,6 +454,7 @@ const Store = (() => {
       [GROUPS, sanitizeGroups],
       [SETTINGS, Schema.coerce],
       [BACKGROUND, sanitizeBackground],
+      [BG_RECENT, sanitizeRecent],
       [ACTIVE_GROUP, id => (typeof id === 'string' && id ? id : null)]
     ];
 
@@ -390,6 +474,7 @@ const Store = (() => {
     loadActiveGroup, saveActiveGroup,
     loadSettings, saveSettings, resetSettings,
     loadBackground, saveBackground, clearBackground,
+    loadRecentBackgrounds, rememberBackground, clearRecentBackgrounds, MAX_RECENT,
     getFontCss, putFontCss,
     icons,
     onExternalChange

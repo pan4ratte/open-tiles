@@ -7,9 +7,14 @@
   <link rel="stylesheet" href="newtab.css">
 </head>
 <body class="gb-floating">
-  <!-- The picture, behind everything; hidden until one is chosen. -->
+  <!-- The background, behind everything; hidden until one is chosen. A still
+       one is painted by the div, a moving one by the video - whichever is not
+       in use is left empty, so nothing is decoded for a layer nobody sees.
+       Muted and inline, which is what lets it play without a click. -->
   <div class="bg" id="bg" aria-hidden="true" hidden>
     <div class="bg__image" id="bgImage"></div>
+    <video class="bg__video" id="bgVideo" muted loop autoplay playsinline
+           disablepictureinpicture hidden></video>
     <div class="bg__veil"></div>
   </div>
 
