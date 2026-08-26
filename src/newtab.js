@@ -222,14 +222,7 @@
     chip.classList.toggle('is-on', on);
     chip.setAttribute('aria-pressed', String(on));
 
-    chip.addEventListener('click', () => {
-      activeGroup = group.id;
-      // Remembered whether or not the setting is on, so turning it on later
-      // picks up where the last tab left off rather than starting blank.
-      Store.saveActiveGroup(activeGroup);
-      renderGroups();
-      render();
-    });
+    chip.addEventListener('click', () => switchGroup(group.id));
 
     if (group.id) {
       // "All" is not a group and cannot be moved; the real ones can, and each
@@ -278,7 +271,246 @@
     // A picked group keeps the block on screen even in hover mode: filtered
     // tiles with nothing to say why would just look like missing ones.
     groupBar.classList.toggle('is-active', Boolean(activeGroup));
+
+    // Once there are more chips than the block can show, the strip scrolls -
+    // and the group being looked at has to be one of the chips on show. A
+    // gesture that walked the selection off the end would otherwise look like
+    // nothing happening at all. "nearest" moves it only when it has to.
+    const chosen = groupChips.querySelector('.chip.is-on');
+    if (chosen && groupChips.scrollWidth > groupChips.clientWidth) {
+      chosen.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+    }
   }
+
+  // ------------------------------------------------------ changing group
+
+  /**
+   * The groups in the order the block shows them, "All" at the front.
+   *
+   * This is the line a change travels along, so where a chip sits is what
+   * decides which way the grid moves to reach it - and it is the same line the
+   * scroll gesture walks.
+   */
+  function groupOrder() {
+    return [null, ...groups.map(group => group.id)];
+  }
+
+  /** Off when the setting says so, and off when the system does. */
+  function animatesGroups() {
+    return settings.groupAnimate
+      && !window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  }
+
+  /**
+   * Starts a CSS animation over, even when the class is already on.
+   *
+   * Taking the class off and putting it back in the same turn is no change at
+   * all as far as the browser is concerned; reading the layout in between is
+   * what makes the removal real, and the animation then runs from the top.
+   */
+  function replay(el, className) {
+    el.classList.remove(className);
+    void el.offsetWidth;
+    el.classList.add(className);
+  }
+
+  /** Whichever of the two is showing - a grid of tiles, or the line of text
+   *  standing in for it - is what moves, so both are moved. */
+  const stage = [grid, empty];
+
+  /** Mirrors --t-group-out: how long the outgoing grid has before the new one
+   *  is drawn in its place. */
+  const GROUP_OUT_MS = 110;
+
+  /** set while the grid is on its way out, holding the redraw that follows */
+  let switchTimer;
+
+  /**
+   * Moves to a group, taking the grid with it.
+   *
+   * The chips change at once and the grid follows, which is what lets a run of
+   * quick changes - a finger held on the touchpad - land where it was aimed:
+   * each one puts the redraw off a little longer, so the grid is built once,
+   * for wherever the run came to rest, and stays out of sight in between.
+   *
+   * @param {?string} id the group to show, or null for all of them
+   * @param {{step?: number, remember?: boolean}} [opts] step is the direction
+   *   travelled where it is already known - a gesture knows, a click on a chip
+   *   has to be worked out from the block. remember is off for a change that
+   *   arrived from another new tab page, which has saved it already.
+   */
+  function switchGroup(id, { step = 0, remember = true } = {}) {
+    if (id === activeGroup) return;
+
+    const order = groupOrder();
+    const direction = step || (order.indexOf(id) < order.indexOf(activeGroup) ? -1 : 1);
+
+    activeGroup = id;
+    // Remembered whether or not the setting is on, so turning it on later
+    // picks up where the last tab left off rather than starting blank.
+    if (remember) Store.saveActiveGroup(activeGroup);
+    renderGroups();
+
+    if (!animatesGroups()) {
+      render();
+      return;
+    }
+
+    document.documentElement.style.setProperty('--group-dir', direction < 0 ? '-1' : '1');
+
+    // Already on its way out from a change a moment ago: that fade is left to
+    // finish rather than snapped back to full opacity to be run again.
+    if (!grid.classList.contains('is-leaving')) {
+      stage.forEach(el => {
+        el.classList.remove('is-entering');
+        el.classList.remove('is-nudged');
+        replay(el, 'is-leaving');
+      });
+    }
+
+    clearTimeout(switchTimer);
+    switchTimer = setTimeout(() => {
+      render();
+      stage.forEach(el => {
+        el.classList.remove('is-leaving');
+        // The stylesheet puts .is-nudged last, so that a nudge can play over a
+        // settled .is-entering. That order also means a nudge left on from a
+        // moment ago would sit on top of this one, so it goes first.
+        el.classList.remove('is-nudged');
+        replay(el, 'is-entering');
+      });
+    }, GROUP_OUT_MS);
+  }
+
+  /** One group along the block - or, at either end, the give that says so. */
+  function stepGroup(step) {
+    const order = groupOrder();
+    // "All" on its own is not somewhere to travel between.
+    if (order.length < 2) return;
+
+    // A group that has just been deleted is nowhere on the line; the front of
+    // it is where the page is really looking.
+    const from = Math.max(0, order.indexOf(activeGroup));
+    const to = Math.min(order.length - 1, Math.max(0, from + step));
+
+    if (to !== from) {
+      switchGroup(order[to], { step });
+      return;
+    }
+
+    // Nowhere further to go. Rather than let the gesture fall flat, the
+    // content gives a little the way it was pushed and comes back.
+    if (!animatesGroups()) return;
+    document.documentElement.style.setProperty('--group-dir', step < 0 ? '-1' : '1');
+    stage.forEach(el => replay(el, 'is-nudged'));
+  }
+
+  // --------------------------------------------- changing group by gesture
+
+  /*
+   * One flick of two fingers across a touchpad is not one wheel event but a
+   * flurry of them, and then a tail of momentum after the fingers have lifted.
+   * Turning a group per event would run the whole block in a frame, so the
+   * deltas are added up and a group is turned each time they pass the
+   * threshold - but no faster than WHEEL_REPEAT, so that keeping the wheel
+   * moving walks the groups steadily rather than blurring through them.
+   *
+   * That leaves the tail to deal with, because it is deltas like any other and
+   * would carry on turning groups after the fingers had gone. It gives itself
+   * away by fading: momentum only ever decays, while a finger still moving
+   * holds its strength. So a turn after the first one asks that the events
+   * driving it still be a fair share of the hardest push in the gesture, and
+   * the tail falls below that within a beat or two. A hard flick may still
+   * carry a group past the one it was aimed at, which is what a flick is meant
+   * to do.
+   */
+
+  /** How far the deltas have to add up before a group is turned. */
+  const WHEEL_THRESHOLD = 50;
+  /** The least time between two turns, in ms. Long enough that each group is
+   *  on screen to be seen, short enough that a held scroll feels like one. */
+  const WHEEL_REPEAT = 280;
+  /** The quiet that ends a gesture, in ms - momentum runs well past the flick. */
+  const WHEEL_QUIET = 260;
+  /** How much of the gesture's hardest push an event has to still carry to be
+   *  taken for a finger rather than for the tail it left behind. */
+  const WHEEL_CARRY = .55;
+  /** What a notch and a page stand for, for the devices that report in lines
+   *  or pages rather than pixels. A Firefox mouse wheel reports three lines. */
+  const WHEEL_LINE = 20;
+  const WHEEL_PAGE = 400;
+
+  /** the deltas since the last turn, the hardest push since it, and when it
+   *  was - all three reset by the pause that ends the gesture */
+  let wheelSum = 0;
+  let wheelPeak = 0;
+  let wheelTurned = 0;
+  let wheelTimer;
+
+  function endGesture() {
+    wheelSum = 0;
+    wheelPeak = 0;
+    wheelTurned = 0;
+  }
+
+  /** How far this event went the way the setting cares about; 0 to ignore it. */
+  function wheelDelta(e) {
+    const scale = e.deltaMode === 1 ? WHEEL_LINE : e.deltaMode === 2 ? WHEEL_PAGE : 1;
+
+    if (settings.groupScrollAxis === 'horizontal') return e.deltaX * scale;
+    if (settings.groupScrollAxis === 'vertical') return e.deltaY * scale;
+    // Either way: whichever way the gesture is mostly going.
+    return (Math.abs(e.deltaX) > Math.abs(e.deltaY) ? e.deltaX : e.deltaY) * scale;
+  }
+
+  document.addEventListener('wheel', e => {
+    if (!settings.groupScroll) return;
+    // A pinch to zoom arrives as a wheel event holding Ctrl, and belongs to
+    // the browser.
+    if (e.ctrlKey) return;
+    // A dialog, a menu and the colour picker all have scrolling of their own,
+    // and it is theirs.
+    if (!e.target || !e.target.closest) return;
+    if (e.target.closest('.modal, .menu, .picker')) return;
+    // So does the block itself, once it holds more chips than it can show.
+    const strip = e.target.closest('.groupbar__inner');
+    if (strip && strip.scrollWidth > strip.clientWidth) return;
+
+    const delta = wheelDelta(e);
+    if (!delta) return;
+
+    if (e.cancelable) e.preventDefault();
+
+    clearTimeout(wheelTimer);
+    wheelTimer = setTimeout(endGesture, WHEEL_QUIET);
+
+    // Turning back the other way mid-scroll starts the sums again, so going
+    // back is not held up by however far the scroll had already got.
+    if (wheelSum && Math.sign(delta) !== Math.sign(wheelSum)) {
+      wheelSum = 0;
+      wheelPeak = 0;
+    }
+
+    const force = Math.abs(delta);
+    wheelPeak = Math.max(wheelPeak, force);
+    wheelSum += delta;
+
+    if (Math.abs(wheelSum) < WHEEL_THRESHOLD) return;
+    // One group at a time, however hard the wheel is spun.
+    const now = Date.now();
+    if (now - wheelTurned < WHEEL_REPEAT) return;
+    // Past the first turn, only a finger still pushing carries on; the tail a
+    // touchpad throws after the fingers have lifted has faded by now.
+    if (wheelTurned && force < wheelPeak * WHEEL_CARRY) return;
+
+    wheelTurned = now;
+    wheelSum = 0;
+    // The hardest push is measured per turn, so easing off into a steady
+    // scroll is not read as the gesture dying.
+    wheelPeak = force;
+
+    stepGroup(delta > 0 ? 1 : -1);
+  }, { passive: false });
 
   // -------------------------------------------------- reordering the chips
 
@@ -1849,11 +2081,11 @@
         if (!settingsModal.hidden) mountSettings();
       } else if (key === 'activeGroup') {
         // Which group is being looked at is shared, the way everything else
-        // here is - so picking one moves every open new tab to it.
+        // here is - so picking one moves every open new tab to it, and moves
+        // it the way the tab it was picked in moved.
         if (!settings.keepGroup) return;
-        activeGroup = groups.some(group => group.id === value) ? value : null;
-        renderGroups();
-        render();
+        const id = groups.some(group => group.id === value) ? value : null;
+        switchGroup(id, { remember: false });
       }
     });
   })();

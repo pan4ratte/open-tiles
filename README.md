@@ -110,6 +110,9 @@ them and are written to storage in the background.
 | | Display — always / on hover | Always |
 | | Show the new group button | on |
 | | Remember the open group | on |
+| | Animate group changes | on |
+| | Switch groups by scrolling | off |
+| | Gesture direction — up and down / left and right / either *(scrolling)* | Up and down |
 | | Alignment — left / centre / right *(status bar)* | Centre |
 | | Position — top / bottom *(status bar)* | Top |
 | Other | Backup — export / import | — |
@@ -214,6 +217,57 @@ Settings → *Groups* decides how the block looks:
 Chips are put in order by dragging them about the block, the same way tiles are
 ordered in the grid — the chip travels under the pointer and where it is let go
 is where it stays. "All" and the **+** hold the two ends and do not move.
+
+### Changing group
+
+Picking a group is a page turn, so the grid moves like one. The tiles on screen
+slide a little the way you are travelling and fade out; the new ones come in
+from the other side, slower than the old ones left, because what arrives is
+what the eye should follow. Which way it runs is read off the block itself — a
+group further along the chips comes in from the right, one further back from
+the left — so the movement agrees with what you clicked.
+
+The travel is deliberately small, and the fade does most of the work. A
+full-width slide belongs to a screen you put your thumb on; a window on a desk
+gets the shorter, quieter version macOS uses to move between two views. The
+chips light up the moment you pick one, without waiting for the grid, so the
+page always answers instantly even while the tiles are still moving.
+
+**Animate group changes** turns the whole thing off, and the grid then simply
+changes. It is off regardless whenever the system asks for reduced motion.
+
+### Switching by scroll or touchpad
+
+**Switch groups by scrolling** turns to the next group along on a roll of the
+wheel or a swipe across the touchpad. **Gesture direction** decides which way
+the gesture runs — **up and down**, **left and right**, or **either**, which
+takes whichever way the flick was mostly going. Down and right go on to the
+next group; up and left go back.
+
+It walks the same line the chips show, "All" at the front, and it stops at each
+end rather than coming round again — flick past the last group and the content
+gives a little in the direction you pushed and comes back, which is how it says
+there is nothing further. Where there are more chips than the block can show,
+the strip scrolls to keep the one you are on in view.
+
+Keep scrolling and it keeps going, about four groups a second — fast enough to
+feel like one movement, slow enough that each group is actually on screen to be
+seen. Stop, and it stops.
+
+Getting that right is most of the work here, because a single swipe of two
+fingers is not one wheel event but a flurry of them, followed by a tail of
+momentum after your fingers have lifted. The deltas are added up and a group is
+turned each time they pass the threshold, never more often than the repeat
+allows. The tail is the awkward part: it is deltas like any other and would
+carry on turning groups by itself. It gives itself away by fading — momentum
+only ever decays, while a finger still moving holds its strength — so past the
+first turn, an event has to still carry a fair share of the hardest push in the
+gesture to count. A hard flick may carry a group past the one you aimed at,
+which is what a flick is for; a released one does not run away with the block.
+
+The gesture keeps its hands off scrolling that belongs to something else: a
+dialog, the right-click menu, the colour picker, a pinch to zoom, and the chip
+block itself once it holds more chips than it can show.
 
 Groups live under their own storage key and sync across open new tab pages like
 everything else. There is room for 24 of them, each with a name of up to 32
@@ -601,6 +655,7 @@ run the real `schema.js`, `settings.js`, `storage.js`, `transfer.js` and
 node test/gesture.test.js      # the permission user-gesture chain
 node test/background.test.js   # the background picker and the settings tabs
 node test/groups.test.js       # groups, conditional fields, markup ids
+node test/groupswitch.test.js  # the group transition and the scroll gesture
 node test/live.test.js         # the change feed, subsections, the accent picker
 node test/transfer.test.js     # the backup envelope, its refusals, the buttons
 node test/importers.test.js    # reading a Speed Dial 2 backup

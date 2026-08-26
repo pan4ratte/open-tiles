@@ -233,6 +233,16 @@
   --t-fast: .15s;
   --t-base: .22s;
   --t-slow: .38s;
+  /* A group change is a page turn: the grid leaves quickly and the new one
+     arrives at its own pace, which is what reads as the new one pushing the
+     old one out rather than as a blink. How far it travels is settled here;
+     which way is --group-dir, and the page writes that from the direction the
+     change was going. */
+  --t-group-out: .11s;
+  --t-group-in: .26s;
+  --group-travel: 28px;
+  --group-dir: 1;
+  --group-shift: calc(var(--group-travel) * var(--group-dir));
 
   /* -- elevation --
      A hairline first, then the shadow: a macOS window reads as a sheet of
@@ -883,6 +893,50 @@ body.gb-bar .chip { border-radius: var(--r-control); }
   max-width: calc(var(--columns) * var(--tile-size)
                   + (var(--columns) - 1) * var(--gap)
                   + var(--grid-bleed) * 2);
+}
+
+/* -- changing group --
+
+   Both halves of the page's content move together, because either one of them
+   can be what is on screen: the grid when the group has tiles, the line of
+   text when it has none.
+
+   The travel is small and the fade does the work, the way macOS moves content
+   between two views - a full-width slide belongs to a device you can put your
+   thumb on, not to a window on a desk. Only opacity and transform are touched,
+   so neither half is laid out twice. */
+
+.grid.is-leaving,
+.empty.is-leaving {
+  animation: group-leave var(--t-group-out) var(--ease) both;
+}
+
+.grid.is-entering,
+.empty.is-entering {
+  animation: group-enter var(--t-group-in) var(--ease-out) both;
+}
+
+@keyframes group-leave {
+  from { opacity: 1; transform: none; }
+  to   { opacity: 0; transform: translateX(calc(var(--group-shift) * -1)); }
+}
+
+@keyframes group-enter {
+  from { opacity: 0; transform: translateX(var(--group-shift)); }
+  to   { opacity: 1; transform: none; }
+}
+
+/* The end of the block. The gesture has nowhere left to go, so the content
+   gives a little in the direction it was pushed and comes back - the rubber
+   band that says "that is the last one" rather than nothing happening at all. */
+.grid.is-nudged,
+.empty.is-nudged {
+  animation: group-nudge var(--t-base) var(--ease-out);
+}
+
+@keyframes group-nudge {
+  40% { transform: translateX(calc(var(--group-shift) * -.2)); }
+  to  { transform: none; }
 }
 
 /* The shape, worked out once and read by everything below it.

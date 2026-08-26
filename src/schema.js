@@ -266,6 +266,38 @@ const Schema = (() => {
               + 'off, every new tab starts on All.'
         },
         {
+          key: 'groupAnimate',
+          label: 'Animate group changes',
+          type: 'toggle',
+          default: true,
+          note: 'Slides the tiles aside and brings the new ones in behind them, '
+              + 'in the direction the block was travelling. With it off the grid '
+              + 'simply changes.'
+        },
+        {
+          key: 'groupScroll',
+          label: 'Switch groups by scrolling',
+          type: 'toggle',
+          default: false,
+          note: 'Turns to the next group along on a roll of the wheel or a swipe '
+              + 'across the touchpad, and keeps turning for as long as you keep '
+              + 'scrolling. It stops at each end rather than coming round again.'
+        },
+        {
+          key: 'groupScrollAxis',
+          label: 'Gesture direction',
+          type: 'segmented',
+          default: 'vertical',
+          when: { groupScroll: true },
+          options: [
+            { value: 'vertical', label: 'Up and down' },
+            { value: 'horizontal', label: 'Left and right' },
+            { value: 'either', label: 'Either' }
+          ],
+          note: 'Which way the gesture runs. Down and right go on to the next '
+              + 'group; up and left go back.'
+        },
+        {
           key: 'groupAlign',
           label: 'Alignment',
           type: 'segmented',
