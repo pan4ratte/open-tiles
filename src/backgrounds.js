@@ -327,18 +327,21 @@ const Backgrounds = (() => {
   const clear = () => Store.clearBackground();
 
   /**
-   * The last few, so one can be put back without going to find the file again.
-   * The list itself is storage.js's business; these are here so the page has
-   * one door to the background whichever part of it it wants.
+   * The last few, so one can be put back without going to find the file again,
+   * each carrying the Blur and Dim it was last looked at with. The list itself
+   * is storage.js's business; these are here so the page has one door to the
+   * background whichever part of it it wants.
    */
   const recent = () => Store.loadRecentBackgrounds();
-  const remember = record => Store.rememberBackground(record);
+  const remember = (record, effects) => Store.rememberBackground(record, effects);
+  const noteEffects = (src, effects) => Store.noteRecentEffects(src, effects);
+  const forgetOne = src => Store.forgetRecentBackground(src);
   const forget = () => Store.clearRecentBackgrounds();
 
   return {
     MAX_FILE, MAX_VIDEO_FILE, formatSize,
     fromFile, fromUrl, apply,
     load, save, clear,
-    recent, remember, forget
+    recent, remember, noteEffects, forgetOne, forget
   };
 })();

@@ -1844,22 +1844,78 @@
       : Backgrounds.fromFile(payload.file);
   }
 
+  /** Blur and Dim as they stand: what a wallpaper is being looked at with. */
+  const currentEffects = () =>
+    Object.fromEntries(Schema.EFFECT_KEYS.map(key => [key, settings[key]]));
+
+  /**
+   * Puts Blur and Dim back to what the wallpaper being restored was last seen
+   * with, and says whether that moved anything.
+   *
+   * Written straight into `settings` rather than through one `updateSetting`
+   * per key, so the two land in a single repaint and a single write - and so
+   * the caller can decide, once, whether the dialog needs rebuilding around
+   * the sliders that just moved under it.
+   */
+  function applyEffects(effects) {
+    const wanted = Schema.coerceEffects(effects);
+    if (Schema.EFFECT_KEYS.every(key => settings[key] === wanted[key])) return false;
+
+    settings = Schema.coerce({ ...settings, ...wanted });
+    applySettings();
+    clearTimeout(persistTimer);
+    persistTimer = setTimeout(() => Store.saveSettings(settings), 250);
+    return true;
+  }
+
+  /**
+   * Hands the background being left the Blur and Dim it was last looked at
+   * with, so going back to it later goes back to how it looked.
+   *
+   * This is the moment to write them rather than every time a slider moves:
+   * the list is the heaviest thing in the storage area, and a wallpaper still
+   * on screen needs nothing remembered about it - what is in `settings` *is*
+   * how it looks.
+   */
+  async function partWith(record) {
+    if (!record || !record.src) return;
+    try {
+      recentBackgrounds = await Backgrounds.noteEffects(record.src, currentEffects());
+    } catch {
+      // A full storage area is not worth losing the change that prompted this.
+    }
+  }
+
   /**
    * The background picker sends an action rather than a value, and gets back
    * `{record, recent}` - what is on screen now, and the last few. Anything that
    * goes wrong (a file that is neither picture nor video, one over the size
    * limit, no room to store it) comes back as the status line instead, with
    * neither, so the field keeps showing what is really on screen.
+   *
+   * The two removals are deliberately not the same thing: `clear` takes the
+   * wallpaper off the page and leaves the history alone, `forget` takes one
+   * out of the history and leaves the page alone.
    */
   async function changeBackground(payload) {
     const previous = background;
     try {
+      // Drops one from the strip. The background on screen is not touched even
+      // when it is the one being dropped: this is a tidy-up of the history, not
+      // a way to take the wallpaper away - Remove is that, and it is right
+      // there above the strip.
+      if (payload.action === 'forget') {
+        recentBackgrounds = await Backgrounds.forgetOne(payload.src);
+        return { value: { recent: recentBackgrounds } };
+      }
+
       if (payload.action === 'clear') {
+        await partWith(previous);
         background = await Backgrounds.clear();
         Backgrounds.apply(background);
         // The list is left as it was: being able to put back what was just
         // taken away is most of what it is for.
-        return { value: { record: null } };
+        return { value: { record: null, recent: recentBackgrounds } };
       }
 
       const record = await pickedBackground(payload);
@@ -1877,19 +1933,38 @@
         throw err;
       }
 
-      recentBackgrounds = await remember(background);
+      // The one being left keeps the Blur and Dim it was looked at with, and
+      // the one arriving gets them back if it had any of its own. Nothing to
+      // do when the same wallpaper is picked twice.
+      const swapped = !previous || previous.src !== background.src;
+      if (swapped) await partWith(previous);
 
-      return {
-        value: { record: background, recent: recentBackgrounds },
-        status: {
-          kind: 'ok',
-          text: settings.bgDim >= 80
+      const moved = swapped && record.effects ? applyEffects(record.effects) : false;
+
+      // Read after the restore, so the entry is stamped with what is actually
+      // in force - the pair just put back, or the pair that was already there.
+      recentBackgrounds = await remember(background, currentEffects());
+
+      const status = {
+        kind: 'ok',
+        text: moved
+          ? 'Background set, with the Blur and Dim it was last seen with.'
+          : settings.bgDim >= 80
             ? 'Set — turn Dim down to see more of it.'
             : payload.action === 'url'
               ? 'Background set. It is fetched from that address on every new tab.'
               : 'Background set.'
-        }
       };
+
+      // Blur and Dim just changed under their own sliders, so the whole dialog
+      // is rebuilt to show them - which takes the row waiting on this status
+      // with it, and the new mount is handed the line instead.
+      if (moved) {
+        mountSettings({ background: status });
+        return { value: null };
+      }
+
+      return { value: { record: background, recent: recentBackgrounds }, status };
     } catch (err) {
       return { value: {}, status: { kind: 'error', text: err.message } };
     }
@@ -1900,9 +1975,9 @@
    * when there is no room for it. A full storage area is not worth losing the
    * background that did fit over - the list is a convenience, not the setting.
    */
-  async function remember(record) {
+  async function remember(record, effects) {
     try {
-      return await Backgrounds.remember(record);
+      return await Backgrounds.remember(record, effects);
     } catch {
       return recentBackgrounds;
     }
@@ -2053,7 +2128,7 @@
   async function resetSettings() {
     settings = await Store.resetSettings();
     background = await Backgrounds.clear();
-    // The list goes with it. Leaving five stored pictures behind - a click
+    // The list goes with it. Leaving six stored pictures behind - a click
     // from being back on screen, and still taking up the room - is not what
     // "take the background away" says.
     recentBackgrounds = await Backgrounds.forget();

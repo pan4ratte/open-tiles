@@ -594,7 +594,7 @@ const SettingsUI = (() => {
    * A video shows as a video in the big preview rather than as a frame of one,
    * because what the preview is for is saying what the page will look like,
    * and a still of a moving background does not. In the strip of recent ones
-   * it is the other way about: five films playing at once to pick one from is
+   * it is the other way about: six films playing at once to pick one from is
    * noise, so those are left on their first frame with a badge to mark them.
    */
   function buildMedia(record, className, live) {
@@ -628,11 +628,13 @@ const SettingsUI = (() => {
    * crop that ends up behind the tiles - blur and dim included, both scaled
    * down to the size of the preview so they look the way they will full size.
    *
-   * `commit` is handed one of `{action:'file'|'url'|'recent'|'clear'}` and
-   * answers with `{record, recent}` - what took effect, and the list as it now
-   * stands. A refusal comes back with neither, so the field keeps showing what
-   * is really on screen; a change that touches only one of the two says only
-   * that much, which is how removing the background leaves the list alone.
+   * `commit` is handed one of
+   * `{action:'file'|'url'|'recent'|'forget'|'clear'}` and answers with
+   * `{record, recent}` - what took effect, and the list as it now stands. A
+   * refusal comes back with neither, so the field keeps showing what is really
+   * on screen; a change that touches only one of the two says only that much,
+   * which is how removing the background leaves the list alone and how
+   * dropping one from the list leaves the background alone.
    */
   function buildBackground(field, value, commit) {
     const wrap = document.createElement('div');
@@ -660,8 +662,8 @@ const SettingsUI = (() => {
     remove.className = 'btn btn--sm btn--danger';
     remove.append(Icons.create('trash-2', { size: 15 }), document.createTextNode('Remove'));
 
-    // The last few, newest first. Its own row under the buttons, and gone
-    // altogether until there is something in it.
+    // The last few, newest first: a grid three across and two down under the
+    // buttons, and gone altogether until there is something in it.
     const strip = document.createElement('div');
     strip.className = 'bgfield__recent';
 
@@ -698,11 +700,20 @@ const SettingsUI = (() => {
       strip.hidden = list.length === 0;
 
       list.forEach(record => {
+        const named = record.name || 'this background';
+
+        // The thumbnail and its delete button are siblings inside a slot, not
+        // one inside the other: a button cannot hold a button, and the slot is
+        // also what gives every thumbnail the same size whether the grid holds
+        // one of them or six.
+        const slot = document.createElement('div');
+        slot.className = 'bgfield__slot';
+
         const chip = document.createElement('button');
         chip.type = 'button';
         chip.className = 'bgfield__chip';
         chip.title = record.name || 'Recent background';
-        chip.setAttribute('aria-label', 'Use ' + (record.name || 'this background') + ' again');
+        chip.setAttribute('aria-label', 'Use ' + named + ' again');
         // The one already on screen is marked rather than left out: a strip
         // that reshuffles itself as you click through it is hard to aim at.
         chip.classList.toggle('is-on', Boolean(shown) && shown.src === record.src);
@@ -716,8 +727,21 @@ const SettingsUI = (() => {
           chip.append(badge);
         }
 
+        // Out of the way until the slot is pointed at or tabbed into, because
+        // six delete buttons on show turn a row of pictures into a row of
+        // controls. It stays put once it is there, so it can be aimed at.
+        const forget = document.createElement('button');
+        forget.type = 'button';
+        forget.className = 'bgfield__forget';
+        forget.title = 'Remove from recent';
+        forget.setAttribute('aria-label', 'Remove ' + named + ' from recent backgrounds');
+        forget.append(Icons.create('x', { size: 11 }));
+        forget.addEventListener('click', () => send({ action: 'forget', src: record.src }));
+
         chip.addEventListener('click', () => send({ action: 'recent', src: record.src }));
-        strip.append(chip);
+
+        slot.append(chip, forget);
+        strip.append(slot);
       });
     }
 

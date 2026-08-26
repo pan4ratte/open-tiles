@@ -348,6 +348,7 @@ body {
 .range input:focus-visible,
 .switch input:focus-visible + .switch__track,
 .bgfield__chip:focus-visible,
+.bgfield__forget:focus-visible,
 .color__well:focus-visible {
   outline: none;
   box-shadow: 0 0 0 3.5px var(--accent-ring);
@@ -2072,22 +2073,33 @@ body.tile-round .tile {
   margin-top: 10px;
 }
 
-/* The last few backgrounds, as a strip under the picker. A way back to one
-   already seen rather than a gallery, so they are small, share the row evenly
-   and are shaped like the window the way the preview above them is. */
+/* The last few backgrounds, under the picker. A way back to one already seen
+   rather than a gallery, so they are small and shaped like the window the way
+   the preview above them is.
+
+   A grid three across rather than a row that shares itself out, so the six
+   fill two even rows and - this is the point of it - a thumbnail is the same
+   size whether there is one of them or six. A flex row grows the last picture
+   left to the full width of the panel, which reads as a second preview. */
 .bgfield__recent {
-  display: flex;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 8px;
   margin-top: 12px;
 }
 
 .bgfield__recent[hidden] { display: none; }
 
-.bgfield__chip {
+/* The thumbnail and its delete button share this. It is what carries the
+   shape, so the two agree on where the corner is. */
+.bgfield__slot {
   position: relative;
-  flex: 1;
-  min-width: 0;
   aspect-ratio: var(--page-ratio);
+}
+
+.bgfield__chip {
+  position: absolute;
+  inset: 0;
   padding: 0;
   border: 0;
   overflow: hidden;
@@ -2099,12 +2111,60 @@ body.tile-round .tile {
               box-shadow var(--t-fast) var(--ease);
 }
 
-.bgfield__chip:hover { transform: scale(1.04); }
+.bgfield__slot:hover .bgfield__chip { transform: scale(1.04); }
 
 /* The one on screen now. Outside the chip rather than in, so the mark reads at
    this size instead of eating the corner of a thumbnail. */
 .bgfield__chip.is-on {
   box-shadow: 0 0 0 2px var(--bg-box), 0 0 0 3.5px var(--accent);
+}
+
+/* Drops one from the list without touching the background on screen.
+
+   Hidden until the slot is pointed at or tabbed into: six of these on show
+   would turn a row of pictures into a row of controls, and the thumbnails are
+   what the strip is for. Dark on white, like the play badge in the other
+   corner, because it stands on a photograph and has no material of its own.
+
+   Inside the thumbnail rather than overhanging it, so the last column cannot
+   be clipped by the edge of the panel; and it does not ride the hover scale
+   under it, because a target that moves as you reach for it is one you miss. */
+.bgfield__forget {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  width: 17px;
+  height: 17px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--r-pill);
+  background: rgba(0, 0, 0, .55);
+  color: #fff;
+  cursor: pointer;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--t-fast) var(--ease),
+              background var(--t-fast) var(--ease);
+}
+
+.bgfield__slot:hover .bgfield__forget,
+.bgfield__forget:focus-visible {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.bgfield__forget:hover { background: var(--system-red); }
+
+/* A pointer that cannot hover - a touch screen - never reveals the button, so
+   there it stands where it can be tapped. */
+@media (hover: none) {
+  .bgfield__forget {
+    opacity: 1;
+    pointer-events: auto;
+  }
 }
 
 .bgfield__chipmedia {

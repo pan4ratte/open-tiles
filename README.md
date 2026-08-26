@@ -142,7 +142,8 @@ settings and the background — to a single `.json` file, and reads one back. Se
 [Backup](#backup) below.
 
 **Other → Reset all** puts every setting back to its default and takes the
-background away, recent ones included. Tiles and groups are left alone.
+background away, the history of recent ones included. Tiles and groups are left
+alone.
 
 The two status-bar-only options carry a `when` in the schema and appear only
 while *Appearance* is set to *Status bar* — a field is hidden, not disabled, so
@@ -306,20 +307,43 @@ in turn, because an address need not end in anything that gives it away
 (`…/loop.mp4?v=2` and a CDN path with no extension both work), and a dead
 address should cost one wait rather than two.
 
-The **last five backgrounds** are kept in a strip under the picker, newest
-first, so one can be put back without going to find the file again. The one on
-screen is marked rather than left out, and moving ones carry a play badge, since
-a thumbnail of a video is a still. Choosing one again moves it up the strip
-rather than repeating it. Removing the background leaves the strip alone —
-putting back what was just taken away is most of what it is for — while *Reset
-all* clears it, because leaving five stored pictures a click from being back is
-not what "take the background away" says.
+The **last six backgrounds** are kept under the picker, newest first, so one can
+be put back without going to find the file again. They are laid out three across
+and two down rather than as a row that shares itself out, which is what keeps a
+thumbnail the same size whether there is one of them or six — a flex row grows
+the last picture left to the full width of the panel, and that reads as a second
+preview rather than as a thumbnail. The one on screen is marked rather than left
+out, and moving ones carry a play badge, since a thumbnail of a video is a still.
+Choosing one again moves it up rather than repeating it.
 
-The strip holds whole backgrounds, not thumbnails: a stored one *is* its data
+Each one is **dropped** with the × in its corner, which appears when the
+thumbnail is pointed at or tabbed into — six delete buttons on show turn a grid
+of pictures into a grid of controls. That takes the entry out of the history and
+does not touch what is on screen, even when it is the one being dropped:
+*Remove*, just above, is the way to take the background away. Removing the
+background is the mirror of it and leaves the history alone — putting back what
+was just taken away is most of what it is for — while *Reset all* clears the lot,
+because leaving six stored pictures a click from being back is not what "take the
+background away" says.
+
+Every entry also carries the **Blur and Dim it was last looked at with**, and
+going back to one brings those back with it: a photograph wants dimming where a
+flat colour does not, and having to re-dial the pair every time you swap
+wallpapers is most of the friction in swapping them. The pair is written against
+the wallpaper you are *leaving*, at the moment you leave it — not on every slider
+drag. The history is the heaviest thing in the storage area, and a wallpaper
+still on screen needs nothing remembered about it: what is in `settings` already
+*is* how it looks. For the same reason the pair rides on the history entry rather
+than on the `background` record, which is the megabytes; an entry that falls off
+the end takes its settings with it rather than leaving them behind for nothing.
+An entry from before this existed carries no pair at all, which is not the same
+as carrying the defaults — going back to one leaves the sliders where they are.
+
+The history holds whole backgrounds, not thumbnails: a stored one *is* its data
 URI, and there would be nothing to put back from a thumbnail. That makes it the
-heaviest thing in the storage area, so it is capped twice over — five entries,
+heaviest thing in the storage area, so it is capped twice over — six entries,
 and 64 MB between them. One named by web address costs only its address, so a
-strip of those never comes near the ceiling.
+history of those never comes near the ceiling.
 
 The background appears behind the tiles the moment it is chosen — it goes on
 screen before it is written to storage, not after. The preview in the dialog
@@ -344,7 +368,7 @@ thins out further so more of it shows through.
 
 Settings → *Other* → **Export** saves everything the add-on keeps to one
 `tiles-backup-YYYY-MM-DD.json` file: your tiles, your groups, every setting and
-the background, data URI and all — the last five are left out, being a history
+the background, data URI and all — the last six are left out, being a history
 rather than a setting. It is indented, so it is a file you
 can open and read. **Import** reads one back.
 
@@ -708,7 +732,7 @@ permissions are needed. Leaving the field empty falls back to the system font.
 | `activeGroup` | id of the group last shown, or `null` for *All* |
 | `settings` | see `src/schema.js` |
 | `background` | `{ src, name, type, savedAt }`, or `null` — `src` is a `data:` URI or a web address, `type` is `image` or `video` |
-| `bgRecent` | `[background]` — the last five, newest first |
+| `bgRecent` | `[background & { effects }]` — the last six, newest first; `effects` is the `{ bgBlur, bgDim }` that entry was last looked at with |
 | `fontCache` | `{ [family]: { css, savedAt } }` |
 | `iconCache` | `{ [origin]: { url, size, mode, savedAt } }` |
 
@@ -725,7 +749,7 @@ the extension — only the Google Fonts fetch and the deep icon lookup behave
 differently there. The background is the one thing that may not survive
 that route: `localStorage` holds about 5 MB, where extension storage — with
 `unlimitedStorage` asked for in the manifest — is happy with a large photo or a
-video, and with five more of them in the recent strip.
+video, and with six more of them in the history.
 
 ## Tests
 

@@ -17,7 +17,7 @@
  * of a backup - a picture is megabytes where the rest is kilobytes, and a
  * video is more again. It is the half of "how my new tab looks" that would be
  * tedious to set up again, so it travels with the rest. The list of recent
- * ones does not: it is a history rather than a setting, and five backgrounds
+ * ones does not: it is a history rather than a setting, and six backgrounds
  * would make a backup an order of magnitude larger for nothing much.
  *
  * A file another add-on wrote is read through the same door: when the envelope

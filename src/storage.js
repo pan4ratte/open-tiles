@@ -15,8 +15,9 @@
  *   activeGroup- id of the group last shown, or null for "All"
  *   background - { src, name, type, savedAt }      the page background
  *                type is 'image' or 'video'; src is a data: URI or an address
- *   bgRecent   - [background]  the last few, newest first, so one can be put
- *                back without finding the file again
+ *   bgRecent   - [background & { effects }]  the last few, newest first, so one
+ *                can be put back without finding the file again; `effects` is
+ *                the { bgBlur, bgDim } that entry was last looked at with
  *   fontCache  - { [family]: { css, savedAt } }     CSS with the woff2 inlined
  *   iconCache  - { [origin]: { url, data, size, mode, savedAt } }
  *                url is the address the icon was found at; data is the picture
@@ -83,12 +84,20 @@ const Store = (() => {
   /** A record's stamp and length - as telling as the whole data URI, for free. */
   const stamp = record => record.savedAt + ':' + record.src.length;
 
+  /**
+   * The same for a recent entry, with the effects on the end: those are the
+   * one thing about an entry that changes without its stamp or its length
+   * doing, so a list that differs only there has to sign differently.
+   */
+  const stampEntry = entry => stamp(entry)
+    + (entry.effects ? ':' + entry.effects.bgBlur + ',' + entry.effects.bgDim : '');
+
   function signature(key, value) {
     // The picture is megabytes of data URI, and the recent list is several of
     // them. Their stamps and lengths identify them as well as the whole
     // strings would, at none of the cost.
     if (key === BACKGROUND) return value ? stamp(value) : 'null';
-    if (key === BG_RECENT) return Array.isArray(value) ? value.map(stamp).join('|') : 'null';
+    if (key === BG_RECENT) return Array.isArray(value) ? value.map(stampEntry).join('|') : 'null';
     try {
       const json = JSON.stringify(value);
       return json === undefined ? null : json;
@@ -305,9 +314,34 @@ const Store = (() => {
    * how many it holds, and by the room they may take between them. One named
    * by web address costs only its address, so a list of those never comes near
    * the ceiling; a list of stored videos reaches it after three or four.
+   *
+   * Six, because the strip is drawn three across and two down: a row and a
+   * half of thumbnails would be a hole in the grid rather than a layout.
    */
-  const MAX_RECENT = 5;
+  const MAX_RECENT = 6;
   const RECENT_BUDGET = 64 * 1024 * 1024;
+
+  /**
+   * An entry as it is kept: the background, plus the Blur and Dim it was last
+   * looked at with.
+   *
+   * The pair rides on the entry rather than in `settings` because there is one
+   * of them per wallpaper - a photograph wants dimming where a flat colour
+   * does not - and because an entry that falls off the end should take its
+   * settings with it rather than leave them behind for nothing.
+   *
+   * It stays off the `background` record for the opposite reason: that one is
+   * megabytes of data URI, and writing it again every time a slider moves is
+   * exactly what keeping the picture out of `settings` was for.
+   */
+  function sanitizeRecentEntry(raw) {
+    const record = sanitizeBackground(raw);
+    if (!record) return null;
+    // Absent rather than defaulted: an entry that has never been looked at
+    // under this build should leave the sliders where they are, not haul them
+    // back to 0 and 35.
+    return raw.effects ? { ...record, effects: Schema.coerceEffects(raw.effects) } : record;
+  }
 
   /** Newest first, no repeats, inside both caps. */
   function sanitizeRecent(list) {
@@ -317,7 +351,7 @@ const Store = (() => {
     let room = RECENT_BUDGET;
 
     for (const raw of list) {
-      const record = sanitizeBackground(raw);
+      const record = sanitizeRecentEntry(raw);
       // The same picture chosen twice is one entry, at the place the newer
       // choice put it.
       if (!record || out.some(kept => kept.src === record.src)) continue;
@@ -336,12 +370,68 @@ const Store = (() => {
     return sanitizeRecent(await get(BG_RECENT));
   }
 
-  /** Puts `record` at the front. @returns the list as it now stands */
-  async function rememberBackground(record) {
+  /**
+   * Puts `record` at the front, carrying `effects` if any were named.
+   *
+   * An entry moving back to the front keeps whatever it already had when the
+   * caller names nothing, so putting one back does not cost it the pair it was
+   * remembered with.
+   *
+   * @returns the list as it now stands
+   */
+  async function rememberBackground(record, effects) {
     const clean = sanitizeBackground(record);
     if (!clean) return loadRecentBackgrounds();
 
-    const list = sanitizeRecent([clean, ...(await loadRecentBackgrounds())]);
+    const held = await loadRecentBackgrounds();
+    const before = held.find(entry => entry.src === clean.src);
+    const carried = effects || (before && before.effects);
+
+    const list = sanitizeRecent([
+      carried ? { ...clean, effects: carried } : clean,
+      ...held
+    ]);
+    await set(BG_RECENT, list);
+    return list;
+  }
+
+  /**
+   * Writes `effects` against the entry holding `src`, leaving the order alone.
+   *
+   * Called as the page moves off a background, so what is remembered against
+   * one is what it was last actually looked at with. A `src` that is not in
+   * the list - the background was removed from the strip while it was still on
+   * screen - is nothing to do, not an error.
+   *
+   * @returns the list as it now stands
+   */
+  async function noteRecentEffects(src, effects) {
+    const held = await loadRecentBackgrounds();
+    const clean = Schema.coerceEffects(effects);
+
+    let changed = false;
+    const list = held.map(entry => {
+      if (entry.src !== src) return entry;
+      const same = entry.effects
+        && Schema.EFFECT_KEYS.every(key => entry.effects[key] === clean[key]);
+      if (same) return entry;
+      changed = true;
+      return { ...entry, effects: clean };
+    });
+
+    // The list is the heaviest thing here; a write that changes nothing is not
+    // worth megabytes, nor the edit it would look like in every other tab.
+    if (!changed) return held;
+    await set(BG_RECENT, list);
+    return list;
+  }
+
+  /** Drops the entry holding `src`. @returns the list as it now stands */
+  async function forgetRecentBackground(src) {
+    const held = await loadRecentBackgrounds();
+    const list = held.filter(entry => entry.src !== src);
+    if (list.length === held.length) return held;
+
     await set(BG_RECENT, list);
     return list;
   }
@@ -474,7 +564,8 @@ const Store = (() => {
     loadActiveGroup, saveActiveGroup,
     loadSettings, saveSettings, resetSettings,
     loadBackground, saveBackground, clearBackground,
-    loadRecentBackgrounds, rememberBackground, clearRecentBackgrounds, MAX_RECENT,
+    loadRecentBackgrounds, rememberBackground, noteRecentEffects,
+    forgetRecentBackground, clearRecentBackgrounds, MAX_RECENT,
     getFontCss, putFontCss,
     icons,
     onExternalChange

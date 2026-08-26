@@ -180,14 +180,72 @@ Store.onExternalChange((key, value) => heard.push({ key, value }));
   check('choosing one again moves it up rather than repeating it',
     await listed() === 'ACB', await listed());
 
-  for (const key of ['D', 'E', 'F', 'G']) await pick(key);
+  for (const key of ['D', 'E', 'F', 'G', 'H']) await pick(key);
   const capped = await Store.loadRecentBackgrounds();
   check('the list stops at its ceiling, dropping the oldest',
-    capped.length === Store.MAX_RECENT && await listed() === 'GFEDA',
+    capped.length === Store.MAX_RECENT && await listed() === 'HGFEDA',
     capped.length + ': ' + await listed());
+  check('and the ceiling fills the strip’s three-by-two grid',
+    Store.MAX_RECENT === 6, String(Store.MAX_RECENT));
 
   check('none of that came back as somebody else’s edit',
     heard.length === 0, heard.map(h => h.key).join(', ') || 'nothing heard');
+
+  // ------------------------------------------------- effects and forgetting
+
+  // Each entry carries the Blur and Dim it was last looked at with, so going
+  // back to a wallpaper goes back to how it looked. They ride on the entry
+  // rather than on the `background` record, which is the megabytes.
+  const effectsOf = async key => {
+    const entry = (await Store.loadRecentBackgrounds()).find(one => one.name === key);
+    return entry && entry.effects;
+  };
+
+  await Store.rememberBackground(remembered('D'), { bgBlur: 12, bgDim: 70 });
+  await settle();
+  check('an entry keeps the effects it was remembered with',
+    JSON.stringify(await effectsOf('D')) === '{"bgBlur":12,"bgDim":70}',
+    JSON.stringify(await effectsOf('D')));
+
+  await Store.rememberBackground(remembered('D'));
+  await settle();
+  check('and keeps them when it is picked again with none named',
+    JSON.stringify(await effectsOf('D')) === '{"bgBlur":12,"bgDim":70}',
+    JSON.stringify(await effectsOf('D')));
+
+  check('one never looked at carries none, so its sliders stay put',
+    (await effectsOf('H')) === undefined, JSON.stringify(await effectsOf('H')));
+
+  await Store.noteRecentEffects(remembered('H').src, { bgBlur: 4, bgDim: 0 });
+  await settle();
+  check('parting with one writes its effects without moving it up',
+    JSON.stringify(await effectsOf('H')) === '{"bgBlur":4,"bgDim":0}'
+      && (await listed()).indexOf('H') === 1,
+    JSON.stringify(await effectsOf('H')) + ' at ' + (await listed()).indexOf('H'));
+
+  const nonsense = await Store.noteRecentEffects(
+    remembered('D').src, { bgBlur: 999, bgDim: -5 });
+  await settle();
+  check('effects out of range are clamped the way a slider is',
+    JSON.stringify(nonsense.find(one => one.name === 'D').effects) === '{"bgBlur":40,"bgDim":0}',
+    JSON.stringify(nonsense.find(one => one.name === 'D').effects));
+
+  heard.length = 0;
+  await Store.noteRecentEffects('data:image/png;base64,NOPE', { bgBlur: 8, bgDim: 8 });
+  await Store.noteRecentEffects(remembered('D').src, { bgBlur: 40, bgDim: 0 });
+  await settle();
+  check('an effects write that changes nothing writes nothing',
+    heard.length === 0, heard.map(h => h.key).join(', ') || 'nothing written');
+
+  const before = (await Store.loadRecentBackgrounds()).length;
+  const left = await Store.forgetRecentBackground(remembered('F').src);
+  await settle();
+  check('one can be dropped from the list on its own',
+    left.length === before - 1 && !left.some(one => one.name === 'F'),
+    left.map(one => one.name).join(''));
+
+  check('dropping one that is not there leaves the list alone',
+    (await Store.forgetRecentBackground('data:image/png;base64,NOPE')).length === left.length);
 
   area.foreign('bgRecent', [remembered('Z')]);
   await settle();

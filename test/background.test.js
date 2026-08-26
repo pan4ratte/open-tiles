@@ -14,6 +14,11 @@
  *     MP4 shows nothing, and shows nothing silently.
  *   - taking the background away must not empty the list of recent ones -
  *     putting back what was just removed is most of what the list is for.
+ *   - dropping one *from the list* is the other way about: the strip loses an
+ *     entry and the background on screen is not touched.
+ *   - a thumbnail and its delete button have to be siblings. A button inside a
+ *     button is markup no browser agrees about, and the one that loses is the
+ *     one that quietly stops firing.
  *   - every section's controls have to exist whichever tab is open, or the
  *     page's own lookups - and these tests - find nothing.
  *
@@ -82,6 +87,8 @@ const removeBtn = field.findAll(el => el.className.includes('btn--danger'))[0];
 
 const chips = () => strip.findAll(el => el.className.includes('bgfield__chip')
   && !el.className.includes('chipmedia'));
+const slots = () => strip.findAll(el => el.className.includes('bgfield__slot'));
+const forgets = () => strip.findAll(el => el.className.includes('bgfield__forget'));
 
 // ------------------------------------------------------------- the contract
 
@@ -132,6 +139,19 @@ check('a still one is drawn as an image, a moving one as a video',
     && Boolean(chips()[1].find(el => el.tagName === 'video')));
 check('the preview draws the still picture it was handed as an image',
   Boolean(preview.find(el => el.tagName === 'img')));
+
+// ------------------------------------------------------- deleting from it
+
+check('every recent one offers a way to drop it',
+  forgets().length === RECENT.length, forgets().length + ' delete buttons');
+check('one slot per entry, so the grid gives them all the same size',
+  slots().length === RECENT.length, slots().length + ' slots');
+check('the delete button is a sibling of the thumbnail, not inside it',
+  slots().every(slot => slot.children.length === 2)
+    && chips().every(chip => !chip.find(el => el.className.includes('bgfield__forget'))));
+check('and it says which one it drops',
+  forgets()[1].attrs['aria-label'].includes('films.example'),
+  forgets()[1].attrs['aria-label']);
 
 // ------------------------------------------------------------------- tabs
 
@@ -231,6 +251,31 @@ const settle = () => new Promise(resolve => setTimeout(resolve, 0));
     chips().length + ' chips');
   check('remove hides itself once there is nothing to remove',
     removeBtn.hidden === true, 'hidden=' + removeBtn.hidden);
+
+  // Dropping one from the strip is the mirror of that: the list loses an
+  // entry, and what is on screen is not the strip's business.
+  answer = { recent: RECENT.slice(1) };
+  forgets()[0].fire('click');
+  await settle();
+
+  // BEACH heads the strip by now - it was chosen a few steps up.
+  check('a delete button asks the page to forget that one by address',
+    sent[sent.length - 1].value.action === 'forget'
+      && sent[sent.length - 1].value.src === BEACH.src,
+    String(sent[sent.length - 1].value.src));
+  check('and the strip loses it',
+    chips().length === 2 && forgets().length === 2, chips().length + ' chips');
+  check('while the preview is left exactly as it was',
+    preview.className.includes('is-empty'), caption.textContent);
+
+  // The last one out takes the strip with it rather than leaving a gap where
+  // a row of pictures used to be.
+  answer = { recent: [] };
+  forgets()[0].fire('click');
+  await settle();
+
+  check('emptying the list hides the strip',
+    strip.hidden === true && chips().length === 0, 'hidden=' + strip.hidden);
 
   // ---------------------------------------------------------------- report
 

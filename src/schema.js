@@ -91,8 +91,9 @@ const Schema = (() => {
           note: 'A picture or a video from this computer — up to 6 MB for a '
               + 'picture, 16 MB for a video — or a web address, which is fetched '
               + 'fresh on every new tab. Large pictures are scaled down to fit; '
-              + 'the preview shows the crop you will get. The last five are kept '
-              + 'underneath, to go back to.'
+              + 'the preview shows the crop you will get. The last six are kept '
+              + 'underneath, each with the Blur and Dim it was last seen with; '
+              + 'going back to one brings those back with it.'
         },
         { key: 'bgBlur', label: 'Blur', type: 'range', default: 0, min: 0, max: 40, step: 2, unit: 'px' },
         {
@@ -431,6 +432,27 @@ const Schema = (() => {
     }
   }
 
+  /**
+   * The background effects: what Blur and Dim are set to.
+   *
+   * They are named as a pair because they travel as one - a wallpaper in the
+   * recent strip carries the pair it was last looked at with, and going back
+   * to it brings them back too. They are ordinary stored settings all the
+   * same; this is only the subset, not a second home for them.
+   */
+  const EFFECT_KEYS = ['bgBlur', 'bgDim'];
+
+  /** The pair, filled in from the defaults and clamped the way a slider is. */
+  function coerceEffects(raw) {
+    const source = raw && typeof raw === 'object' ? raw : {};
+    const out = {};
+    EFFECT_KEYS.forEach(key => {
+      const field = STORED.find(f => f.key === key);
+      out[key] = key in source ? coerceField(field, source[key]) : field.default;
+    });
+    return out;
+  }
+
   /** Fills in defaults and drops anything invalid or unknown. */
   function coerce(raw) {
     const source = raw && typeof raw === 'object' ? raw : {};
@@ -443,5 +465,8 @@ const Schema = (() => {
     return out;
   }
 
-  return { SECTIONS, FIELDS, STORED, DEFAULTS, coerce, optionValue, optionLabel };
+  return {
+    SECTIONS, FIELDS, STORED, DEFAULTS, EFFECT_KEYS,
+    coerce, coerceEffects, optionValue, optionLabel
+  };
 })();
