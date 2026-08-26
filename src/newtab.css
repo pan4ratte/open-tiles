@@ -265,6 +265,10 @@
   --bg-blur: 0px;
   --bg-dim: .35;
   --groupbar-h: 38px;
+  /* The air the group block keeps around itself where it is set in the page,
+     above and below. Its own, not a share of the clock's - every element
+     stacked over the tiles carries the room it needs with it. */
+  --groupbar-gap: 24px;
   --groupbar-align: center;
 
   /* How far the page is held off the window's edges. The top has to clear the
@@ -577,21 +581,37 @@ body.gb-floating.gb-float-bottom .groupbar {
   bottom: 16px;
 }
 
-/* Set in the page instead, between the clock and the tiles: not chrome over
-   the page but part of its column, moving with it and taking room of its own.
-   Static, so the row it is in can measure it - a fixed element measures
-   nothing. */
+/* Set in the page instead: not chrome over the page but part of the stack that
+   the tiles anchor - the date, the clock and the block, one under the other
+   above the grid. The page moves it there, into the header's own column, so it
+   is laid out with the clock rather than beside it.
+
+   The tiles are the anchor and nothing may shift them, which is what that
+   column is for: it hangs from the bottom of a flexible row, so anything added
+   to it pushes the clock up rather than pushing the tiles down. That leaves
+   the block free to take the room it actually needs.
+
+   The room it takes is its own - `--groupbar-gap` above and below - rather
+   than a share of the gap the clock leaves. Each element over the tiles
+   carries its own, so the order they are stacked in is free to change without
+   the spacing having to be worked out again.
+
+   Static: as a flex item it is centred by the column, and the offsets written
+   for a pill fixed to the window mean nothing to it. The transform, though, is
+   spoken for - it is what carries the block when a group with a different
+   number of rows moves the stack under it. See glideGroupBar. */
 body.gb-inline .groupbar {
   position: static;
-  grid-row: 2;
-  transform: none;
+  margin-top: var(--groupbar-gap);
   max-width: 100%;
-  margin-bottom: 22px;
+  transform: none;
+  transition: opacity var(--t-base) var(--ease),
+              transform var(--t-group-in) var(--ease-out);
 }
 
-/* The clock's own gap to the tiles is now shared with the block standing in
-   it, so it gives up most of it. */
-body.gb-inline .page__header { margin-bottom: 22px; }
+/* The column's own margin now falls under the block rather than under the
+   clock, so it is the block's to set. */
+body.gb-inline .page__header { margin-bottom: var(--groupbar-gap); }
 
 /* The pill animates itself in. Doing it one level up, on .groupbar, would
    fight the `on hover` rule below and win: a running or filled animation
@@ -696,10 +716,10 @@ body.gb-hover .groupbar { opacity: 0; }
 
 body.gb-hover .groupbar:hover,
 body.gb-hover .groupbar:focus-within,
-/* A group has just been picked: the grid has to say what filtered it, so the
-   block shows itself for a moment and then steps back - see peekGroups. */
-body.gb-hover .groupbar.is-peek,
-/* And a tile is being dragged, which is the moment the chips are wanted. */
+/* A tile is being dragged, which is the moment the chips are wanted - the one
+   thing besides the pointer arriving that brings the block back. Picking a
+   group does not: on hover means on hover, and a block that let itself out
+   whenever the grid changed was the thing that made the setting look broken. */
 body.gb-hover.is-dragging .groupbar { opacity: 1; }
 
 /* -- chips -- */
@@ -835,11 +855,9 @@ body.gb-bar .chip { border-radius: var(--r-control); }
 
    `1fr` is `minmax(auto, 1fr)`, so a row never shrinks below what is in it: on
    a window too short to hold both, the rows give up their equal share, the
-   page grows past the viewport and scrolls, and nothing is clipped.
-
-   The second row is the group block's, for the one placement that sets it in
-   the page rather than floating it over. Empty it measures nothing, so the
-   other three rows are the same three rows they always were. */
+   page grows past the viewport and scrolls, and nothing is clipped. The group
+   block set in the page joins the clock in the row above rather than taking a
+   row of its own, for the same reason. */
 .page {
   display: grid;
   /* minmax(0, ...) rather than the default `auto`: an auto track takes its
@@ -847,7 +865,7 @@ body.gb-bar .chip { border-radius: var(--r-control); }
      blow the track out past the viewport and drag the grid off centre with
      it. Pinned to the row, the grid simply drops to the columns that fit. */
   grid-template-columns: minmax(0, 1fr);
-  grid-template-rows: 1fr auto auto 1fr;
+  grid-template-rows: 1fr auto 1fr;
   justify-items: center;
   min-height: 100%;
   padding: var(--page-inset) 24px calc(var(--page-inset) + var(--optical-lift) * 2);
@@ -907,7 +925,7 @@ body.gb-bar .chip { border-radius: var(--r-control); }
    --------------------------------------------------------------------------- */
 
 .grid {
-  grid-row: 3;
+  grid-row: 2;
   display: grid;
   grid-template-columns: repeat(auto-fit, var(--tile-size));
   gap: var(--gap);
@@ -1175,7 +1193,7 @@ body.tile-round .tile {
 }
 
 .empty {
-  grid-row: 4;
+  grid-row: 3;
   align-self: start;
   max-width: 34ch;
   margin-top: 32px;

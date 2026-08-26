@@ -167,35 +167,101 @@ check('the two toggles are always on show',
     check(`and the stylesheet draws it`, css.includes(`body.${name} `));
   });
 
-  check('a block set in the page is static, so its row can measure it',
-    /body\.gb-inline \.groupbar \{[^}]*position: static/.test(css));
+  /*
+   * The tiles are the anchor of this page: they hold the centre of the window
+   * and nothing is allowed to shift them. So a block set in the page cannot
+   * take a row of its own - a row with height in it pushes the tiles down as
+   * surely as a margin would. It joins the stack the tiles anchor instead, the
+   * header's column, which hangs from the bottom of a flexible row: room taken
+   * there pushes the clock up and leaves the grid where it is.
+   */
+  const inlineRule = (css.match(/body\.gb-inline \.groupbar \{([^}]*)\}/) || [])[1] || '';
 
-  check('and it takes the row the page leaves for it',
-    /body\.gb-inline \.groupbar \{[^}]*grid-row: 2/.test(css)
-      && /grid-template-rows: 1fr auto auto 1fr/.test(css));
+  check('the page moves the block into the column the clock is in',
+    /const home = inline \? header : document\.body;/.test(js));
 
-  check('the tiles and the empty notice moved down a row to make it',
-    /\.grid \{[^}]*grid-row: 3/.test(css) && /\.empty \{[^}]*grid-row: 4/.test(css));
+  check('and appends it there, so it lands under the clock',
+    /home\.insertBefore\(groupBar, inline \? null : toolbar\);/.test(js));
+
+  check('the column stays even with no clock and no date, being the block home now',
+    /header\.hidden = !settings\.showClock && !settings\.showDate && !inline;/.test(js));
+
+  check('the block is a plain item of that column, centred by it',
+    /position: static/.test(inlineRule), inlineRule.replace(/\s+/g, ' ').trim());
+
+  check('the room it takes is its own, above and below',
+    /margin-top: var\(--groupbar-gap\)/.test(inlineRule)
+      && /body\.gb-inline \.page__header \{ margin-bottom: var\(--groupbar-gap\); \}/.test(css));
+
+  check('and it is a number of its own, not a share of the gap the clock leaves',
+    /--groupbar-gap:\s*\d+px/.test(css) && /\.page__header \{[\s\S]*?margin-bottom: 44px/.test(css));
+
+  check('so the page keeps the three rows it always had',
+    /grid-template-rows: 1fr auto 1fr/.test(css)
+      && /\.grid \{[^}]*grid-row: 2/.test(css) && /\.empty \{[^}]*grid-row: 3/.test(css));
+
+  check('and the block asks for no row at all',
+    !/grid-row/.test(inlineRule), inlineRule.replace(/\s+/g, ' ').trim());
 
   check('the pill arrives from the edge it lives at',
     css.includes('body.gb-float-bottom .groupbar__inner { animation-name: pill-up; }')
       && css.includes('@keyframes pill-up'));
 
-  // Hover mode: the block shows itself when a group changes and then steps
-  // back. Held open for as long as a group was picked - which is what the
-  // is-active rule did - it never went away at all, since a remembered group
-  // is where most new tabs open.
-  check('a group change shows the block for a moment',
-    js.includes("'is-peek'") && css.includes('body.gb-hover .groupbar.is-peek'));
+  /*
+   * A group with a different number of rows re-centres the page, which moves
+   * the gap the block sits in. It travels there rather than jumping: the page
+   * measures where the block was, puts it back with a transform once the grid
+   * has been rebuilt, and lets go.
+   */
+  check('the page measures the block before the redraw and puts it back after',
+    /const from = groupBarAt\(\);\s*render\(\);\s*startOfGroup\(\);\s*glideGroupBar\(from\);/.test(js));
 
-  check('and the stylesheet no longer pins it open for a picked group',
-    !css.includes('.groupbar.is-active') && !js.includes("'is-active'"));
+  /*
+   * The measurement is taken on the page rather than in the window, because
+   * the change may take the scroll with it: that is a jump, not a move, and
+   * gliding the block across it would animate the wrong thing entirely.
+   */
+  check('and measures it on the page, so a scroll is not read as a move',
+    /function groupBarAt\(\) \{\s*return groupBar\.getBoundingClientRect\(\)\.top \+ scroller\(\)\.scrollTop;/.test(js));
 
-  check('the peek is what a change asks for',
-    /renderGroups\(\);\s*peekGroups\(\);/.test(js));
+  /*
+   * A group is only left once it has been read to the end, so the next one
+   * has to begin somewhere else - or it would arrive already read, and the
+   * next push would leave it unseen. That somewhere is the top, however the
+   * group was arrived at.
+   */
+  check('every group begins at its top, whichever way it was come to',
+    /function startOfGroup\(\) \{\s*scroller\(\)\.scrollTop = 0;\s*\}/.test(js));
 
-  check('and it lets go of the block on its own',
-    /peekTimer = setTimeout\(\(\) => groupBar\.classList\.remove\('is-peek'\)/.test(js));
+  check('and the page is put there as part of the change, not left to the browser',
+    /render\(\);\s*startOfGroup\(\);\s*return;/.test(js));
+
+  check('the jump back is made with the transition off, or it animates itself',
+    /style\.transition = 'none';\s*groupBar\.style\.transform = `translateY\(\$\{shift\}px\)`/.test(js));
+
+  check('and the layout is read in between, or both writes land in one pass',
+    /void groupBar\.offsetWidth;\s*groupBar\.style\.transition = '';\s*groupBar\.style\.transform = '';/.test(js));
+
+  check('the stylesheet is what carries it the rest of the way',
+    /transition: opacity[^;]*,\s*transform var\(--t-group-in\)/.test(inlineRule));
+
+  check('nowhere else measures anything - a pill and a bar are both pinned',
+    /if \(!document\.body\.classList\.contains\('gb-inline'\)\) return;/.test(js));
+
+  check('and with the animation off the block simply moves, like the grid',
+    /if \(!animatesGroups\(\)\) \{\s*render\(\);\s*startOfGroup\(\);\s*return;\s*\}/.test(js));
+
+  /*
+   * On hover means on hover. The block used to let itself out whenever a group
+   * was picked - first for as long as it stayed picked, which meant it never
+   * hid at all, then for a moment - and both read as the setting not working.
+   */
+  check('nothing but the pointer, the keyboard and a drag brings the block back',
+    !css.includes('.groupbar.is-peek') && !css.includes('.groupbar.is-active')
+      && css.includes('body.gb-hover.is-dragging .groupbar'));
+
+  check('and the page has no way left to ask it to show itself',
+    !js.includes('peekGroups') && !js.includes("'is-peek'") && !js.includes("'is-active'"));
 
   check('the page writes --group-dir and the stylesheet reads it',
     js.includes("'--group-dir'") && css.includes('var(--group-dir)'));
@@ -221,8 +287,9 @@ check('the two toggles are always on show',
 
   /*
    * Lifted whole out of newtab.js - its constants, its running totals and the
-   * listener itself - and run against stubs for the two things it reaches out
-   * to: the settings, and the call that turns a group.
+   * listener itself - and run against stubs for the three things it reaches
+   * out to: the settings, the call that turns a group, and the page's own
+   * scrolling, which a gesture has to give way to before it turns anything.
    */
   const from = '  /** How far the deltas have to add up before a group is turned. */';
   const to = '  }, { passive: false });';
@@ -236,17 +303,33 @@ check('the two toggles are always on show',
   const steps = [];
 
   const build = new Function('document', 'settings', 'stepGroup', 'setTimeout', 'clearTimeout',
+    'scroller',
     block + '\n; return { wheelDelta };');
 
   let settings = { groupScroll: true, groupScrollAxis: 'vertical' };
 
+  /*
+   * The page as something to scroll. A group that fits the window has nothing
+   * to scroll and turns on the first push, which is what `fits` is; `runs`
+   * gives it more tiles than fit, with `at` saying how far down them the page
+   * has been scrolled.
+   */
+  const scroller = { scrollTop: 0, scrollHeight: 800, clientHeight: 800 };
+  const fits = () => Object.assign(scroller, { scrollTop: 0, scrollHeight: 800 });
+  const runs = at => Object.assign(scroller, { scrollTop: at, scrollHeight: 2400 });
+
   const { wheelDelta } = build(
-    { addEventListener: (type, fn) => { if (type === 'wheel') handler = fn; } },
+    {
+      addEventListener: (type, fn) => { if (type === 'wheel') handler = fn; },
+      scrollingElement: scroller
+    },
     // A getter, so the stub follows whatever the test sets next.
     new Proxy({}, { get: (_, key) => settings[key] }),
     step => steps.push(step),
     setTimeout,
-    clearTimeout
+    clearTimeout,
+    // The page's own scrolling, which the gesture asks about before it acts.
+    () => scroller
   );
 
   check('the handler listens for wheel events', typeof handler === 'function');
@@ -448,13 +531,101 @@ check('the two toggles are always on show',
   handler(wheel({ deltaY: 3, deltaMode: 1 }));
   check('one notch of a mouse wheel reporting lines turns a group',
     steps.length === 1 && steps[0] === 1,
-    `a notch reads as ${wheelDelta(wheel({ deltaY: 3, deltaMode: 1 }))}px`);
+    `a notch reads as ${wheelDelta(wheel({ deltaY: 3, deltaMode: 1 })).delta}px`);
 
   await rest();
   steps.length = 0;
   handler(wheel({ deltaY: 1, deltaMode: 2 }));
   check('so does a wheel reporting whole pages',
     steps.length === 1, JSON.stringify(steps));
+
+  // ------------------------------------- reading a group before leaving it
+
+  /*
+   * A group with more tiles than the window can hold is somewhere to read
+   * before it is somewhere to leave. The gesture gives way to the page's own
+   * scrolling until there is none of that group left in the direction being
+   * pushed - and only then turns.
+   */
+  settings = { groupScroll: true, groupScrollAxis: 'vertical' };
+
+  await rest();
+  steps.length = 0;
+  runs(0);
+  flick({ dy: 40 });
+  check('a group taller than the window scrolls rather than turning',
+    steps.length === 0, JSON.stringify(steps));
+
+  await rest();
+  steps.length = 0;
+  runs(700);
+  flick({ dy: 40 });
+  check('and half way down it is still scrolling',
+    steps.length === 0, JSON.stringify(steps));
+
+  await rest();
+  steps.length = 0;
+  runs(1600);
+  flick({ dy: 40 });
+  check('at the bottom of it, the next push turns the group',
+    steps.length === 1 && steps[0] === 1, JSON.stringify(steps));
+
+  await rest();
+  steps.length = 0;
+  runs(1600);
+  flick({ dy: -40 });
+  check('scrolling back up from there reads it rather than turning back',
+    steps.length === 0, JSON.stringify(steps));
+
+  await rest();
+  steps.length = 0;
+  runs(0);
+  flick({ dy: -40 });
+  check('and at the top, going back turns the group',
+    steps.length === 1 && steps[0] === -1, JSON.stringify(steps));
+
+  // Arriving at the end is not itself enough to be carried past it: what the
+  // page scrolled with does not count towards the turn.
+  await rest();
+  steps.length = 0;
+  runs(1600 - 30);
+  handler(wheel({ deltaY: 40 }));   // takes the page to the bottom
+  scroller.scrollTop = 1600;
+  handler(wheel({ deltaY: 40 }));
+  check('the scroll that reached the end does not count towards leaving',
+    steps.length === 0, JSON.stringify(steps));
+
+  handler(wheel({ deltaY: 40 }));
+  check('but pushing on from there does',
+    steps.length === 1, JSON.stringify(steps));
+
+  // A sideways push is nothing the page would have scrolled with, so it has
+  // nothing to wait behind.
+  settings = { groupScroll: true, groupScrollAxis: 'either' };
+  await rest();
+  steps.length = 0;
+  runs(700);
+  flick({ dx: 40 });
+  check('a sideways gesture turns a group wherever the page is scrolled to',
+    steps.length === 1 && steps[0] === 1, JSON.stringify(steps));
+
+  settings = { groupScroll: true, groupScrollAxis: 'horizontal' };
+  await rest();
+  steps.length = 0;
+  runs(700);
+  handler(wheel({ deltaY: 100 }));
+  check('but the wheel borrowed for left and right still waits for the page',
+    steps.length === 0, JSON.stringify(steps));
+
+  await rest();
+  steps.length = 0;
+  runs(1600);
+  handler(wheel({ deltaY: 100 }));
+  check('and turns once there is no more group to read',
+    steps.length === 1, JSON.stringify(steps));
+
+  settings = { groupScroll: true, groupScrollAxis: 'vertical' };
+  fits();
 
   // ------------------------------------------------- what it keeps its hands off
 

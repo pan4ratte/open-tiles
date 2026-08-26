@@ -248,8 +248,8 @@ const Schema = (() => {
             { value: 'hover', label: 'On hover' }
           ],
           note: 'On hover keeps the block out of the way until the pointer '
-              + 'reaches it. Picking a group leaves it on show for a moment, '
-              + 'so a filtered grid always says what filtered it.'
+              + 'reaches it. Picking a group does not bring it back; dragging '
+              + 'a tile does, since that is the moment the chips are wanted.'
         },
         {
           key: 'showAllGroup',
@@ -294,7 +294,9 @@ const Schema = (() => {
           default: false,
           note: 'Turns to the next group along on a roll of the wheel or a swipe '
               + 'across the touchpad, and keeps turning for as long as you keep '
-              + 'scrolling. It stops at each end rather than coming round again.'
+              + 'scrolling. It stops at each end rather than coming round again. '
+              + 'A group with more tiles than the window holds scrolls first: it '
+              + 'turns once you reach the top or the bottom of it.'
         },
         {
           key: 'groupScrollAxis',
@@ -323,8 +325,9 @@ const Schema = (() => {
             { value: 'bottom', label: 'Bottom' }
           ],
           note: 'Top and bottom float the pill over the page at that edge. '
-              + 'Above the tiles sets it in the page itself, under the clock '
-              + 'and over the grid, where it moves with them.'
+              + 'Above the tiles puts it in the page itself, under the clock '
+              + 'and over the grid: the clock moves up to make room for it and '
+              + 'the tiles stay where they are.'
         },
         {
           key: 'groupAlign',

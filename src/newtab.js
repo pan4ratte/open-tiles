@@ -3,8 +3,8 @@
 
   const grid = document.getElementById('grid');
   const empty = document.getElementById('empty');
-  // The two the group block moves between: over the page, or set in it.
-  const page = document.querySelector('.page');
+  // Where the group block goes when it is not floating over the page: into the
+  // stack above the tiles, which is the header's own column.
   const toolbar = document.querySelector('.toolbar');
   const header = document.getElementById('header');
   const clock = document.getElementById('clock');
@@ -150,23 +150,26 @@
     root.style.setProperty('--groupbar-align', ALIGNMENT[settings.groupAlign]);
 
     // Where the floating pill sits. Top and bottom hold it over the page at
-    // that edge; "above the tiles" is not a float at all - it takes its place
-    // in the page's own column, between the clock and the grid.
+    // that edge; "above the tiles" is not a float at all - it joins the stack
+    // the tiles anchor, under the clock and over the grid.
     const inline = !bar && settings.groupFloat === 'tiles';
     document.body.classList.toggle('gb-inline', inline);
     document.body.classList.toggle('gb-float-bottom', !bar && settings.groupFloat === 'bottom');
 
-    // A block in the page has to be *in* the page: only the markup can say
-    // which row of that column it holds. Moved only when it is in the wrong
-    // one, so a slider drag does not replay the pill's arrival every frame.
-    const home = inline ? page : document.body;
+    // That stack is the header's column, so the block has to be in it: laid
+    // out with the clock rather than beside it, which is what lets it take
+    // room without the tiles giving any up. Moved only when it is in the wrong
+    // place, so a slider drag does not replay the pill's arrival every frame.
+    const home = inline ? header : document.body;
     if (groupBar.parentElement !== home) {
-      home.insertBefore(groupBar, inline ? grid : toolbar);
+      home.insertBefore(groupBar, inline ? null : toolbar);
     }
 
     clock.hidden = !settings.showClock;
     dateLine.hidden = !settings.showDate;
-    header.hidden = !settings.showClock && !settings.showDate;
+    // The column is the block's home in this placement, so it stays even with
+    // nothing else in it to show.
+    header.hidden = !settings.showClock && !settings.showDate && !inline;
 
     tick();
   }
@@ -174,6 +177,15 @@
   // ------------------------------------------------------------------ groups
 
   const ALIGNMENT = { start: 'flex-start', center: 'center', end: 'flex-end' };
+
+  /**
+   * What scrolls when the page is taller than the window.
+   *
+   * Three things ask about it: the gesture, which gives way to it; the change
+   * of group, which starts the new one at the end it is being entered from;
+   * and the block set in the page, which is measured against it.
+   */
+  const scroller = () => document.scrollingElement || document.documentElement;
 
   /** The group a tile is in, or null when it is loose or its group has gone. */
   function groupOf(tile) {
@@ -328,30 +340,50 @@
     return settings.showAllGroup ? [null, ...ids] : ids;
   }
 
-  /** How long the block stays out after a group change, in ms. Long enough to
-   *  read the name that lit up, short enough not to become the furniture. */
-  const PEEK_MS = 1600;
+  /**
+   * Slides the block to wherever the redraw has left it.
+   *
+   * Set in the page, the block sits in the gap above the tiles - and a group
+   * with more or fewer rows than the last one re-centres the page, which moves
+   * that gap. Left alone the block would jump there while the tiles it belongs
+   * to were still fading across, so it is put back where it was and let go: the
+   * stylesheet's transition carries it the rest of the way.
+   *
+   * Nowhere else does this move at all - a floating pill and a status bar are
+   * both pinned to the window - so nowhere else is anything measured.
+   *
+   * @param {number} from where the block was before the grid was rebuilt, as
+   *   groupBarAt measures it
+   */
+  function glideGroupBar(from) {
+    if (!document.body.classList.contains('gb-inline')) return;
 
-  /** set while the block is showing itself after a change */
-  let peekTimer;
+    const shift = from - groupBarAt();
+    if (!shift) return;
+
+    // The jump back has to be made with the transition off, or it is itself
+    // something to animate: the block would set off towards where it came
+    // from, and letting go a moment later would leave it where it already is.
+    groupBar.style.transition = 'none';
+    groupBar.style.transform = `translateY(${shift}px)`;
+    // Reading the layout is what makes the jump real. Without it both writes
+    // land in the same style pass and there is nothing to travel from.
+    void groupBar.offsetWidth;
+    groupBar.style.transition = '';
+    groupBar.style.transform = '';
+  }
 
   /**
-   * Brings the block out for a moment, for the benefit of hover mode.
+   * Where the block sits on the page rather than in the window.
    *
-   * A grid that has just been filtered has to say what filtered it, or the
-   * tiles that went look like tiles that were lost. Keeping the block out for
-   * as long as a group is picked - which is what this used to do - meant it
-   * never went away at all, since a remembered group is where most new tabs
-   * open: the setting looked broken. So the change announces itself and the
-   * block then steps back, the way a scrollbar does.
-   *
-   * Outside hover mode the block is on show whatever happens, and the class
-   * draws nothing there - so there is nothing to guard.
+   * A change of group can take the scroll with it - see startOfGroup - and
+   * that is a jump, not a move: the block has not gone anywhere on the page,
+   * the page has gone somewhere under the window. Measured this way, the
+   * glide is left with the layout change alone, which is the part worth
+   * travelling.
    */
-  function peekGroups() {
-    groupBar.classList.add('is-peek');
-    clearTimeout(peekTimer);
-    peekTimer = setTimeout(() => groupBar.classList.remove('is-peek'), PEEK_MS);
+  function groupBarAt() {
+    return groupBar.getBoundingClientRect().top + scroller().scrollTop;
   }
 
   /** Off when the setting says so, and off when the system does. */
@@ -385,6 +417,23 @@
   let switchTimer;
 
   /**
+   * Puts the page at the top of the group just arrived in.
+   *
+   * A group is only left once it has been read to its end, so arriving in the
+   * next one at that same end would leave it read before it was seen - one
+   * more push and it would be gone. The top is where a group begins however it
+   * was arrived at: turned on to, turned back to, or picked from the block.
+   *
+   * Going back is the one that gives something up for that. Landing at the top
+   * of a group is landing at the limit for travelling further back, so a scroll
+   * held upwards walks group to group rather than reading each one from its
+   * end - which is the price of every group opening the same way.
+   */
+  function startOfGroup() {
+    scroller().scrollTop = 0;
+  }
+
+  /**
    * Moves to a group, taking the grid with it.
    *
    * The chips change at once and the grid follows, which is what lets a run of
@@ -409,10 +458,13 @@
     // picks up where the last tab left off rather than starting blank.
     if (remember) Store.saveActiveGroup(activeGroup);
     renderGroups();
-    peekGroups();
 
+    // With the animation off the grid simply changes, and the block set in the
+    // page simply moves with it - gliding one while the other jumps would be
+    // the animation the setting just turned off.
     if (!animatesGroups()) {
       render();
+      startOfGroup();
       return;
     }
 
@@ -430,7 +482,10 @@
 
     clearTimeout(switchTimer);
     switchTimer = setTimeout(() => {
+      const from = groupBarAt();
       render();
+      startOfGroup();
+      glideGroupBar(from);
       stage.forEach(el => {
         el.classList.remove('is-leaving');
         // The stylesheet puts .is-nudged last, so that a nudge can play over a
@@ -534,9 +589,20 @@
     return e.deltaX === 0 && Math.abs(e.deltaY) >= WHEEL_NOTCH;
   }
 
-  /** How far this event went the way the setting cares about; 0 to ignore it. */
+  /**
+   * How far this event went the way the setting cares about, and which axis
+   * that came off.
+   *
+   * The axis matters because the page scrolls on one of them: a gesture that
+   * the page could scroll with has to wait its turn, and a sideways one never
+   * does. See pageScrolls.
+   *
+   * @returns {{delta: number, vertical: boolean}} delta is 0 to ignore the event
+   */
   function wheelDelta(e) {
     const scale = e.deltaMode === 1 ? WHEEL_LINE : e.deltaMode === 2 ? WHEEL_PAGE : 1;
+    const across = { delta: e.deltaX * scale, vertical: false };
+    const down = { delta: e.deltaY * scale, vertical: true };
 
     if (settings.groupScrollAxis === 'horizontal') {
       // Left and right is a gesture a mouse cannot make. Rather than leave
@@ -544,12 +610,33 @@
       // counts as the push its one axis was meant to be - while a touchpad
       // scrolled up and down is still left to the page, which is what asking
       // for left and right was about.
-      if (e.deltaX) return e.deltaX * scale;
-      return isWheel(e) ? e.deltaY * scale : 0;
+      if (e.deltaX) return across;
+      return isWheel(e) ? down : { delta: 0, vertical: false };
     }
-    if (settings.groupScrollAxis === 'vertical') return e.deltaY * scale;
+    if (settings.groupScrollAxis === 'vertical') return down;
     // Either way: whichever way the gesture is mostly going.
-    return (Math.abs(e.deltaX) > Math.abs(e.deltaY) ? e.deltaX : e.deltaY) * scale;
+    return Math.abs(e.deltaX) > Math.abs(e.deltaY) ? across : down;
+  }
+
+  /**
+   * Whether the page can still scroll the way this gesture is pushing.
+   *
+   * A group with more tiles than the window can hold is somewhere to read
+   * before it is somewhere to leave, so the wheel scrolls it and the group
+   * only turns once there is none of it left in that direction - at the very
+   * top, or at the very bottom. A group that fits is at both at once, and
+   * turns on the first push the way it always did.
+   *
+   * @param {number} delta which way the gesture is pushing
+   */
+  function pageScrolls(delta) {
+    const el = scroller();
+    const room = delta > 0
+      ? el.scrollHeight - el.clientHeight - el.scrollTop
+      : el.scrollTop;
+    // Fractional layouts and page zoom leave a sliver behind that nobody can
+    // scroll and nobody can see.
+    return room > 1;
   }
 
   document.addEventListener('wheel', e => {
@@ -565,8 +652,21 @@
     const strip = e.target.closest('.groupbar__inner');
     if (strip && strip.scrollWidth > strip.clientWidth) return;
 
-    const delta = wheelDelta(e);
+    const { delta, vertical } = wheelDelta(e);
     if (!delta) return;
+
+    // The group's own scrolling comes first: while there is more of it to
+    // reach, the wheel reaches it and the page keeps the event. Only the
+    // vertical axis waits - the page has no use for a sideways push, so there
+    // is nothing there for one to wait behind.
+    if (vertical && pageScrolls(delta)) {
+      // None of that scroll counts towards a turn: the tally starts from the
+      // moment the group runs out, so arriving at the end is not itself
+      // enough to be carried past it.
+      clearTimeout(wheelTimer);
+      endGesture();
+      return;
+    }
 
     if (e.cancelable) e.preventDefault();
 
@@ -2357,9 +2457,6 @@
     Fonts.use(settings.font).catch(() => Fonts.applyStack(Schema.DEFAULTS.font));
     renderGroups();
     render();
-    // A tab that opens in a group says so, even where the block is hidden
-    // until the pointer asks for it.
-    if (activeGroup) peekGroups();
 
     syncSiteAccess();
     Favicons.onAccessChange(() => syncSiteAccess());

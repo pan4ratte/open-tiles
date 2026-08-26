@@ -210,18 +210,37 @@ Settings → *Groups* decides how the block looks:
 - **Floating** — a HUD pill, frosted whatever is behind it, sitting at the
   **top** of the window, at the **bottom** of it the way the Dock does, or
   **above the tiles**. The first two float over the page; the third is not a
-  float at all — the pill takes its place in the page's own column, under the
-  clock and over the grid, and moves with them as the window changes shape.
+  float at all — the pill joins the stack that stands over the grid, under the
+  clock, and moves with it as the window changes shape.
 - **Status bar** — the menu bar: a full-width translucent strip pinned to the
   **top** or **bottom** of the window, with its chips to the **left**,
   **centre** or **right**. The settings button moves into the bar, at its right
   hand end, the way macOS keeps status items in the menu bar; the page keeps
   its centre inside whatever is left of the window.
-- **On hover** fades the block out until the pointer reaches it. Picking a
-  group brings it back for a moment and it then steps away again, the way a
-  scrollbar does — a grid that has just been filtered has to say what filtered
-  it, or the tiles that went look like tiles that were lost. It also stays out
-  while a tile is being dragged, which is the moment the chips are wanted.
+- **On hover** fades the block out until the pointer reaches it, and nothing
+  else brings it back — picking a group does not, since a block that let
+  itself out whenever the grid changed is a block that is never really hidden.
+  The one exception is a tile being dragged, which is the moment the chips are
+  wanted.
+
+Above the tiles, the block joins the column the date and the clock are in — it
+is moved into the header itself rather than laid over the page. That column is
+what keeps the tiles where they are: it hangs from the bottom of a flexible
+row, so anything added to it pushes the clock up rather than pushing the grid
+down. The tiles are the anchor of this page and nothing is allowed to shift
+them; everything else is stacked around them.
+
+Which is why the block brings its own spacing with it — 24px above and below,
+its own number rather than a share of the 44px the clock leaves. Each element
+standing over the tiles carries the room it needs, so the order they are
+stacked in can change without the spacing having to be worked out again.
+
+What does move the block is the page moving under it: a group with more or
+fewer rows of tiles re-centres the grid, and the stack above it goes along.
+Rather than jump there while the tiles it belongs to are still crossing, the
+block is put back where it was the instant the grid is rebuilt and then let go,
+so it travels the distance in the same beat the new tiles arrive in. With
+**Animate group changes** off it simply moves, like everything else.
 
 **Show the All category** takes the *All* chip away. The page then always sits
 in a group — opening on the first one where it would have opened on *All* —
@@ -267,6 +286,26 @@ or one big round pixel step, with nothing sideways beside them, where a
 touchpad sends a stream of small uneven deltas and leaks a little to the side
 even when swiped straight. So a touchpad scrolled up and down is still left to
 the page, which is what asking for left and right was about.
+
+A group is somewhere to read before it is somewhere to leave, so the gesture
+gives way to the page's own scrolling: where a group holds more tiles than the
+window can show, the wheel scrolls it, and the group only turns once you are at
+the very top or the very bottom of it. A group that fits is at both ends at
+once and turns on the first push. Only up-and-down gestures wait like this — a
+sideways swipe is nothing the page would have scrolled with, so it has nothing
+to wait behind, while the wheel borrowed for **left and right** does wait,
+being the same wheel the page scrolls with.
+
+Which means the next group has to begin somewhere other than where you left the
+last one: arriving at the bottom of a group you just scrolled into would leave
+it read before it was seen, and one more push would carry you past it unlooked
+at. So every group opens at its top, however it was arrived at — turned on to,
+turned back to, or picked from the block.
+
+Going back is what that costs something. The top of a group is also the limit
+for travelling further back, so a scroll held upwards walks group to group
+rather than reading each one from its end. That is the price of every group
+opening the same way, which is the more predictable of the two.
 
 It walks the same line the chips show, "All" at the front, and it stops at each
 end rather than coming round again — flick past the last group and the content
