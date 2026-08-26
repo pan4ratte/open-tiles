@@ -14,8 +14,13 @@
  *   3. /favicon.ico as the floor.
  *
  * Every candidate is loaded as an <img> and measured, so what wins is the one
- * that really is the largest, not the one whose filename claims to be. Results
- * are cached per origin, so a tile resolves once and is instant afterwards.
+ * that really is the largest, not the one whose filename claims to be.
+ *
+ * The winner is cached per origin, and where the host allows it the picture
+ * itself is kept alongside the address, as a data: URI. That is what makes a
+ * tile instant on the next new tab: an address has to be fetched again every
+ * time, and a hard reload goes past the browser's own cache to do it, whereas
+ * bytes already in storage are simply drawn.
  *
  * Probing images needs no permissions at all - only the deep lookup does.
  */
@@ -33,6 +38,15 @@ const Favicons = (() => {
   const TTL_MISS = 3 * 24 * 60 * 60 * 1000;
   const MAX_DEEP_CANDIDATES = 10;
   const MAX_PARALLEL_ORIGINS = 4;
+
+  /** A kept picture, as a data: URI, may be this long and no longer. */
+  const KEEP_MAX = 20 * 1024;
+  /** Under this the file is kept byte for byte, which keeps an SVG a vector. */
+  const KEEP_DIRECT = 13 * 1024;
+  /** Anything larger is not downloaded to be kept: it is a picture, not a logo. */
+  const KEEP_SOURCE_MAX = 2 * 1024 * 1024;
+  /** What a picture too large to keep whole is redrawn at before keeping. */
+  const KEEP_DIM = 192;
 
   /** Conventional locations, grouped so we stop early when a wave pays off. */
   const WAVES = [
@@ -228,6 +242,79 @@ const Favicons = (() => {
     } catch { /* nothing granted */ }
   }
 
+  // --------------------------------------------------- keeping the picture
+
+  /** A data: URI worth storing, or null when it came out too long to keep. */
+  const within = data => (data && data.length <= KEEP_MAX ? data : null);
+
+  /** The icon's bytes, or null where the host would not hand them over. */
+  async function fetchBlob(url) {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT);
+    try {
+      const res = await fetch(url, {
+        credentials: 'omit',
+        redirect: 'follow',
+        referrerPolicy: 'no-referrer',
+        signal: controller.signal
+      });
+      if (!res.ok) return null;
+
+      const blob = await res.blob();
+      const usable = blob.size > 0 && blob.size <= KEEP_SOURCE_MAX
+        && /^image\//.test(blob.type || '');
+      return usable ? blob : null;
+    } catch {
+      return null;
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+
+  /**
+   * Downloads a resolved icon and returns it as a data: URI, or null.
+   *
+   * Reading an icon's bytes cross-origin needs the host's consent, which most
+   * icon hosts give and some do not. Where it is refused - or the picture is
+   * too big to be worth the room - this gives up quietly and the tile goes on
+   * loading the address as an <img>, which needs no consent. The icon still
+   * shows either way; what is lost is only its instant appearance next time.
+   *
+   * Never throws: a tile whose picture could not be kept is not a tile that
+   * failed to resolve.
+   */
+  async function keep(url) {
+    try {
+      if (/^data:/i.test(url)) return within(url);
+
+      const blob = await fetchBlob(url);
+      if (!blob) return null;
+
+      // Small already: kept exactly as it came, so an SVG stays a vector and
+      // stays sharp on the largest tile the settings allow.
+      if (blob.size <= KEEP_DIRECT) return within(await readAsDataUrl(blob));
+
+      const bitmap = await createImageBitmap(blob);
+      const scale = Math.min(1, KEEP_DIM / Math.max(bitmap.width, bitmap.height));
+      const width = Math.max(1, Math.round(bitmap.width * scale));
+      const height = Math.max(1, Math.round(bitmap.height * scale));
+
+      const canvas = document.createElement('canvas');
+      canvas.width = width;
+      canvas.height = height;
+      canvas.getContext('2d').drawImage(bitmap, 0, 0, width, height);
+      bitmap.close();
+
+      // WebP carries a logo's flat colour and its transparency in a fraction
+      // of what PNG takes. A browser that will not write one says so by
+      // handing back a PNG data URI instead, which is the fallback already.
+      const webp = canvas.toDataURL('image/webp', 0.92);
+      return within(/^data:image\/webp/i.test(webp) ? webp : canvas.toDataURL('image/png'));
+    } catch {
+      return null;
+    }
+  }
+
   // ------------------------------------------------------------------ queue
 
   let active = 0;
@@ -273,8 +360,32 @@ const Favicons = (() => {
     return winner;
   }
 
+  /** What a cache entry hands back: the kept picture when there is one. */
+  const fromCache = entry =>
+    (entry && entry.url ? { url: entry.data || entry.url, size: entry.size } : null);
+
+  /**
+   * Fetches the picture for an entry that was cached before the bytes were
+   * being kept, or by a run where the host refused them.
+   *
+   * `data` is left as null on a refusal rather than absent, so an origin that
+   * will not hand its icon over is asked once and not on every new tab after.
+   */
+  function backfill(origin, cached) {
+    // Through the same queue as a lookup: a page of cached tiles would
+    // otherwise open one download per tile at once, on the first frame.
+    schedule(() => keep(cached.url)).then(data => {
+      Store.icons.put(origin, { ...cached, data }).catch(() => {});
+    });
+  }
+
   /**
    * Resolves the best icon for a site.
+   *
+   * The returned `url` is the kept picture where there is one - a data: URI
+   * the tile can draw without going anywhere - and the address it was found
+   * at otherwise. Callers do not need to know which.
+   *
    * @param {string} pageUrl the tile's URL
    * @param {{deep?: boolean, force?: boolean}} [opts]
    * @returns {Promise<{url:string,size:number}|null>}
@@ -297,21 +408,29 @@ const Favicons = (() => {
         // A basic result is worth redoing once deep lookup is available.
         const goodEnough = cached.mode === mode || cached.mode === 'deep';
         if (fresh && goodEnough) {
-          return cached.url ? { url: cached.url, size: cached.size } : null;
+          if (cached.url && cached.data === undefined) backfill(origin, cached);
+          return fromCache(cached);
         }
       }
     }
 
     if (inFlight.has(origin)) return inFlight.get(origin);
 
-    const job = schedule(() => lookup(pageUrl, origin, opts.deep))
-      .then(async winner => {
-        await Store.icons.put(origin, {
-          url: winner ? winner.url : null,
-          size: winner ? winner.size : 0,
-          mode
-        });
-        return winner;
+    // Finding the icon and fetching it to keep both go through the queue as
+    // one piece of work, so a page full of new tiles cannot open more
+    // connections than the limit allows by doing the second half outside it.
+    const job = schedule(async () => {
+      const winner = await lookup(pageUrl, origin, opts.deep);
+      return {
+        url: winner ? winner.url : null,
+        data: winner ? await keep(winner.url) : null,
+        size: winner ? winner.size : 0,
+        mode
+      };
+    })
+      .then(async entry => {
+        await Store.icons.put(origin, entry);
+        return fromCache(entry);
       })
       .catch(() => null)
       .finally(() => inFlight.delete(origin));

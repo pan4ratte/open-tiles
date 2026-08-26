@@ -818,7 +818,8 @@ body.gb-bar .chip { border-radius: var(--r-control); }
    9. Tiles
 
    Each tile is a small widget: a material card with a corner that scales with
-   it, holding the site's icon drawn in Apple's app-icon squircle.
+   it, holding the site's own logo shown whole - or, where a site has none, a
+   letter standing on the card.
    --------------------------------------------------------------------------- */
 
 .grid {
@@ -870,6 +871,13 @@ body.gb-bar .chip { border-radius: var(--r-control); }
   /* The floor keeps a very small tile, or a very wide one, from losing its
      icon altogether. */
   --logo-size: max(14px, calc(var(--logo-room) * (1 - var(--logo-pad) * 2)));
+  /* How far a logo may run sideways. The height is the tighter of the two on
+     almost every tile, because the name has to fit under it - so a wordmark
+     fitted into a square of that height would be shown far smaller than the
+     tile has room for. It keeps the same height either way; all this does is
+     stop throwing away the width beside it. */
+  --logo-span: max(14px, calc((var(--tile-size) - var(--tile-inset) * 2)
+                              * (1 - var(--logo-pad) * 2)));
 
   position: relative;
   display: flex;
@@ -915,41 +923,59 @@ body.gb-bar .chip { border-radius: var(--r-control); }
   box-shadow: inset 0 0 0 .5px var(--stroke-inner), 0 0 0 3.5px var(--accent-ring);
 }
 
-/* The app-icon squircle. `#squircle` is defined once in the markup, in
-   objectBoundingBox units, so the one path fits every size. */
+/* The logo box: a square of room the picture is fitted into, not a shape cut
+   out of it. Sites draw their marks to every proportion there is - a round
+   badge, a wide wordmark, a square app icon - and cutting them all to one
+   silhouette takes the corners off the square ones and the ends off the wide
+   ones. `contain` fits the picture inside the box whole and leaves whatever
+   room is left over as space, which is what the picture's own designer
+   assumed would be there. */
 .tile__icon,
 .tile__fallback {
   flex: none;
   width: var(--logo-size);
   height: var(--logo-size);
-  clip-path: url(#squircle);
-  /* Where a clip-path reference is unavailable, the radius alone still reads
-     as an app icon. */
-  border-radius: 22.37%;
   object-fit: contain;
   pointer-events: none;
   transition: transform var(--t-base) var(--spring);
 }
 
+/* A square logo is bounded by the height and comes out exactly as it would
+   have; only one wider than it is tall notices the extra room. The monogram
+   keeps the square: it is a letter placed in the middle of one, and the globe
+   that stands in for it is sized as a fraction of its box. */
+.tile__icon { width: var(--logo-span); }
+
 .tile:hover .tile__icon,
 .tile:hover .tile__fallback { transform: scale(1.04); }
 
-/* Letter monogram shown until (or instead of) the site's own icon. */
+/* Letter monogram shown until (or instead of) the site's own icon.
+
+   A letter standing on the tile, with no plate under it: a site that has no
+   logo should not be given one, and a coloured square reads as a mark the site
+   does not have. Without the plate the letter carries the tile on its own, so
+   it is set larger than a letter inside a badge would be.
+
+   The ink: --tile-ink on a tile with a background colour of its own, which was
+   already chosen to read against that colour; otherwise --mono-ink, the site's
+   own colour from the palette, which is an Apple system colour and so is light
+   in the dark theme and dark in the light one. --label is the floor, for a
+   monogram built before either was set. */
 .tile__fallback {
   display: grid;
   place-items: center;
   font-family: var(--font-family);
-  font-size: calc(var(--logo-size) * .45);
+  font-size: calc(var(--logo-size) * .62);
   font-weight: 600;
   letter-spacing: -.02em;
-  color: #fff;
+  color: var(--tile-ink, var(--mono-ink, var(--label)));
 }
 
 /* The globe stands in for a monogram when a site's name starts with neither a
    letter nor a digit; it is drawn at a fixed size, so it is scaled here. */
 .tile__fallback .icon {
-  width: 50%;
-  height: 50%;
+  width: 62%;
+  height: 62%;
 }
 
 .tile__label {
@@ -1382,9 +1408,11 @@ body.tile-round .tile {
   letter-spacing: -.004em;
 }
 
+/* No line-length cap here. The row is the measure: its label column already
+   stops well short of the window, and a cap on top of that broke the note over
+   two or three lines with a hand's width of empty row beside it. */
 .row__note {
   display: block;
-  max-width: 46ch;
   margin-top: 2px;
   color: var(--label-secondary);
   font-size: var(--t-subhead);

@@ -15,7 +15,10 @@
  *   activeGroup- id of the group last shown, or null for "All"
  *   background - { src, name, savedAt }            the page background
  *   fontCache  - { [family]: { css, savedAt } }     CSS with the woff2 inlined
- *   iconCache  - { [origin]: { url, size, source, savedAt } }
+ *   iconCache  - { [origin]: { url, data, size, mode, savedAt } }
+ *                url is the address the icon was found at; data is the picture
+ *                itself as a data: URI when it was small enough to keep, null
+ *                when it was tried and could not be
  */
 const Store = (() => {
   const TILES = 'tiles';
@@ -268,13 +271,52 @@ const Store = (() => {
   // ------------------------------------------------------- generic LRU cache
 
   function makeCache(key, limit) {
+    /**
+     * The map, read once and then held.
+     *
+     * Every tile on the page asks this cache for its icon. Read straight from
+     * storage each time, a page of forty tiles reads and parses the whole map
+     * forty times over before it can draw the first icon - which is most of
+     * why icons used to appear a beat after everything else. Held here, the
+     * second tile onwards costs nothing.
+     *
+     * A write from another new-tab page is not picked up. That is a cache
+     * behaving like one: the worst it costs is a lookup done twice.
+     */
+    let map = null;
+
+    function all() {
+      if (!map) map = Promise.resolve(get(key)).then(stored => stored || {}, () => ({}));
+      return map;
+    }
+
+    /**
+     * Writes are coalesced. A cold page resolves its icons one after another,
+     * and each entry now carries the picture itself - writing the whole map
+     * once per icon would put megabytes through storage while the page is
+     * still filling in. The map in memory is what everything reads, so the
+     * write is free to lag behind it; a page closed inside the window loses
+     * nothing but the chance to skip a lookup next time.
+     */
+    const WRITE_DELAY = 300;
+    let writing = null;
+
+    function scheduleWrite(cache) {
+      if (writing) return;
+      writing = setTimeout(() => {
+        writing = null;
+        // A full storage area throws here. There is nothing useful to do
+        // about it: the map is still in memory, and this is a cache.
+        set(key, cache).catch(() => {});
+      }, WRITE_DELAY);
+    }
+
     return {
       async get(id) {
-        const cache = (await get(key)) || {};
-        return cache[id];
+        return (await all())[id];
       },
       async put(id, entry) {
-        const cache = (await get(key)) || {};
+        const cache = await all();
         cache[id] = { ...entry, savedAt: Date.now() };
 
         Object.keys(cache)
@@ -282,10 +324,13 @@ const Store = (() => {
           .slice(limit)
           .forEach(stale => delete cache[stale]);
 
-        await set(key, cache);
+        scheduleWrite(cache);
         return cache[id];
       },
       async clear() {
+        clearTimeout(writing);
+        writing = null;
+        map = Promise.resolve({});
         await set(key, {});
       }
     };
@@ -293,8 +338,13 @@ const Store = (() => {
 
   /** Inlined webfont stylesheets, keyed by family. */
   const fonts = makeCache(FONT_CACHE, 6);
-  /** Resolved site icons, keyed by origin. */
-  const icons = makeCache(ICON_CACHE, 300);
+  /** Resolved site icons, keyed by origin.
+
+     Fewer than the map once held, because an entry is no longer a short string
+     but may carry the picture too. Favicons kept this way run a few kilobytes
+     each, so the whole map sits comfortably under a megabyte at this limit -
+     and the page picture, which is far larger, shares the same storage area. */
+  const icons = makeCache(ICON_CACHE, 120);
 
   async function getFontCss(family) {
     const entry = await fonts.get(family);

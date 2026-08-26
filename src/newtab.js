@@ -393,7 +393,11 @@
   function buildFallback(label, seed) {
     const el = document.createElement('span');
     el.className = 'tile__fallback';
-    el.style.background = colorFor(seed);
+    // A custom property rather than `color` outright: a tile standing on its
+    // own background has already worked out an ink that reads against it, and
+    // an inline `color` would beat any stylesheet rule trying to say so. The
+    // stylesheet picks between the two - see --tile-ink in newtab.css.
+    el.style.setProperty('--mono-ink', colorFor(seed));
     el.dataset.seed = seed;
 
     const first = label.trim().charAt(0);
@@ -835,6 +839,32 @@
 
   const iconEl = () => tilePreview.querySelector('img.tile__icon');
 
+  /**
+   * The address to ask for the picture again by, when asking as a request the
+   * host has to agree to.
+   *
+   * It carries a throwaway parameter, and that is the whole point. The tile
+   * has already drawn this icon as a plain <img>, which asked the host for no
+   * agreement and got none - and a browser holding that copy will hand it back
+   * for this request too, whereupon it still cannot be read. Firefox does
+   * exactly that, which is why sampling worked on a freshly hard-reloaded page
+   * and stopped working once the icon had been seen once. A parameter the
+   * cache has never met leaves it nothing to hand back.
+   *
+   * Only http(s) addresses are touched: anything stored inline is readable
+   * already, and appending to a data: URI would corrupt the picture.
+   */
+  function sampleUrl(src) {
+    if (!/^https?:/i.test(src)) return src;
+    try {
+      const url = new URL(src);
+      url.searchParams.set('tiles-sample', Date.now().toString(36));
+      return url.href;
+    } catch {
+      return src;
+    }
+  }
+
   function loadForSampling(src) {
     return new Promise(resolve => {
       const img = new Image();
@@ -842,14 +872,38 @@
       img.referrerPolicy = 'no-referrer';
       img.onload = () => resolve(img);
       img.onerror = () => resolve(null);
-      img.src = src;
+      img.src = sampleUrl(src);
+    });
+  }
+
+  /**
+   * Whether a picture on the page has finished arriving, and did arrive.
+   *
+   * The wait is capped. An <img> taken back out of the page mid-flight - which
+   * is what a repaint does - fires neither event ever again, and a promise
+   * that never settles would leave the button dead with nothing said about it.
+   */
+  const SAMPLE_WAIT = 4000;
+
+  function settled(img) {
+    if (img.complete) return Promise.resolve(img.naturalWidth > 0);
+    return new Promise(resolve => {
+      const done = ok => { clearTimeout(timer); resolve(ok); };
+      const timer = setTimeout(() => done(img.naturalWidth > 0), SAMPLE_WAIT);
+      img.addEventListener('load', () => done(img.naturalWidth > 0), { once: true });
+      img.addEventListener('error', () => done(false), { once: true });
     });
   }
 
   /** @returns {boolean} whether the drawn picture can actually be read back */
   function drawForSampling(img) {
     const side = 128;
-    const canvas = sampler.canvas || document.createElement('canvas');
+    // A fresh canvas each time rather than the one kept from the last tile.
+    // Drawing a picture the page may not read taints a canvas, and what
+    // untaints it again is resizing it - which the two lines below happen to
+    // do. Depending on that is a thin thread to hang the whole feature on, and
+    // a 128px canvas costs nothing to make.
+    const canvas = document.createElement('canvas');
     canvas.width = side;
     canvas.height = side;
 
@@ -876,8 +930,16 @@
   /** Gets the icon ready to be read from, if it can be. */
   async function prepareSampler() {
     const img = iconEl();
+    // Nothing of the last tile's icon is allowed to survive into this one.
     sampler.ready = false;
-    if (!img || !img.naturalWidth) return false;
+    sampler.canvas = null;
+    sampler.ctx = null;
+    if (!img) return false;
+
+    // An icon still on its way is not an icon that refuses to be read, and
+    // saying so would be a lie the user has no way to act on. The button is
+    // reachable well before a picture over the network has arrived.
+    if (!(await settled(img))) return false;
 
     // A picture already on the page and readable - anything stored inline.
     if (drawForSampling(img)) {
@@ -900,7 +962,7 @@
     return hit ? toHex(Number(hit[1]), Number(hit[2]), Number(hit[3])) : null;
   }
 
-  /** With no icon there is still a monogram, and it is a colour on the tile. */
+  /** With no icon there is still a monogram, and its letter is a colour. */
   function colorUnderFallback(event) {
     const fallback = tilePreview.querySelector('.tile__fallback');
     if (!fallback) return null;
@@ -909,7 +971,7 @@
     const inside = event.clientX >= box.left && event.clientX <= box.right
       && event.clientY >= box.top && event.clientY <= box.bottom;
 
-    return inside ? parseCssColor(getComputedStyle(fallback).backgroundColor) : null;
+    return inside ? parseCssColor(getComputedStyle(fallback).color) : null;
   }
 
   /** The colour under the pointer, or null where there is nothing to read. */
