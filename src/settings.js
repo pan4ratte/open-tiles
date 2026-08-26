@@ -1063,5 +1063,17 @@ const SettingsUI = (() => {
     });
   }
 
-  return { mount, setStatus };
+  /**
+   * The colour picker on its own, for a dialog built by hand rather than from
+   * the schema - the tile sheet's background well. Same control, same popover,
+   * same one-open-at-a-time rule, so there is only ever one of these to fix.
+   *
+   * @param {{key:string, label:string, default:string}} field
+   * @param {string} value
+   * @param {(hex:string) => *} commit answers with the colour that took, if it
+   *   differs from the one sent
+   */
+  const colorControl = (field, value, commit) => buildColor(field, value, commit);
+
+  return { mount, setStatus, colorControl, closePicker: () => dismissPicker && dismissPicker() };
 })();

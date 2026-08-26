@@ -126,7 +126,10 @@ if the dialog has to be rebuilt under it.
 system's: the ten named macOS accents along the top, then a saturation and
 brightness square, a hue strip and a hex field for anything else. It is a
 popover, so it hangs off the colour well and closes on Escape, on a click
-outside, or as soon as the pane behind it scrolls.
+outside, or as soon as the pane behind it scrolls. The same control is reused
+for a [tile's own background](#its-background), through
+`SettingsUI.colorControl` — there is only ever one picker open, and only one to
+fix.
 
 **Other → Backup** writes everything this add-on keeps — tiles, groups,
 settings and the background picture — to a single `.json` file, and reads one
@@ -350,13 +353,22 @@ colours**, and `ts_created`. Preferences with no counterpart here —
 `maxWidth`, `fontSize`, `borderRadius`, `padding`, `shadow`, the sidebar
 options, the per-theme text and interface colours — are simply not read.
 
-## Tile icons
+## Editing a tile
+
+Right-click a tile to edit it. **Appearance** shows the tile as it will really
+be drawn — the same `.tile` element, the same classes, the same custom
+properties — so shape, corner, logo padding and whether the name shows all
+follow the settings without the sheet knowing any of them. It is a preview, not
+an impression of one; the only thing it changes is `--tile-size`, capped so a
+200px tile still fits the sheet.
+
+### Its icon
 
 A tile normally finds its own picture — see [Site icons](#site-icons) below.
-Any tile can override that with one of its own: right-click it and fill in
-**Icon**, either as a web address or by choosing a file. A set icon is drawn
-straight away and the lookup never runs, so it is also the way to fix a site
-whose own icon is wrong, ugly, or missing.
+Any tile can override that with one of its own: fill in **Icon**, either as a
+web address or by choosing a file. A set icon is drawn straight away and the
+lookup never runs, so it is also the way to fix a site whose own icon is wrong,
+ugly, or missing.
 
 A chosen file is scaled to fit 256px and kept inline as a PNG — transparent, so
 a logo sits on the tile rather than in a white box, and fitted rather than
@@ -367,6 +379,25 @@ rewritten on every drag, so nothing on it may grow to the size of a background.
 Only `https:`, `http:` and `data:image/` are accepted. Anything else — a
 `javascript:` address in a hand-edited or imported file, most of all — is
 dropped on the way into storage.
+
+### Its background
+
+A tile can stand on a colour of its own instead of the frosted material.
+**Background** opens the same picker the accent colour uses, and the **pipette**
+beside it takes a colour straight out of the icon: arm it, and the next click
+on the icon reads the pixel under the pointer. Where there is no icon yet the
+monogram answers instead. Clear it with the arrow to go back to the usual tile.
+
+Reading a picture's pixels means drawing it to a canvas, which the browser only
+allows for one it is sure the page may read: stored inline, or served by a host
+that says so. An icon is first tried as it is, and then asked for again as a
+CORS request — most icon hosts agree to that, and the ones that do not cannot be
+sampled, which the pipette says rather than going quiet.
+
+The name on a coloured tile is set to black or white by the colour's relative
+luminance, so it stays readable on a dark navy and on a bright yellow alike, and
+it drops the text shadow it would otherwise wear over a background picture — it
+is standing on its own colour, not on the picture.
 
 ## Visit counts
 
@@ -498,7 +529,7 @@ permissions are needed. Leaving the field empty falls back to the system font.
 
 | Key | Shape |
 | --- | --- |
-| `tiles` | `[{ id, url, title, groupId, icon, visits }]` — `groupId` is `null` when loose; `icon` is `''` when the site's own is looked up |
+| `tiles` | `[{ id, url, title, groupId, icon, bg, visits }]` — `groupId` is `null` when loose; `icon` is `''` when the site's own is looked up; `bg` is `''` for the usual frosted tile |
 | `groups` | `[{ id, name }]` |
 | `activeGroup` | id of the group last shown, or `null` for *All* |
 | `settings` | see `src/schema.js` |

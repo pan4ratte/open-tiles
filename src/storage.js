@@ -6,9 +6,10 @@
  * makes the page testable by opening src/newtab.html directly in a browser.
  *
  * Keys
- *   tiles      - [{ id, url, title, groupId, icon, visits }]
+ *   tiles      - [{ id, url, title, groupId, icon, bg, visits }]
  *                groupId is null when loose; icon is '' when the site's own
- *                is to be looked up; visits counts opens from this add-on
+ *                is to be looked up; bg is '' for the usual frosted tile;
+ *                visits counts opens from this add-on
  *   groups     - [{ id, name }]                 the bar across the top
  *   settings   - see schema.js
  *   activeGroup- id of the group last shown, or null for "All"
@@ -129,6 +130,13 @@ const Store = (() => {
     return /^(https?:\/\/|data:image\/)/i.test(icon) ? icon : '';
   }
 
+  /** A tile's own background: a six-digit hex colour, or '' for the material. */
+  function sanitizeColor(raw) {
+    if (typeof raw !== 'string') return '';
+    const hex = raw.trim().toLowerCase();
+    return /^#[0-9a-f]{6}$/.test(hex) ? hex : '';
+  }
+
   /** Opens counted by this add-on. Never negative, never a fraction. */
   function sanitizeVisits(raw) {
     const n = Math.floor(Number(raw));
@@ -147,6 +155,7 @@ const Store = (() => {
         // it shows under "All" and nowhere else.
         groupId: typeof t.groupId === 'string' && t.groupId ? t.groupId : null,
         icon: sanitizeIcon(t.icon),
+        bg: sanitizeColor(t.bg),
         visits: sanitizeVisits(t.visits)
       }));
   }

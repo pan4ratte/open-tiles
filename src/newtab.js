@@ -19,7 +19,6 @@
   const fieldIcon = document.getElementById('fieldIcon');
   const fieldIconFile = document.getElementById('fieldIconFile');
   const btnIconFile = document.getElementById('btnIconFile');
-  const iconPreview = document.getElementById('iconPreview');
   const btnAddTile = document.getElementById('btnAddTile');
 
   const groupBar = document.getElementById('groupBar');
@@ -39,7 +38,7 @@
   const btnSettingsClose = document.getElementById('btnSettingsClose');
 
   /** @type {{id:string,url:string,title:string,groupId:?string,
-   *   icon:string,visits:number}[]} */
+   *   icon:string,bg:string,visits:number}[]} */
   let tiles = [];
   /** @type {{id:string,name:string}[]} the chips across the top */
   let groups = [];
@@ -351,11 +350,51 @@
 
   // ---------------------------------------------------------------- rendering
 
+  /**
+   * Black or white, whichever will be read more easily on `hex`.
+   *
+   * The threshold is on relative luminance rather than plain brightness, so a
+   * saturated yellow is treated as the light colour it is - the standard sRGB
+   * weights, written out here rather than pulled in for six lines of it.
+   */
+  function readableInk(hex) {
+    const n = parseInt(hex.slice(1), 16);
+    const channel = c => {
+      const v = c / 255;
+      return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4);
+    };
+    const luminance = 0.2126 * channel((n >> 16) & 255)
+      + 0.7152 * channel((n >> 8) & 255)
+      + 0.0722 * channel(n & 255);
+
+    // Roughly where the contrast against white and against black is equal.
+    return luminance > 0.18 ? '#1c1c1e' : '#ffffff';
+  }
+
+  /**
+   * A tile's own background colour, if it has one, and the ink to go on it.
+   *
+   * The class is what the stylesheet keys the "no text shadow over a picture"
+   * exception off: a tile standing on its own colour is not standing on the
+   * picture, and its ink was already chosen to read against that colour.
+   */
+  function applyTileBg(el, hex) {
+    el.classList.toggle('has-own-bg', Boolean(hex));
+    if (hex) {
+      el.style.setProperty('--tile-bg', hex);
+      el.style.setProperty('--tile-ink', readableInk(hex));
+    } else {
+      el.style.removeProperty('--tile-bg');
+      el.style.removeProperty('--tile-ink');
+    }
+  }
+
   /** Monogram shown until the site's real icon arrives, or when there is none. */
   function buildFallback(label, seed) {
     const el = document.createElement('span');
     el.className = 'tile__fallback';
     el.style.background = colorFor(seed);
+    el.dataset.seed = seed;
 
     const first = label.trim().charAt(0);
     if (/[\p{L}\p{N}]/u.test(first)) {
@@ -415,6 +454,7 @@
 
     const label = tile.title || defaultTitle(tile.url);
     el.title = label + '\n' + tile.url;
+    applyTileBg(el, tile.bg);
 
     const text = document.createElement('span');
     text.className = 'tile__label';
@@ -613,6 +653,9 @@
   }
 
   function closeDialog(el) {
+    // The colour picker's popover lives in the body rather than in the sheet
+    // that opened it, so hiding the sheet would leave it standing on its own.
+    SettingsUI.closePicker();
     el.hidden = true;
   }
 
@@ -651,22 +694,76 @@
     fieldGroup.closest('.field').hidden = groups.length === 0;
   }
 
-  /** The icon as it will be drawn, or nothing when the site's own is to be used. */
-  function showIconPreview(src) {
-    iconPreview.textContent = '';
-    iconPreview.classList.toggle('is-empty', !src);
-    if (!src) return;
+  // ------------------------------------------------------- the tile preview
 
-    const img = document.createElement('img');
-    img.alt = '';
-    img.referrerPolicy = 'no-referrer';
-    // A bad address should read as "nothing set", not as a broken picture.
-    img.addEventListener('error', () => iconPreview.classList.add('is-empty'));
-    img.src = src;
-    iconPreview.append(img);
+  /**
+   * The tile being edited, drawn the way the grid will draw it.
+   *
+   * It is a real `.tile` with the real children, so shape, corner, logo
+   * padding, whether the name shows and the material behind it all come from
+   * the same rules and the same custom properties the grid reads. Nothing here
+   * restates any of them, which is the point: a preview that is only nearly
+   * right is worse than none.
+   */
+  let previewBg = '';
+  /** Bumped on every repaint, so a slow icon lookup can tell it is stale. */
+  let previewToken = 0;
+
+  function previewFields() {
+    const raw = fieldUrl.value.trim();
+    const url = normalizeUrl(raw) || raw;
+    return {
+      url,
+      label: fieldTitle.value.trim() || (url ? defaultTitle(url) : 'Example'),
+      icon: fieldIcon.value.trim()
+    };
   }
 
-  fieldIcon.addEventListener('input', () => showIconPreview(fieldIcon.value.trim()));
+  function paintPreview() {
+    const token = ++previewToken;
+    const { url, label, icon } = previewFields();
+
+    tilePreview.textContent = '';
+    applyTileBg(tilePreview, previewBg);
+
+    // Everything inside a tile is worked out from its width, so capping that
+    // one property here scales the whole preview down faithfully - a sheet
+    // this wide has nowhere to put a 200px tile.
+    tilePreview.style.setProperty('--tile-size',
+      Math.min(settings.tileSize, 132) + 'px');
+
+    const text = document.createElement('span');
+    text.className = 'tile__label';
+    text.textContent = label;
+
+    tilePreview.append(buildFallback(label, url || label), text);
+
+    if (icon) {
+      paintIcon(tilePreview, icon);
+    } else if (url) {
+      // The same lookup the grid does, so what is on show here is what will be
+      // on the tile - and what the pipette has to work with.
+      Favicons.resolve(url, { deep: settings.deepIcons })
+        .then(found => {
+          if (found && token === previewToken) paintIcon(tilePreview, found.url);
+        })
+        .catch(() => {});
+    }
+
+    armPipette(false);
+  }
+
+  /** Typing an address should not fire a lookup on every keystroke. */
+  let previewTimer;
+  function schedulePreview(immediate) {
+    clearTimeout(previewTimer);
+    if (immediate) paintPreview();
+    else previewTimer = setTimeout(paintPreview, 400);
+  }
+
+  fieldUrl.addEventListener('input', () => schedulePreview());
+  fieldTitle.addEventListener('input', () => schedulePreview());
+  fieldIcon.addEventListener('input', () => schedulePreview(true));
 
   btnIconFile.addEventListener('click', () => fieldIconFile.click());
 
@@ -677,10 +774,201 @@
 
     try {
       fieldIcon.value = await Favicons.fromFile(picked);
-      showIconPreview(fieldIcon.value);
+      paintPreview();
     } catch (err) {
       SettingsUI.setStatus(modalError, { kind: 'error', text: err.message });
     }
+  });
+
+  // ---------------------------------------------------- the background well
+
+  /**
+   * The colour well, built from the same picker the accent colour uses and
+   * rebuilt whenever the sheet opens - the popover it hangs off has to go with
+   * it, and there is only ever one of these on screen.
+   */
+  let bgWell = null;
+
+  function mountBgWell(value) {
+    if (bgWell) bgWell.remove();
+
+    const built = SettingsUI.colorControl(
+      { key: 'tileBg', label: 'Tile background', default: '#007aff' },
+      // With no colour set the picker still has to open on something, and the
+      // tile's own monogram colour is the one already on screen.
+      value || colorFor(previewFields().url || 'tile'),
+      hex => { setPreviewBg(hex); return hex; }
+    );
+
+    bgWell = built.control;
+    tileBgRow.prepend(bgWell);
+  }
+
+  function setPreviewBg(hex) {
+    previewBg = hex || '';
+    applyTileBg(tilePreview, previewBg);
+    btnBgClear.hidden = !previewBg;
+  }
+
+  btnBgClear.addEventListener('click', () => {
+    setPreviewBg('');
+    mountBgWell('');
+    armPipette(false);
+  });
+
+  // ------------------------------------------------------------ the pipette
+
+  /**
+   * Taking a colour straight out of the icon.
+   *
+   * Reading a picture's pixels means drawing it to a canvas, which the browser
+   * only allows for one it is sure this page is entitled to read: stored
+   * inline, or served by a host that said so. A remote icon whose host says
+   * nothing cannot be sampled, and the button says so rather than going quiet.
+   *
+   * The canvas is square and the picture is fitted into it exactly as the tile
+   * fits it, so a point on the icon is the same point on the canvas once it
+   * has been scaled - no arithmetic about letterboxing.
+   */
+  const sampler = { canvas: null, ctx: null, ready: false };
+  let pipetteOn = false;
+
+  const iconEl = () => tilePreview.querySelector('img.tile__icon');
+
+  function loadForSampling(src) {
+    return new Promise(resolve => {
+      const img = new Image();
+      img.crossOrigin = 'anonymous';
+      img.referrerPolicy = 'no-referrer';
+      img.onload = () => resolve(img);
+      img.onerror = () => resolve(null);
+      img.src = src;
+    });
+  }
+
+  /** @returns {boolean} whether the drawn picture can actually be read back */
+  function drawForSampling(img) {
+    const side = 128;
+    const canvas = sampler.canvas || document.createElement('canvas');
+    canvas.width = side;
+    canvas.height = side;
+
+    const ctx = canvas.getContext('2d', { willReadFrequently: true });
+    ctx.clearRect(0, 0, side, side);
+
+    const scale = Math.min(side / img.naturalWidth, side / img.naturalHeight);
+    const w = img.naturalWidth * scale;
+    const h = img.naturalHeight * scale;
+    ctx.drawImage(img, (side - w) / 2, (side - h) / 2, w, h);
+
+    try {
+      // The read is what decides it: a tainted canvas throws here, not above.
+      ctx.getImageData(0, 0, 1, 1);
+    } catch {
+      return false;
+    }
+
+    sampler.canvas = canvas;
+    sampler.ctx = ctx;
+    return true;
+  }
+
+  /** Gets the icon ready to be read from, if it can be. */
+  async function prepareSampler() {
+    const img = iconEl();
+    sampler.ready = false;
+    if (!img || !img.naturalWidth) return false;
+
+    // A picture already on the page and readable - anything stored inline.
+    if (drawForSampling(img)) {
+      sampler.ready = true;
+      return true;
+    }
+
+    // Otherwise ask for it again, this time as a request the host has to agree
+    // to. Most icon hosts do; the ones that do not cannot be sampled.
+    const cors = await loadForSampling(img.src);
+    sampler.ready = Boolean(cors && cors.naturalWidth && drawForSampling(cors));
+    return sampler.ready;
+  }
+
+  const toHex = (r, g, b) => '#' + [r, g, b]
+    .map(n => n.toString(16).padStart(2, '0')).join('');
+
+  function parseCssColor(value) {
+    const hit = /rgba?\((\d+),\s*(\d+),\s*(\d+)/.exec(value || '');
+    return hit ? toHex(Number(hit[1]), Number(hit[2]), Number(hit[3])) : null;
+  }
+
+  /** With no icon there is still a monogram, and it is a colour on the tile. */
+  function colorUnderFallback(event) {
+    const fallback = tilePreview.querySelector('.tile__fallback');
+    if (!fallback) return null;
+
+    const box = fallback.getBoundingClientRect();
+    const inside = event.clientX >= box.left && event.clientX <= box.right
+      && event.clientY >= box.top && event.clientY <= box.bottom;
+
+    return inside ? parseCssColor(getComputedStyle(fallback).backgroundColor) : null;
+  }
+
+  /** The colour under the pointer, or null where there is nothing to read. */
+  function sampleAt(event) {
+    const img = iconEl();
+    if (!img) return colorUnderFallback(event);
+    if (!sampler.ready) return null;
+
+    const box = img.getBoundingClientRect();
+    // An icon still loading is hidden, so it has no box to point at - and
+    // dividing by that width would put NaN through the whole sum.
+    if (!box.width || !box.height) return null;
+
+    const x = (event.clientX - box.left) / box.width;
+    const y = (event.clientY - box.top) / box.height;
+    if (x < 0 || x > 1 || y < 0 || y > 1) return null;
+
+    const px = Math.min(sampler.canvas.width - 1, Math.floor(x * sampler.canvas.width));
+    const py = Math.min(sampler.canvas.height - 1, Math.floor(y * sampler.canvas.height));
+    const [r, g, b, a] = sampler.ctx.getImageData(px, py, 1, 1).data;
+
+    // Clear pixels are the space around a logo, not a colour it is made of.
+    return a < 24 ? null : toHex(r, g, b);
+  }
+
+  function hint(text) {
+    pipetteHint.textContent = text || '';
+    pipetteHint.hidden = !text;
+  }
+
+  async function armPipette(on) {
+    if (on && !pipetteOn && iconEl() && !(await prepareSampler())) {
+      hint('That icon will not let itself be read — try one from a file.');
+      return;
+    }
+
+    pipetteOn = on;
+    tilePreview.classList.toggle('is-sampling', on);
+    btnPipette.classList.toggle('is-on', on);
+    btnPipette.setAttribute('aria-pressed', String(on));
+    hint(on ? 'Click the icon to take its colour.' : '');
+  }
+
+  btnPipette.addEventListener('click', () => armPipette(!pipetteOn));
+
+  tilePreview.addEventListener('pointermove', e => {
+    if (!pipetteOn) return;
+    const hex = sampleAt(e);
+    hint(hex ? hex.toUpperCase() : 'Point at the icon.');
+  });
+
+  tilePreview.addEventListener('click', e => {
+    if (!pipetteOn) return;
+    const hex = sampleAt(e);
+    if (!hex) return;
+
+    setPreviewBg(hex);
+    mountBgWell(hex);
+    armPipette(false);
   });
 
   function openTileModal(id) {
@@ -691,11 +979,16 @@
     fieldUrl.value = tile ? tile.url : '';
     fieldTitle.value = tile ? tile.title : '';
     fieldIcon.value = tile ? tile.icon : '';
-    showIconPreview(tile ? tile.icon : '');
     // A tile added while a group is being shown belongs to that group.
     fillGroupSelect(tile ? groupOf(tile) : activeGroup);
     btnDelete.hidden = !tile;
     modalError.hidden = true;
+
+    // The colour first: the preview is painted from it.
+    previewBg = tile ? tile.bg : '';
+    btnBgClear.hidden = !previewBg;
+    mountBgWell(previewBg);
+    paintPreview();
 
     openDialog(modal, fieldUrl);
   }
@@ -714,12 +1007,13 @@
     const title = fieldTitle.value.trim();
     const groupId = fieldGroup.value || null;
     const icon = fieldIcon.value.trim();
+    const bg = previewBg;
 
     if (editingId) {
       const tile = tiles.find(t => t.id === editingId);
-      if (tile) Object.assign(tile, { url, title, groupId, icon });
+      if (tile) Object.assign(tile, { url, title, groupId, icon, bg });
     } else {
-      tiles.push({ id: crypto.randomUUID(), url, title, groupId, icon, visits: 0 });
+      tiles.push({ id: crypto.randomUUID(), url, title, groupId, icon, bg, visits: 0 });
     }
 
     await persistTiles();

@@ -439,7 +439,10 @@ body {
 
 /* Over a picture the page chrome thins out and the type picks up a shadow, so
    both stay legible on a busy photograph. */
-body.has-bg .tile,
+body.has-bg .tile {
+  background: var(--tile-bg, var(--mat-over-picture));
+}
+
 body.has-bg .toolbar .toolbtn:hover,
 body.has-bg.gb-floating .groupbar__inner,
 body.has-bg.gb-bar .groupbar {
@@ -453,6 +456,10 @@ body.has-bg .empty {
 }
 
 body.has-bg .tile__label { text-shadow: 0 1px 6px rgba(0, 0, 0, .3); }
+
+/* A tile standing on its own colour is not standing on the picture, and the
+   ink was already chosen to read against it. */
+body.has-bg .tile.has-own-bg .tile__label { text-shadow: none; }
 
 /* How often a site has been opened from here, in the corner of its tile. Sized
    off the tile the way the label is, so it stays in proportion at every size,
@@ -878,7 +885,7 @@ body.gb-bar .chip { border-radius: var(--r-control); }
      card, so a large tile is not a small tile with a tight corner. It follows
      the short side, so a wide tile does not end up a lozenge. */
   border-radius: clamp(10px, calc(var(--tile-short) * .18), 26px);
-  background: var(--mat-thin);
+  background: var(--tile-bg, var(--mat-thin));
   -webkit-backdrop-filter: var(--mat-filter);
   backdrop-filter: var(--mat-filter);
   box-shadow: inset 0 0 0 .5px var(--stroke-inner), var(--shadow-control);
@@ -893,7 +900,7 @@ body.gb-bar .chip { border-radius: var(--r-control); }
 }
 
 .tile:hover {
-  background: var(--mat-regular);
+  background: var(--tile-bg, var(--mat-regular));
   box-shadow: inset 0 0 0 .5px var(--stroke-inner), var(--shadow-raised);
   transform: translateY(-2px);
 }
@@ -981,7 +988,7 @@ body.tile-round .tile {
 
 .grid.is-dragging .tile:hover {
   transform: none;
-  background: var(--mat-thin);
+  background: var(--tile-bg, var(--mat-thin));
   box-shadow: inset 0 0 0 .5px var(--stroke-inner), var(--shadow-control);
 }
 
@@ -1964,37 +1971,99 @@ body.tile-round .tile {
 
 .backupfield .btn { flex: 1; }
 
-/* The icon row: what is set now, the address, and the file button - one line,
-   with the text field taking whatever the other two leave. */
-.iconfield {
+/* The appearance field: the tile as it will be, with the controls that shape
+   it beside it. The preview is a real .tile, so it is already the right size -
+   the stage only has to give it somewhere to stand. */
+.tilefield {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+}
+
+/* The tile stands here at whatever size it is really drawn at, up to the cap
+   newtab.js puts on --tile-size for the preview alone - past which a sheet
+   this wide has nowhere to put it. */
+.tilefield__stage {
+  flex: none;
+  display: flex;
+  align-items: flex-start;
+}
+
+.tilefield__controls {
+  flex: 1;
+  min-width: 0;
+}
+
+.tilefield__sub {
+  display: block;
+  margin-bottom: 5px;
+  font-size: var(--t-caption);
+  font-weight: 500;
+  color: var(--label-secondary);
+}
+
+.tilefield__sub em { font-style: normal; opacity: .75; }
+
+.tilefield__row + .tilefield__sub { margin-top: 12px; }
+
+.tilefield__row {
   display: flex;
   align-items: center;
   gap: 8px;
 }
 
-.iconfield .field__input { flex: 1; min-width: 0; }
+.tilefield__row .field__input { flex: 1; min-width: 0; }
 
-.iconfield__preview {
-  flex: none;
-  display: grid;
-  place-items: center;
-  width: 30px;
-  height: 30px;
-  border-radius: var(--r-control);
-  background: var(--fill-quaternary);
-  box-shadow: inset 0 0 0 .5px var(--separator-opaque);
-  overflow: hidden;
+/* The colour well built into the row reads as one control with the buttons
+   beside it, so it takes the same height and does not stretch. */
+.tilefield__row .color { flex: 1; min-width: 0; }
+
+.tilefield__hint {
+  display: block;
+  margin-top: 8px;
+  font-size: var(--t-caption);
+  font-variant-numeric: tabular-nums;
+  color: var(--label-secondary);
+  text-align: center;
 }
 
-.iconfield__preview img {
-  width: 100%;
-  height: 100%;
-  object-fit: contain;
+.tilefield__hint[hidden] { display: none; }
+
+/* The preview is shown, not used: no lift on hover, no drag, no navigation. */
+.tile--preview {
+  cursor: default;
+  transition: background var(--t-base) var(--ease);
 }
 
-/* Nothing set, or an address that led nowhere: an empty well rather than the
-   browser's broken-picture glyph. */
-.iconfield__preview.is-empty img { display: none; }
+.tile--preview:hover {
+  transform: none;
+  box-shadow: inset 0 0 0 .5px var(--stroke-inner), var(--shadow-control);
+}
+
+.tile--preview:hover .tile__icon,
+.tile--preview:hover .tile__fallback { transform: none; }
+
+/* Armed to take a colour: the pointer becomes the tool, and the icon is the
+   only part of the tile that answers to it. */
+.tile--preview.is-sampling,
+.tile--preview.is-sampling .tile__icon,
+.tile--preview.is-sampling .tile__fallback {
+  cursor: crosshair;
+  pointer-events: auto;
+}
+
+.tile--preview.is-sampling {
+  box-shadow: inset 0 0 0 1.5px var(--accent), var(--shadow-control);
+}
+
+/* A pressed toggle button - the pipette while it is armed. */
+.btn.is-on {
+  background: var(--accent);
+  box-shadow: none;
+  color: #fff;
+}
+
+.btn.is-on:hover { background: var(--accent); filter: brightness(1.06); }
 
 /* A picture named by web address, under the file button that is the usual way
    in. Its own row, because a field and two buttons will not share one. */

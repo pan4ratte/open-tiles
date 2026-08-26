@@ -253,6 +253,19 @@ check('group colours are reported as dropped', out.dropped.colours === 0,
     await iconOf('data:image/png;base64,' + 'A'.repeat(300 * 1024)) === '');
   check('a missing icon reads as none', await iconOf(undefined) === '');
 
+  const bgOf = async raw => (await Store.save([
+    { id: 'x', url: 'https://x.example', bg: raw }
+  ]))[0].bg;
+
+  check('a six-digit hex background is kept', await bgOf('#34C759') === '#34c759',
+    await bgOf('#34C759'));
+  check('a three-digit hex is refused', await bgOf('#abc') === '');
+  check('a named colour is refused', await bgOf('red') === '');
+  check('a colour function is refused', await bgOf('rgb(1,2,3)') === '');
+  check('something that is not a colour at all is refused',
+    await bgOf('url(evil.png)') === '');
+  check('no background reads as none', await bgOf(undefined) === '');
+
   const visitsOf = async raw => (await Store.save([
     { id: 'x', url: 'https://x.example', visits: raw }
   ]))[0].visits;
