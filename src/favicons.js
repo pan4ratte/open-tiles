@@ -10,7 +10,7 @@
  *      until the user turns it on.
  *   2. conventional paths - /favicon.svg, /apple-touch-icon.png,
  *      /android-chrome-512x512.png and friends, probed in waves so the common
- *      case costs three requests, not fifteen.
+ *      case costs four requests, not fifteen.
  *   3. /favicon.ico as the floor.
  *
  * Every candidate is loaded as an <img> and measured, so what wins is the one
@@ -29,8 +29,24 @@ const Favicons = (() => {
   const SVG_SCORE = 1024;
   /** Below this it is a tracking pixel or a broken placeholder, not a logo. */
   const MIN_SIZE = 16;
-  /** Good enough to stop probing the remaining waves. */
-  const GOOD_SIZE = 128;
+  /**
+   * Good enough to stop probing the remaining waves.
+   *
+   * A tile's logo is at most about 172 CSS pixels across - a 200px tile less
+   * its inset - which is 344 real ones on a 2x screen. Stopping at an icon
+   * smaller than that is stopping too early: the site may well publish a
+   * larger one a wave further down, and settling for a 128px apple-touch-icon
+   * is most of why tiles used to look soft.
+   */
+  const GOOD_SIZE = 256;
+
+  /**
+   * Bumped whenever a change here would produce a better result than a cached
+   * entry holds. Entries stamped with an older revision are looked up again
+   * rather than served for the rest of their month - otherwise a sharper
+   * lookup only reaches anyone who has never visited the site before.
+   */
+  const REV = 2;
 
   const PROBE_TIMEOUT = 6000;
   const FETCH_TIMEOUT = 8000;
@@ -39,20 +55,43 @@ const Favicons = (() => {
   const MAX_DEEP_CANDIDATES = 10;
   const MAX_PARALLEL_ORIGINS = 4;
 
-  /** A kept picture, as a data: URI, may be this long and no longer. */
-  const KEEP_MAX = 20 * 1024;
-  /** Under this the file is kept byte for byte, which keeps an SVG a vector. */
-  const KEEP_DIRECT = 13 * 1024;
+  /**
+   * A kept picture, as a data: URI, may be this long and no longer.
+   *
+   * Going over is not a failure: the picture is simply not kept, and the tile
+   * loads the address as an <img> instead - at whatever size the site
+   * published, which is if anything sharper. What is lost is only the instant
+   * appearance on the next new tab.
+   */
+  const KEEP_MAX = 40 * 1024;
+  /** Under this the file is kept byte for byte, at whatever size it came. */
+  const KEEP_DIRECT = 24 * 1024;
   /** Anything larger is not downloaded to be kept: it is a picture, not a logo. */
   const KEEP_SOURCE_MAX = 2 * 1024 * 1024;
-  /** What a picture too large to keep whole is redrawn at before keeping. */
-  const KEEP_DIM = 192;
+  /**
+   * What a bitmap too large to keep whole is redrawn at.
+   *
+   * Enough for the largest logo a tile can draw on a 2x screen - see
+   * GOOD_SIZE. It used to be 192, which is under half of that, so every icon
+   * big enough to be worth keeping was thrown away down to blurry and then
+   * kept in that state for a month.
+   */
+  const KEEP_DIM = 384;
 
-  /** Conventional locations, grouped so we stop early when a wave pays off. */
+  /**
+   * Conventional locations, grouped so we stop early when a wave pays off.
+   *
+   * Ordered by what each is usually worth rather than by how common it is: the
+   * first wave is the vectors and the two large bitmaps nearly every site with
+   * a modern icon set publishes, so the common case now costs four requests
+   * and comes back with something worth having. The last wave is the small
+   * ones, which are the floor rather than the aim.
+   */
   const WAVES = [
-    ['/favicon.svg', '/apple-touch-icon.png', '/apple-touch-icon-precomposed.png'],
-    ['/android-chrome-512x512.png', '/android-chrome-192x192.png',
-     '/apple-touch-icon-180x180.png', '/icon.svg'],
+    ['/favicon.svg', '/icon.svg', '/apple-touch-icon.png',
+     '/android-chrome-512x512.png'],
+    ['/apple-touch-icon-precomposed.png', '/apple-touch-icon-180x180.png',
+     '/android-chrome-192x192.png', '/icon-512x512.png', '/icon-192x192.png'],
     ['/favicon-196x196.png', '/favicon-192x192.png', '/favicon-96x96.png',
      '/favicon-32x32.png', '/favicon.png', '/favicon.ico']
   ];
@@ -89,10 +128,9 @@ const Favicons = (() => {
 
       img.onload = () => {
         // Firefox reports 0 for an SVG with no intrinsic size - still perfect.
-        const size = isSvg(url)
-          ? SVG_SCORE
-          : Math.max(img.naturalWidth, img.naturalHeight);
-        finish(size >= MIN_SIZE ? { url, size } : null);
+        const vector = isSvg(url);
+        const size = vector ? SVG_SCORE : Math.max(img.naturalWidth, img.naturalHeight);
+        finish(size >= MIN_SIZE ? { url, size, vector } : null);
       };
       img.onerror = () => finish(null);
 
@@ -129,13 +167,21 @@ const Favicons = (() => {
       .reduce((max, n) => Math.max(max, n), 0);
   }
 
-  async function fetchText(url) {
+  /**
+   * `fresh` asks the network rather than the browser's own cache.
+   *
+   * Only a forced lookup sets it. Without it, looking an icon up again right
+   * after a site changed one reads the same page out of the HTTP cache and
+   * finds the same icon, which looks exactly like the button doing nothing.
+   */
+  async function fetchText(url, fresh) {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT);
     try {
       const res = await fetch(url, {
         credentials: 'omit',
         redirect: 'follow',
+        cache: fresh ? 'reload' : 'default',
         signal: controller.signal
       });
       if (!res.ok) return null;
@@ -148,8 +194,8 @@ const Favicons = (() => {
   }
 
   /** Icons declared in the page markup and in the site's web manifest. */
-  async function candidatesFromSite(pageUrl) {
-    const page = await fetchText(pageUrl);
+  async function candidatesFromSite(pageUrl, fresh) {
+    const page = await fetchText(pageUrl, fresh);
     if (!page) return [];
 
     const doc = new DOMParser().parseFromString(page.text, 'text/html');
@@ -166,11 +212,25 @@ const Favicons = (() => {
       } catch { /* malformed href */ }
     });
 
+    // Windows tiles. Often the largest square logo a site publishes anywhere,
+    // and it is declared nowhere else.
+    doc.querySelectorAll('meta[name][content]').forEach(meta => {
+      const name = (meta.getAttribute('name') || '').toLowerCase();
+      const square = name.match(/^msapplication-square(\d+)x\d+logo$/);
+      if (name !== 'msapplication-tileimage' && !square) return;
+      try {
+        found.push({
+          url: new URL(meta.getAttribute('content'), page.url).href,
+          hint: square ? parseInt(square[1], 10) : 0
+        });
+      } catch { /* malformed content */ }
+    });
+
     const manifestLink = doc.querySelector('link[rel~="manifest"][href]');
     if (manifestLink) {
       try {
         const manifestUrl = new URL(manifestLink.getAttribute('href'), page.url).href;
-        const manifest = await fetchText(manifestUrl);
+        const manifest = await fetchText(manifestUrl, fresh);
         const icons = manifest ? (JSON.parse(manifest.text).icons || []) : [];
         icons.forEach(icon => {
           if (!icon || !icon.src) return;
@@ -248,7 +308,7 @@ const Favicons = (() => {
   const within = data => (data && data.length <= KEEP_MAX ? data : null);
 
   /** The icon's bytes, or null where the host would not hand them over. */
-  async function fetchBlob(url) {
+  async function fetchBlob(url, fresh) {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT);
     try {
@@ -256,6 +316,7 @@ const Favicons = (() => {
         credentials: 'omit',
         redirect: 'follow',
         referrerPolicy: 'no-referrer',
+        cache: fresh ? 'reload' : 'default',
         signal: controller.signal
       });
       if (!res.ok) return null;
@@ -283,16 +344,24 @@ const Favicons = (() => {
    * Never throws: a tile whose picture could not be kept is not a tile that
    * failed to resolve.
    */
-  async function keep(url) {
+  async function keep(url, fresh) {
     try {
       if (/^data:/i.test(url)) return within(url);
 
-      const blob = await fetchBlob(url);
+      const blob = await fetchBlob(url, fresh);
       if (!blob) return null;
 
-      // Small already: kept exactly as it came, so an SVG stays a vector and
-      // stays sharp on the largest tile the settings allow.
+      // Small already: kept exactly as it came, at whatever size it came.
       if (blob.size <= KEEP_DIRECT) return within(await readAsDataUrl(blob));
+
+      // A vector is never redrawn to fit. Rasterizing it would throw away the
+      // one thing that makes it worth having, and a 30 KB SVG kept as a 384px
+      // bitmap is worse than the same SVG not kept at all - which is what
+      // happens instead when it will not fit: the tile loads the address, and
+      // draws it as the vector it is.
+      if (/^image\/svg/i.test(blob.type || '') || isSvg(url)) {
+        return within(await readAsDataUrl(blob));
+      }
 
       const bitmap = await createImageBitmap(blob);
       const scale = Math.min(1, KEEP_DIM / Math.max(bitmap.width, bitmap.height));
@@ -342,11 +411,11 @@ const Favicons = (() => {
 
   const inFlight = new Map();
 
-  async function lookup(pageUrl, origin, deep) {
+  async function lookup(pageUrl, origin, deep, fresh) {
     let winner = null;
 
     if (deep && await hasSiteAccess()) {
-      const candidates = await candidatesFromSite(pageUrl);
+      const candidates = await candidatesFromSite(pageUrl, fresh);
       if (candidates.length) {
         winner = best(await Promise.all(candidates.map(c => probe(c.url))));
       }
@@ -361,8 +430,9 @@ const Favicons = (() => {
   }
 
   /** What a cache entry hands back: the kept picture when there is one. */
-  const fromCache = entry =>
-    (entry && entry.url ? { url: entry.data || entry.url, size: entry.size } : null);
+  const fromCache = entry => (entry && entry.url
+    ? { url: entry.data || entry.url, size: entry.size, vector: Boolean(entry.vector) }
+    : null);
 
   /**
    * Fetches the picture for an entry that was cached before the bytes were
@@ -387,7 +457,11 @@ const Favicons = (() => {
    * at otherwise. Callers do not need to know which.
    *
    * @param {string} pageUrl the tile's URL
-   * @param {{deep?: boolean, force?: boolean}} [opts]
+   * @param {{deep?: boolean, force?: boolean}} [opts] `force` looks the icon up
+   *   again from scratch: past the cache here, and past the browser's own for
+   *   everything it fetches. Probing is still left to the browser's cache -
+   *   the address a probe wins with is the one that gets stored, so it cannot
+   *   carry a cache-busting parameter around with it.
    * @returns {Promise<{url:string,size:number}|null>}
    */
   async function resolve(pageUrl, opts = {}) {
@@ -404,7 +478,9 @@ const Favicons = (() => {
       const cached = await Store.icons.get(origin);
       if (cached) {
         const ttl = cached.url ? TTL_HIT : TTL_MISS;
-        const fresh = Date.now() - (cached.savedAt || 0) < ttl;
+        const fresh = Date.now() - (cached.savedAt || 0) < ttl
+          // Found by a build that would do better now - see REV.
+          && cached.rev === REV;
         // A basic result is worth redoing once deep lookup is available.
         const goodEnough = cached.mode === mode || cached.mode === 'deep';
         if (fresh && goodEnough) {
@@ -420,12 +496,14 @@ const Favicons = (() => {
     // one piece of work, so a page full of new tiles cannot open more
     // connections than the limit allows by doing the second half outside it.
     const job = schedule(async () => {
-      const winner = await lookup(pageUrl, origin, opts.deep);
+      const winner = await lookup(pageUrl, origin, opts.deep, opts.force);
       return {
         url: winner ? winner.url : null,
-        data: winner ? await keep(winner.url) : null,
+        data: winner ? await keep(winner.url, opts.force) : null,
         size: winner ? winner.size : 0,
-        mode
+        vector: Boolean(winner && winner.vector),
+        mode,
+        rev: REV
       };
     })
       .then(async entry => {

@@ -19,6 +19,7 @@
   const fieldIcon = document.getElementById('fieldIcon');
   const fieldIconFile = document.getElementById('fieldIconFile');
   const btnIconFile = document.getElementById('btnIconFile');
+  const btnIconReload = document.getElementById('btnIconReload');
 
   const groupBar = document.getElementById('groupBar');
   const groupChips = document.getElementById('groupChips');
@@ -1011,6 +1012,83 @@
   fieldIcon.addEventListener('input', () => schedulePreview(true));
 
   btnIconFile.addEventListener('click', () => fieldIconFile.click());
+
+  /** Big enough to fill a tile's logo on a 2x screen - see favicons.js. */
+  const GOOD_ICON = 256;
+
+  /**
+   * What was found, in words - and where it fell short, why.
+   *
+   * The size is worth saying out loud. "The icon is blurry" and "this site
+   * only publishes a 32-pixel icon" look identical on a tile, and only one of
+   * them is something the reader can do anything about.
+   */
+  function iconReport(found) {
+    if (!found) {
+      return {
+        kind: 'error',
+        text: settings.deepIcons
+          ? 'This site offers no icon of its own — choose or paste a picture instead.'
+          : 'Nothing at the usual addresses. Deep icon lookup, in Settings, reads '
+            + 'the page itself and usually finds one.'
+      };
+    }
+
+    if (found.vector) {
+      return { kind: 'ok', text: 'Found a vector icon — sharp at any size.' };
+    }
+
+    if (found.size >= GOOD_ICON) {
+      return { kind: 'ok', text: `Found a ${found.size}px icon.` };
+    }
+
+    return {
+      kind: 'ok',
+      text: `Found a ${found.size}px icon`
+        + (settings.deepIcons
+          ? ', which is the largest this site publishes.'
+          : '. Deep icon lookup, in Settings, often finds a larger one.')
+    };
+  }
+
+  /*
+   * Looking the site's icon up again from scratch: past the answer cached
+   * here, and past the browser's own cache for the page and the manifest it
+   * reads on the way.
+   *
+   * A tile's own picture is what would be drawn instead, so it is cleared
+   * first - "look the site's icon up again" cannot mean anything else while
+   * one is set, and nothing here is written until Save is pressed.
+   */
+  btnIconReload.addEventListener('click', async () => {
+    const url = normalizeUrl(fieldUrl.value);
+    if (!url) {
+      SettingsUI.setStatus(modalError,
+        { kind: 'error', text: 'Fill in the address first — that is what is looked up.' });
+      return;
+    }
+
+    const had = fieldIcon.value.trim();
+    fieldIcon.value = '';
+
+    btnIconReload.disabled = true;
+    SettingsUI.setStatus(modalError,
+      { kind: 'loading', text: 'Looking for the sharpest icon this site has…' });
+
+    try {
+      const found = await Favicons.resolve(url, { deep: settings.deepIcons, force: true });
+      paintPreview();
+
+      const report = iconReport(found);
+      SettingsUI.setStatus(modalError, had
+        ? { ...report, text: report.text + ' The picture that was set has been cleared.' }
+        : report);
+    } catch (err) {
+      SettingsUI.setStatus(modalError, { kind: 'error', text: err.message });
+    } finally {
+      btnIconReload.disabled = false;
+    }
+  });
 
   fieldIconFile.addEventListener('change', async () => {
     const picked = fieldIconFile.files && fieldIconFile.files[0];

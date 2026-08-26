@@ -564,16 +564,17 @@ To add an icon, copy the inner markup from
 settling for `/favicon.ico`:
 
 1. **Deep lookup** (optional, off by default) reads the page's
-   `<link rel="icon | apple-touch-icon | mask-icon">` tags and the `icons[]` of
-   its web manifest. This is the only way to find logos on a separate CDN host
-   or at a hashed path — Figma's 1024px SVG and 512px manifest icons, or Google
-   Fonts' 192px branded PNG on gstatic, are invisible to any other method.
+   `<link rel="icon | apple-touch-icon | mask-icon">` tags, its
+   `msapplication-TileImage` and square-logo metas, and the `icons[]` of its web
+   manifest. This is the only way to find logos on a separate CDN host or at a
+   hashed path — Figma's 1024px SVG and 512px manifest icons, or Google Fonts'
+   192px branded PNG on gstatic, are invisible to any other method.
    It needs permission to read the sites you save, so the toggle asks for it and
    turns itself back off if you decline. See *Permissions* below.
-2. **Conventional paths** — `/favicon.svg`, `/apple-touch-icon.png`,
-   `/android-chrome-512x512.png` and a dozen others, probed in three waves so
-   the common case costs three requests instead of thirteen, stopping as soon as
-   something ≥128px turns up.
+2. **Conventional paths** — `/favicon.svg`, `/icon.svg`,
+   `/apple-touch-icon.png`, `/android-chrome-512x512.png` and a dozen others,
+   probed in three waves ordered by *what each is usually worth* rather than by
+   how common it is. The common case costs four requests instead of fifteen.
 3. **`/favicon.ico`** as the floor, and a coloured monogram (or the Lucide
    `globe`) when a site offers nothing.
 
@@ -582,9 +583,50 @@ that really is largest — not the one whose filename claims a size. SVGs win
 outright, and anything under 16px is discarded as a placeholder. Probing images
 needs no permissions; only the deep lookup does.
 
+### How sharp the result is
+
+A tile's logo is at most about 172 CSS pixels across — a 200px tile less its
+inset — which is **344 real pixels on a 2× screen**. Three separate ceilings
+used to sit below that, and each one silently cost resolution:
+
+- **Probing stopped at 128px.** A site publishing both a 180px
+  `apple-touch-icon` and a 512px `android-chrome` icon handed over the 180,
+  because the first wave had already cleared the bar. The bar is now 256px, and
+  the first wave asks for the large ones to begin with.
+- **A kept picture was redrawn at 192px** — under half of what the largest tile
+  draws — and then held in that state for a month. It is now 384px.
+- **A vector over 13 KB was rasterized** on its way into the cache. That is the
+  one case where keeping a picture makes it *worse* than not keeping it: an SVG
+  is sharp at every size until it is turned into a bitmap. Vectors are now never
+  redrawn. One too large to store is simply not stored, and the tile loads the
+  address instead — still the vector.
+
+Going over the storage ceiling is not a failure, for the same reason: the
+picture is not kept, the tile loads the address as an `<img>`, and what is lost
+is only its instant appearance on the next new tab.
+
 Results are cached per origin (hits 30 days, misses 3 days), at most four
 origins are resolved at once, and turning deep lookup on or off clears the cache
 so every tile is re-resolved.
+
+Cache entries carry the **revision** of the lookup that found them. Bumping it
+is what lets a sharper lookup reach sites you have already visited — otherwise
+a better result would only ever be seen by someone who had never opened that
+site before, because the old answer stays fresh for a month.
+
+### Looking one up again
+
+The **↻** button beside *Icon* in the tile sheet looks the site's own icon up
+again from scratch: past the answer cached here, and past the browser's own
+cache for the page and manifest it reads on the way. It reports what it found
+and how big it was, which matters — *the icon is blurry* and *this site only
+publishes a 32px icon* look identical on a tile, and only one of them is
+something you can do anything about. Where deep lookup is off and the result is
+small, it says so.
+
+A picture of the tile's own is what would be drawn instead, so the button
+clears one if it is set — looking up the site's icon cannot mean anything else
+while an override is in place. Nothing is written until **Save**.
 
 ## Permissions
 
@@ -697,6 +739,7 @@ node test/background.test.js   # the background picker and the settings tabs
 node test/groups.test.js       # groups, conditional fields, markup ids
 node test/groupswitch.test.js  # the group transition and the scroll gesture
 node test/paste.test.js        # pasted SVG code and pasted pictures
+node test/favicon.test.js      # icon resolution: probing, keeping, the cache
 node test/live.test.js         # the change feed, subsections, the accent picker
 node test/transfer.test.js     # the backup envelope, its refusals, the buttons
 node test/importers.test.js    # reading a Speed Dial 2 backup
