@@ -108,11 +108,13 @@ them and are written to storage in the background.
 | | Show the date | off |
 | Groups | Appearance — floating / status bar | Floating |
 | | Display — always / on hover | Always |
+| | Show the All category | on |
 | | Show the new group button | on |
 | | Remember the open group | on |
 | | Animate group changes | on |
 | | Switch groups by scrolling | off |
 | | Gesture direction — up and down / left and right / either *(scrolling)* | Up and down |
+| | Position — top / above the tiles / bottom *(floating)* | Top |
 | | Alignment — left / centre / right *(status bar)* | Centre |
 | | Position — top / bottom *(status bar)* | Top |
 | Other | Backup — export / import | — |
@@ -196,24 +198,36 @@ object that is rewritten on every slider drag.
 
 ## Groups
 
-A group is a name and the tiles put into it. They show as chips in a block at
-the top of the page: click one to narrow the grid to its tiles, click **All** to
-see everything again. A tile can be dragged straight onto a chip to move it
+A group is a name and the tiles put into it. They show as chips in a block over
+the page: click one to narrow the grid to its tiles, click **All** to see
+everything again. A tile can be dragged straight onto a chip to move it
 there, which is usually quicker than opening the tile dialog and picking a group
 from the list. Deleting a group leaves its tiles alone — they simply go loose
 and show under *All*.
 
 Settings → *Groups* decides how the block looks:
 
-- **Floating** — a HUD pill above the clock, frosted whatever is behind it.
+- **Floating** — a HUD pill, frosted whatever is behind it, sitting at the
+  **top** of the window, at the **bottom** of it the way the Dock does, or
+  **above the tiles**. The first two float over the page; the third is not a
+  float at all — the pill takes its place in the page's own column, under the
+  clock and over the grid, and moves with them as the window changes shape.
 - **Status bar** — the menu bar: a full-width translucent strip pinned to the
   **top** or **bottom** of the window, with its chips to the **left**,
   **centre** or **right**. The settings button moves into the bar, at its right
   hand end, the way macOS keeps status items in the menu bar; the page keeps
   its centre inside whatever is left of the window.
-- **On hover** fades the block out until the pointer reaches it — with two
-  exceptions, because both would otherwise look like a bug: while a group is
-  being shown, and while a tile is being dragged.
+- **On hover** fades the block out until the pointer reaches it. Picking a
+  group brings it back for a moment and it then steps away again, the way a
+  scrollbar does — a grid that has just been filtered has to say what filtered
+  it, or the tiles that went look like tiles that were lost. It also stays out
+  while a tile is being dragged, which is the moment the chips are wanted.
+
+**Show the All category** takes the *All* chip away. The page then always sits
+in a group — opening on the first one where it would have opened on *All* —
+and a tile leaves a group from the tile dialog rather than by being dragged
+onto the chip that is no longer there. The scroll gesture walks the same
+shortened line, so there is nowhere along it the block cannot show.
 
 Chips are put in order by dragging them about the block, the same way tiles are
 ordered in the grid — the chip travels under the pointer and where it is let go
@@ -244,6 +258,15 @@ wheel or a swipe across the touchpad. **Gesture direction** decides which way
 the gesture runs — **up and down**, **left and right**, or **either**, which
 takes whichever way the flick was mostly going. Down and right go on to the
 next group; up and left go back.
+
+**Left and right** answers a mouse wheel too, which has only the one direction
+to give: a notch of one counts as the sideways push it was meant to be, so the
+setting is not one that quietly does nothing for anyone without a touchpad. A
+wheel is told from fingers by what it sends — whole notches, in lines or pages
+or one big round pixel step, with nothing sideways beside them, where a
+touchpad sends a stream of small uneven deltas and leaks a little to the side
+even when swiped straight. So a touchpad scrolled up and down is still left to
+the page, which is what asking for left and right was about.
 
 It walks the same line the chips show, "All" at the front, and it stops at each
 end rather than coming round again — flick past the last group and the content

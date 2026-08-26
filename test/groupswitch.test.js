@@ -154,6 +154,49 @@ check('the two toggles are always on show',
       js.includes(`'${name}'`));
   });
 
+  /*
+   * Where the floating block sits, and how it hides. Each placement is a body
+   * class the page writes and the stylesheet draws; a name that drifts on one
+   * side leaves the block sitting wherever it last was, with nothing thrown.
+   */
+  [
+    ['gb-inline', 'above the tiles'],
+    ['gb-float-bottom', 'at the bottom']
+  ].forEach(([name, where]) => {
+    check(`the page puts .${name} on for a block ${where}`, js.includes(`'${name}'`));
+    check(`and the stylesheet draws it`, css.includes(`body.${name} `));
+  });
+
+  check('a block set in the page is static, so its row can measure it',
+    /body\.gb-inline \.groupbar \{[^}]*position: static/.test(css));
+
+  check('and it takes the row the page leaves for it',
+    /body\.gb-inline \.groupbar \{[^}]*grid-row: 2/.test(css)
+      && /grid-template-rows: 1fr auto auto 1fr/.test(css));
+
+  check('the tiles and the empty notice moved down a row to make it',
+    /\.grid \{[^}]*grid-row: 3/.test(css) && /\.empty \{[^}]*grid-row: 4/.test(css));
+
+  check('the pill arrives from the edge it lives at',
+    css.includes('body.gb-float-bottom .groupbar__inner { animation-name: pill-up; }')
+      && css.includes('@keyframes pill-up'));
+
+  // Hover mode: the block shows itself when a group changes and then steps
+  // back. Held open for as long as a group was picked - which is what the
+  // is-active rule did - it never went away at all, since a remembered group
+  // is where most new tabs open.
+  check('a group change shows the block for a moment',
+    js.includes("'is-peek'") && css.includes('body.gb-hover .groupbar.is-peek'));
+
+  check('and the stylesheet no longer pins it open for a picked group',
+    !css.includes('.groupbar.is-active') && !js.includes("'is-active'"));
+
+  check('the peek is what a change asks for',
+    /renderGroups\(\);\s*peekGroups\(\);/.test(js));
+
+  check('and it lets go of the block on its own',
+    /peekTimer = setTimeout\(\(\) => groupBar\.classList\.remove\('is-peek'\)/.test(js));
+
   check('the page writes --group-dir and the stylesheet reads it',
     js.includes("'--group-dir'") && css.includes('var(--group-dir)'));
 
@@ -330,12 +373,58 @@ check('the two toggles are always on show',
   await rest();
   steps.length = 0;
   flick({ dy: 40 });
-  check('and an up-and-down one while it says left and right',
+  check('and a touchpad swiped up and down while it says left and right',
     steps.length === 0, JSON.stringify(steps));
 
   steps.length = 0;
   flick({ dx: 40 });
   check('the direction it was asked for does turn a group',
+    steps.length === 1 && steps[0] === 1, JSON.stringify(steps));
+
+  /*
+   * A mouse has no sideways to give. Left and right would otherwise be a
+   * setting that does nothing at all for anyone on a wheel, so a notch of one
+   * counts as the push its single axis was meant to be - while the touchpad
+   * above, scrolled the way the setting is not about, is still left alone.
+   */
+  await rest();
+  steps.length = 0;
+  handler(wheel({ deltaY: 100 }));
+  check('a notch of a mouse wheel turns a group even so',
+    steps.length === 1 && steps[0] === 1, JSON.stringify(steps));
+
+  await rest();
+  steps.length = 0;
+  handler(wheel({ deltaY: -100 }));
+  check('and the other way goes back',
+    steps.length === 1 && steps[0] === -1, JSON.stringify(steps));
+
+  await rest();
+  steps.length = 0;
+  handler(wheel({ deltaY: 3, deltaMode: 1 }));
+  check('so does one reporting in lines, which is what Firefox sends',
+    steps.length === 1, JSON.stringify(steps));
+
+  await rest();
+  steps.length = 0;
+  // Six of these add up past the threshold; what keeps them out is what they
+  // are, not how far they went.
+  for (let i = 0; i < 6; i++) handler(wheel({ deltaY: 12.5 }));
+  check('but a touchpad is still told apart by its small, uneven deltas',
+    steps.length === 0, JSON.stringify(steps));
+
+  // Gecko reports a precision touchpad in lines, the way it reports a wheel -
+  // but in fractions of one, and a notch is never a fraction.
+  await rest();
+  steps.length = 0;
+  for (let i = 0; i < 8; i++) handler(wheel({ deltaY: 1.5, deltaMode: 1 }));
+  check('and a touchpad counted in lines does not pass for a notch',
+    steps.length === 0, JSON.stringify(steps));
+
+  await rest();
+  steps.length = 0;
+  for (let i = 0; i < 6; i++) handler(wheel({ deltaX: 10, deltaY: 60 }));
+  check('and a swipe that leaks sideways is read sideways, not as a notch',
     steps.length === 1 && steps[0] === 1, JSON.stringify(steps));
 
   settings = { groupScroll: true, groupScrollAxis: 'either' };

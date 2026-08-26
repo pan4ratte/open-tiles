@@ -570,6 +570,29 @@ body.gb-floating .groupbar {
   max-width: min(70vw, 860px);
 }
 
+/* At the bottom it is the Dock: the same pill, held off the bottom edge by the
+   same margin the top one keeps. */
+body.gb-floating.gb-float-bottom .groupbar {
+  top: auto;
+  bottom: 16px;
+}
+
+/* Set in the page instead, between the clock and the tiles: not chrome over
+   the page but part of its column, moving with it and taking room of its own.
+   Static, so the row it is in can measure it - a fixed element measures
+   nothing. */
+body.gb-inline .groupbar {
+  position: static;
+  grid-row: 2;
+  transform: none;
+  max-width: 100%;
+  margin-bottom: 22px;
+}
+
+/* The clock's own gap to the tiles is now shared with the block standing in
+   it, so it gives up most of it. */
+body.gb-inline .page__header { margin-bottom: 22px; }
+
 /* The pill animates itself in. Doing it one level up, on .groupbar, would
    fight the `on hover` rule below and win: a running or filled animation
    outranks a normal declaration, so `opacity: 0` would never take. */
@@ -585,6 +608,15 @@ body.gb-floating .groupbar__inner {
 
 @keyframes pill-in {
   from { opacity: 0; transform: translateY(-8px); }
+  to   { opacity: 1; transform: none; }
+}
+
+/* Coming up from the bottom edge rather than down from the top: a thing that
+   arrives should arrive from where it lives. */
+body.gb-float-bottom .groupbar__inner { animation-name: pill-up; }
+
+@keyframes pill-up {
+  from { opacity: 0; transform: translateY(8px); }
   to   { opacity: 1; transform: none; }
 }
 
@@ -664,9 +696,9 @@ body.gb-hover .groupbar { opacity: 0; }
 
 body.gb-hover .groupbar:hover,
 body.gb-hover .groupbar:focus-within,
-/* A group is being shown: hiding the reason half the tiles are missing would
-   just look like the tiles had gone. */
-body.gb-hover .groupbar.is-active,
+/* A group has just been picked: the grid has to say what filtered it, so the
+   block shows itself for a moment and then steps back - see peekGroups. */
+body.gb-hover .groupbar.is-peek,
 /* And a tile is being dragged, which is the moment the chips are wanted. */
 body.gb-hover.is-dragging .groupbar { opacity: 1; }
 
@@ -803,7 +835,11 @@ body.gb-bar .chip { border-radius: var(--r-control); }
 
    `1fr` is `minmax(auto, 1fr)`, so a row never shrinks below what is in it: on
    a window too short to hold both, the rows give up their equal share, the
-   page grows past the viewport and scrolls, and nothing is clipped. */
+   page grows past the viewport and scrolls, and nothing is clipped.
+
+   The second row is the group block's, for the one placement that sets it in
+   the page rather than floating it over. Empty it measures nothing, so the
+   other three rows are the same three rows they always were. */
 .page {
   display: grid;
   /* minmax(0, ...) rather than the default `auto`: an auto track takes its
@@ -811,7 +847,7 @@ body.gb-bar .chip { border-radius: var(--r-control); }
      blow the track out past the viewport and drag the grid off centre with
      it. Pinned to the row, the grid simply drops to the columns that fit. */
   grid-template-columns: minmax(0, 1fr);
-  grid-template-rows: 1fr auto 1fr;
+  grid-template-rows: 1fr auto auto 1fr;
   justify-items: center;
   min-height: 100%;
   padding: var(--page-inset) 24px calc(var(--page-inset) + var(--optical-lift) * 2);
@@ -871,7 +907,7 @@ body.gb-bar .chip { border-radius: var(--r-control); }
    --------------------------------------------------------------------------- */
 
 .grid {
-  grid-row: 2;
+  grid-row: 3;
   display: grid;
   grid-template-columns: repeat(auto-fit, var(--tile-size));
   gap: var(--gap);
@@ -1139,7 +1175,7 @@ body.tile-round .tile {
 }
 
 .empty {
-  grid-row: 3;
+  grid-row: 4;
   align-self: start;
   max-width: 34ch;
   margin-top: 32px;

@@ -235,7 +235,7 @@ const Schema = (() => {
             { value: 'floating', label: 'Floating' },
             { value: 'bar', label: 'Status bar' }
           ],
-          note: 'Floating sits in a pill above the clock; a status bar spans the '
+          note: 'Floating sits in a pill over the page; a status bar spans the '
               + 'whole window.'
         },
         {
@@ -248,7 +248,18 @@ const Schema = (() => {
             { value: 'hover', label: 'On hover' }
           ],
           note: 'On hover keeps the block out of the way until the pointer '
-              + 'reaches it - or until a group is picked.'
+              + 'reaches it. Picking a group leaves it on show for a moment, '
+              + 'so a filtered grid always says what filtered it.'
+        },
+        {
+          key: 'showAllGroup',
+          label: 'Show the All category',
+          type: 'toggle',
+          default: true,
+          note: 'The chip at the front of the block that clears the filter. '
+              + 'With it off the page always sits in a group, and a tile is '
+              + 'taken out of one from the tile dialog rather than by dragging '
+              + 'it onto All.'
         },
         {
           key: 'showGroupAdd',
@@ -264,7 +275,8 @@ const Schema = (() => {
           type: 'toggle',
           default: true,
           note: 'Opens a new tab on the group you were last looking at. With it '
-              + 'off, every new tab starts on All.'
+              + 'off, every new tab starts on All - or, where All is not shown, '
+              + 'on the first group.'
         },
         {
           key: 'groupAnimate',
@@ -296,7 +308,23 @@ const Schema = (() => {
             { value: 'either', label: 'Either' }
           ],
           note: 'Which way the gesture runs. Down and right go on to the next '
-              + 'group; up and left go back.'
+              + 'group; up and left go back. Left and right still answers a '
+              + 'mouse wheel, which has only the one direction to give.'
+        },
+        {
+          key: 'groupFloat',
+          label: 'Position',
+          type: 'segmented',
+          default: 'top',
+          when: { groupStyle: 'floating' },
+          options: [
+            { value: 'top', label: 'Top' },
+            { value: 'tiles', label: 'Above the tiles' },
+            { value: 'bottom', label: 'Bottom' }
+          ],
+          note: 'Top and bottom float the pill over the page at that edge. '
+              + 'Above the tiles sets it in the page itself, under the clock '
+              + 'and over the grid, where it moves with them.'
         },
         {
           key: 'groupAlign',

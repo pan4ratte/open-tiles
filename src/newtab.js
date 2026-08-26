@@ -3,6 +3,9 @@
 
   const grid = document.getElementById('grid');
   const empty = document.getElementById('empty');
+  // The two the group block moves between: over the page, or set in it.
+  const page = document.querySelector('.page');
+  const toolbar = document.querySelector('.toolbar');
   const header = document.getElementById('header');
   const clock = document.getElementById('clock');
   const dateLine = document.getElementById('date');
@@ -140,10 +143,26 @@
     const bar = settings.groupStyle === 'bar';
     document.body.classList.toggle('gb-bar', bar);
     document.body.classList.toggle('gb-floating', !bar);
-    // Only a status bar can sit at the bottom; the floating block is a lid.
+    // The bar's own edge. A floating block has an edge too, but it is a
+    // different setting with a third place in it - see below.
     document.body.classList.toggle('gb-bottom', bar && settings.groupEdge === 'bottom');
     document.body.classList.toggle('gb-hover', settings.groupShow === 'hover');
     root.style.setProperty('--groupbar-align', ALIGNMENT[settings.groupAlign]);
+
+    // Where the floating pill sits. Top and bottom hold it over the page at
+    // that edge; "above the tiles" is not a float at all - it takes its place
+    // in the page's own column, between the clock and the grid.
+    const inline = !bar && settings.groupFloat === 'tiles';
+    document.body.classList.toggle('gb-inline', inline);
+    document.body.classList.toggle('gb-float-bottom', !bar && settings.groupFloat === 'bottom');
+
+    // A block in the page has to be *in* the page: only the markup can say
+    // which row of that column it holds. Moved only when it is in the wrong
+    // one, so a slider drag does not replay the pill's arrival every frame.
+    const home = inline ? page : document.body;
+    if (groupBar.parentElement !== home) {
+      home.insertBefore(groupBar, inline ? grid : toolbar);
+    }
 
     clock.hidden = !settings.showClock;
     dateLine.hidden = !settings.showDate;
@@ -257,21 +276,33 @@
     return chip;
   }
 
+  /**
+   * Moves the page into the first group when "All" is not there to be on.
+   *
+   * With the chip hidden there is no way back to the unfiltered grid, so
+   * sitting on it would strand the page somewhere the block cannot show - a
+   * grid of everything with nothing lit to say so. The block is where "All"
+   * either is or is not, so this is settled just before the chips are drawn;
+   * every caller draws the grid straight after.
+   */
+  function settleActiveGroup() {
+    if (settings.showAllGroup || activeGroup || !groups.length) return;
+    activeGroup = groups[0].id;
+    Store.saveActiveGroup(activeGroup);
+  }
+
   function renderGroups() {
+    settleActiveGroup();
     groupChips.textContent = '';
 
     const any = groups.length > 0;
-    if (any) groupChips.append(buildChip({ id: null, name: 'All' }));
+    if (any && settings.showAllGroup) groupChips.append(buildChip({ id: null, name: 'All' }));
     groups.forEach(group => groupChips.append(buildChip(group)));
     if (settings.showGroupAdd) groupChips.append(buildAddChip(any));
 
     // With no groups and the + turned off there is nothing in the block, and
     // an empty pill floating over the page is just a smudge.
     groupBar.hidden = !any && !settings.showGroupAdd;
-
-    // A picked group keeps the block on screen even in hover mode: filtered
-    // tiles with nothing to say why would just look like missing ones.
-    groupBar.classList.toggle('is-active', Boolean(activeGroup));
 
     // Once there are more chips than the block can show, the strip scrolls -
     // and the group being looked at has to be one of the chips on show. A
@@ -293,7 +324,34 @@
    * scroll gesture walks.
    */
   function groupOrder() {
-    return [null, ...groups.map(group => group.id)];
+    const ids = groups.map(group => group.id);
+    return settings.showAllGroup ? [null, ...ids] : ids;
+  }
+
+  /** How long the block stays out after a group change, in ms. Long enough to
+   *  read the name that lit up, short enough not to become the furniture. */
+  const PEEK_MS = 1600;
+
+  /** set while the block is showing itself after a change */
+  let peekTimer;
+
+  /**
+   * Brings the block out for a moment, for the benefit of hover mode.
+   *
+   * A grid that has just been filtered has to say what filtered it, or the
+   * tiles that went look like tiles that were lost. Keeping the block out for
+   * as long as a group is picked - which is what this used to do - meant it
+   * never went away at all, since a remembered group is where most new tabs
+   * open: the setting looked broken. So the change announces itself and the
+   * block then steps back, the way a scrollbar does.
+   *
+   * Outside hover mode the block is on show whatever happens, and the class
+   * draws nothing there - so there is nothing to guard.
+   */
+  function peekGroups() {
+    groupBar.classList.add('is-peek');
+    clearTimeout(peekTimer);
+    peekTimer = setTimeout(() => groupBar.classList.remove('is-peek'), PEEK_MS);
   }
 
   /** Off when the setting says so, and off when the system does. */
@@ -351,6 +409,7 @@
     // picks up where the last tab left off rather than starting blank.
     if (remember) Store.saveActiveGroup(activeGroup);
     renderGroups();
+    peekGroups();
 
     if (!animatesGroups()) {
       render();
@@ -440,6 +499,9 @@
    *  or pages rather than pixels. A Firefox mouse wheel reports three lines. */
   const WHEEL_LINE = 20;
   const WHEEL_PAGE = 400;
+  /** The smallest pixel step taken for a wheel notch rather than for fingers.
+   *  Chrome sends 100 a notch; a touchpad sends a stream of much smaller ones. */
+  const WHEEL_NOTCH = 50;
 
   /** the deltas since the last turn, the hardest push since it, and when it
    *  was - all three reset by the pause that ends the gesture */
@@ -454,11 +516,37 @@
     wheelTurned = 0;
   }
 
+  /**
+   * Whether this came off a wheel rather than off a touchpad.
+   *
+   * A mouse has one axis and turns it in whole notches, whichever unit the
+   * browser counts them in: three lines, a page, one big round pixel step with
+   * nothing sideways beside it. Fingers give a stream of small deltas instead,
+   * and a touchpad scrolled straight up still leaks a little to the side.
+   *
+   * The whole-step test is also what keeps Gecko honest: it reports a
+   * precision touchpad in lines, the way it reports a wheel, but in fractions
+   * of one - where a notch is always a round number of them.
+   */
+  function isWheel(e) {
+    if (!Number.isInteger(e.deltaY)) return false;
+    if (e.deltaMode !== 0) return true;
+    return e.deltaX === 0 && Math.abs(e.deltaY) >= WHEEL_NOTCH;
+  }
+
   /** How far this event went the way the setting cares about; 0 to ignore it. */
   function wheelDelta(e) {
     const scale = e.deltaMode === 1 ? WHEEL_LINE : e.deltaMode === 2 ? WHEEL_PAGE : 1;
 
-    if (settings.groupScrollAxis === 'horizontal') return e.deltaX * scale;
+    if (settings.groupScrollAxis === 'horizontal') {
+      // Left and right is a gesture a mouse cannot make. Rather than leave
+      // wheel users with a setting that does nothing, a notch of the wheel
+      // counts as the push its one axis was meant to be - while a touchpad
+      // scrolled up and down is still left to the page, which is what asking
+      // for left and right was about.
+      if (e.deltaX) return e.deltaX * scale;
+      return isWheel(e) ? e.deltaY * scale : 0;
+    }
     if (settings.groupScrollAxis === 'vertical') return e.deltaY * scale;
     // Either way: whichever way the gesture is mostly going.
     return (Math.abs(e.deltaX) > Math.abs(e.deltaY) ? e.deltaX : e.deltaY) * scale;
@@ -2149,11 +2237,14 @@
    * variable the stylesheet already reads.
    */
   const REBUILDS_GRID = new Set([
-    'openInNewTab', 'showVisits', 'showAddButton', 'tileOrder'
+    'openInNewTab', 'showVisits', 'showAddButton', 'tileOrder',
+    // Taking "All" away moves the page into the first group, which is a
+    // different set of tiles - see settleActiveGroup.
+    'showAllGroup'
   ]);
 
   /** The same, for the block of group chips: what it holds, not how it looks. */
-  const REBUILDS_GROUPS = new Set(['showGroupAdd']);
+  const REBUILDS_GROUPS = new Set(['showGroupAdd', 'showAllGroup']);
 
   async function onSettingChange(key, value) {
     if (key === 'font') return changeFont(value);
@@ -2163,8 +2254,10 @@
     if (key === 'backup') return changeTransfer(value);
 
     const effective = updateSetting(key, value);
-    if (REBUILDS_GRID.has(key)) render();
+    // The chips first: renderGroups is what settles which group the page is
+    // on, and the grid is drawn from that.
     if (REBUILDS_GROUPS.has(key)) renderGroups();
+    if (REBUILDS_GRID.has(key)) render();
     return { value: effective };
   }
 
@@ -2264,6 +2357,9 @@
     Fonts.use(settings.font).catch(() => Fonts.applyStack(Schema.DEFAULTS.font));
     renderGroups();
     render();
+    // A tab that opens in a group says so, even where the block is hidden
+    // until the pointer asks for it.
+    if (activeGroup) peekGroups();
 
     syncSiteAccess();
     Favicons.onAccessChange(() => syncSiteAccess());
@@ -2290,6 +2386,7 @@
         // baked into a tile's markup are worth tearing the grid down for -
         // rebuilding it sends every icon back to the network.
         if (before.font !== settings.font) Fonts.use(settings.font).catch(() => {});
+        if ([...REBUILDS_GROUPS].some(key => before[key] !== settings[key])) renderGroups();
         if (before.deepIcons !== settings.deepIcons
             || [...REBUILDS_GRID].some(key => before[key] !== settings[key])) render();
         if (!settingsModal.hidden) mountSettings();

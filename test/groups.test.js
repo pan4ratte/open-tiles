@@ -80,7 +80,9 @@ check('reset stores nothing',
 
 // ------------------------------------------------------------ the settings
 
-const groupKeys = ['groupStyle', 'groupShow', 'groupAlign', 'groupEdge'];
+const groupKeys = [
+  'groupStyle', 'groupShow', 'groupAlign', 'groupEdge', 'groupFloat', 'showAllGroup'
+];
 check('every group setting has a default',
   groupKeys.every(key => key in Schema.DEFAULTS),
   JSON.stringify(groupKeys.map(k => Schema.DEFAULTS[k])));
@@ -90,6 +92,44 @@ check('the block floats until told otherwise',
 
 check('a nonsense value falls back to the default',
   Schema.coerce({ groupAlign: 'sideways' }).groupAlign === 'center');
+
+check('"All" is shown out of the box - hiding it is the choice, not the default',
+  Schema.DEFAULTS.showAllGroup === true);
+
+check('the floating block starts at the top, where it has always been',
+  Schema.DEFAULTS.groupFloat === 'top');
+
+check('all three placements are offered',
+  ['top', 'tiles', 'bottom'].every(value =>
+    Schema.coerce({ groupFloat: value }).groupFloat === value));
+
+/*
+ * Taking "All" away moves the page into the first group, so both halves of
+ * that have to happen: the chips are rebuilt, and the grid is rebuilt from
+ * wherever the chips left the page. Reading them off the page rather than
+ * running it, because the sets are what the change handler dispatches on.
+ */
+const rebuildsGroups = (js.match(/REBUILDS_GROUPS = new Set\(\[([^\]]*)\]/) || [])[1] || '';
+const rebuildsGrid = (js.match(/REBUILDS_GRID = new Set\(\[([\s\S]*?)\]\)/) || [])[1] || '';
+
+check('hiding "All" rebuilds the chips',
+  rebuildsGroups.includes("'showAllGroup'"), rebuildsGroups.trim());
+
+check('and the grid, since the page has moved into a group',
+  rebuildsGrid.includes("'showAllGroup'"), rebuildsGrid.replace(/\s+/g, ' ').trim());
+
+check('the chips are settled before the grid is drawn from them',
+  js.indexOf('if (REBUILDS_GROUPS.has(key)) renderGroups();')
+    < js.indexOf('if (REBUILDS_GRID.has(key)) render();'));
+
+check('the page never sits on "All" while "All" is not on show',
+  /function settleActiveGroup\(\) \{[\s\S]*?settings\.showAllGroup \|\| activeGroup/.test(js));
+
+check('and the block is drawn from that, not from around it',
+  /function renderGroups\(\) \{\s*settleActiveGroup\(\);/.test(js));
+
+check('the line the gesture walks leaves "All" out with the chip',
+  /function groupOrder\(\)[\s\S]*?settings\.showAllGroup \? \[null, \.\.\.ids\] : ids/.test(js));
 
 // ---------------------------------------------------------------- storage
 
@@ -155,6 +195,13 @@ check('a nonsense value falls back to the default',
   check('the status-bar options are out of sight while the block floats',
     rowFor('groupAlign').hidden === true && rowFor('groupEdge').hidden === true);
 
+  check('but the placement a floating block has is on show',
+    rowFor('groupFloat').hidden === false);
+
+  check('and it reads in places, not in edges',
+    itemFor('groupFloat', 'tiles').textContent === 'Above the tiles',
+    itemFor('groupFloat', 'tiles').textContent);
+
   check('the options that always apply are on show',
     rowFor('groupStyle').hidden === false && rowFor('groupShow').hidden === false);
 
@@ -169,12 +216,18 @@ check('a nonsense value falls back to the default',
   check('and brings out the options that only apply to a bar',
     rowFor('groupAlign').hidden === false && rowFor('groupEdge').hidden === false);
 
+  check('while the floating placement goes away - a bar has edges, not places',
+    rowFor('groupFloat').hidden === true);
+
   answer = 'floating';
   itemFor('groupStyle', 'floating').fire('click');
   await new Promise(resolve => setTimeout(resolve, 0));
 
   check('going back to floating puts them away again',
     rowFor('groupAlign').hidden === true && rowFor('groupEdge').hidden === true);
+
+  check('and brings the placement back',
+    rowFor('groupFloat').hidden === false);
 
   // ---------------------------------------------------------- reset button
 
