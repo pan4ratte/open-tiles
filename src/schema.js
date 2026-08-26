@@ -185,8 +185,8 @@ const Schema = (() => {
               label: 'Show the add button',
               type: 'toggle',
               default: true,
-              note: 'The dotted + at the end of the grid. With it off, the + in '
-                  + 'the toolbar is how a tile gets added.'
+              note: 'The dotted + at the end of the grid. With it off, '
+                  + 'right-clicking the page is how a tile gets added.'
             },
             { key: 'openInNewTab', label: 'Open sites in a new tab', type: 'toggle', default: false },
             {
@@ -245,6 +245,14 @@ const Schema = (() => {
           ],
           note: 'On hover keeps the block out of the way until the pointer '
               + 'reaches it - or until a group is picked.'
+        },
+        {
+          key: 'showGroupAdd',
+          label: 'Show the new group button',
+          type: 'toggle',
+          default: true,
+          note: 'The + at the end of the block. With it off, right-clicking the '
+              + 'page is how a group gets made.'
         },
         {
           key: 'keepGroup',

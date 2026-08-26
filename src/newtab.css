@@ -502,6 +502,8 @@ body.has-bg .tile__visits {
   transition: opacity var(--t-base) var(--ease);
 }
 
+.groupbar[hidden] { display: none; }
+
 .groupbar__inner {
   display: flex;
   align-items: center;
@@ -2153,7 +2155,104 @@ body.tile-round .tile {
 
 
 /* ---------------------------------------------------------------------------
-   15. Reduced motion
+   15. The context menu
+
+   A macOS menu: thick material, a tight run of rows, and a hairline where one
+   run of items ends and another begins. It is placed by newtab.js at the
+   pointer, so it carries no position of its own beyond being fixed.
+   --------------------------------------------------------------------------- */
+
+.menu {
+  position: fixed;
+  z-index: 70;
+  min-width: 172px;
+  padding: 5px;
+  border-radius: var(--r-window);
+  background: var(--mat-thick);
+  -webkit-backdrop-filter: var(--mat-filter);
+  backdrop-filter: var(--mat-filter);
+  box-shadow: var(--shadow-window);
+  /* Out of the corner it was opened from, which is the corner nearest the
+     pointer - see placeMenu, which flips the whole box rather than sliding
+     it, so this stays true at every edge of the window. */
+  transform-origin: top left;
+  animation: menu-in var(--t-fast) var(--ease-out) both;
+  /* It holds focus itself while no row does - see openMenu - and a ring round
+     the whole menu is not what that is for. */
+  outline: 0;
+}
+
+@keyframes menu-in {
+  from { opacity: 0; transform: scale(.94); }
+  to   { opacity: 1; transform: none; }
+}
+
+.menu__item {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  width: 100%;
+  padding: 5px 9px;
+  border: 0;
+  border-radius: var(--r-control);
+  background: transparent;
+  color: var(--label);
+  font-family: var(--font-family);
+  font-size: var(--t-body);
+  letter-spacing: -.004em;
+  text-align: left;
+  cursor: pointer;
+  /* No transition on the fill: a menu row should light up the instant the
+     pointer crosses it, or a fast pass down the menu smears. */
+  transition: none;
+}
+
+/* The glyph is the quieter half of a row - it is there to be recognised at a
+   glance, not read - until the row itself is picked out. */
+.menu__item .icon { color: var(--label-secondary); }
+
+.menu__label {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Hover and keyboard focus are the same state: on a menu there is only ever
+   one row in hand, however the hand got there. */
+.menu__item:hover,
+.menu__item:focus-visible {
+  outline: 0;
+  background: var(--accent);
+  /* --on-accent, not --accent-text: the latter is the accent adjusted to be
+     read *as* text on the page, which on an accent fill is the same colour
+     twice over. */
+  color: var(--on-accent);
+}
+
+.menu__item:hover .icon,
+.menu__item:focus-visible .icon { color: currentColor; }
+
+.menu__item:active { background: var(--accent); }
+
+/* Destructive, so it is not read as one more thing to try. It keeps the
+   accent fill when picked out: the row is what is highlighted, and red on red
+   would say nothing. */
+.menu__item--danger { color: var(--system-red); }
+
+.menu__item--danger .icon { color: var(--system-red); }
+
+.menu__sep {
+  height: 1px;
+  margin: 5px 9px;
+  background: var(--separator);
+  transform: scaleY(.5);
+}
+
+
+/* ---------------------------------------------------------------------------
+   16. Reduced motion
    --------------------------------------------------------------------------- */
 
 @media (prefers-reduced-motion: reduce) {

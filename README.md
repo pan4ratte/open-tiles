@@ -21,7 +21,9 @@ overridden — accept it, otherwise the default page stays.
 
 - **+** tile — add a site (`example.com` is enough, `https://` is filled in)
 - **drag a tile** — reorder; the new order is saved automatically
-- **right-click a tile** — edit or delete it (opens as a sheet)
+- **right-click a tile** — edit or delete it, or add another
+- **right-click the page** — add a tile or start a group; this is the way in
+  when either **+** is turned off
 - **+ New group** — start a group; **click a group** to show only its tiles
 - **drag a tile onto a group** — move it there (or onto *All* to take it out)
 - **drag a group** — put the groups in whatever order you like
@@ -106,6 +108,7 @@ them and are written to storage in the background.
 | | Show the date | off |
 | Groups | Appearance — floating / status bar | Floating |
 | | Display — always / on hover | Always |
+| | Show the new group button | on |
 | | Remember the open group | on |
 | | Alignment — left / centre / right *(status bar)* | Centre |
 | | Position — top / bottom *(status bar)* | Top |
@@ -355,7 +358,7 @@ options, the per-theme text and interface colours — are simply not read.
 
 ## Editing a tile
 
-Right-click a tile to edit it. **Appearance** shows the tile as it will really
+Right-click a tile and choose **Edit tile**. **Appearance** shows it as it will really
 be drawn — the same `.tile` element, the same classes, the same custom
 properties — so shape, corner, logo padding and whether the name shows all
 follow the settings without the sheet knowing any of them. It is a preview, not

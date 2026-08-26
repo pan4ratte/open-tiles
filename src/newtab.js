@@ -19,7 +19,6 @@
   const fieldIcon = document.getElementById('fieldIcon');
   const fieldIconFile = document.getElementById('fieldIconFile');
   const btnIconFile = document.getElementById('btnIconFile');
-  const btnAddTile = document.getElementById('btnAddTile');
 
   const groupBar = document.getElementById('groupBar');
   const groupChips = document.getElementById('groupChips');
@@ -134,9 +133,6 @@
     if (fixedColumns) root.style.setProperty('--columns', settings.columns);
 
     document.body.classList.toggle('no-labels', !settings.showLabels);
-    // With the + gone from the grid there has to be one somewhere, or a tile
-    // cannot be added at all.
-    btnAddTile.hidden = settings.showAddButton;
 
     const bar = settings.groupStyle === 'bar';
     document.body.classList.toggle('gb-bar', bar);
@@ -241,6 +237,9 @@
 
       chip.addEventListener('contextmenu', e => {
         e.preventDefault();
+        // The page's own menu is listening further up and would open over the
+        // dialog this is about to raise.
+        e.stopPropagation();
         openGroupModal(group.id);
       });
     }
@@ -268,7 +267,11 @@
     const any = groups.length > 0;
     if (any) groupChips.append(buildChip({ id: null, name: 'All' }));
     groups.forEach(group => groupChips.append(buildChip(group)));
-    groupChips.append(buildAddChip(any));
+    if (settings.showGroupAdd) groupChips.append(buildAddChip(any));
+
+    // With no groups and the + turned off there is nothing in the block, and
+    // an empty pill floating over the page is just a smudge.
+    groupBar.hidden = !any && !settings.showGroupAdd;
 
     // A picked group keeps the block on screen even in hover mode: filtered
     // tiles with nothing to say why would just look like missing ones.
@@ -529,9 +532,13 @@
 
     empty.hidden = shown.length > 0;
     if (!shown.length) {
+      // With the + turned off there is no + to hit, and the only way in is
+      // the one the menu offers.
       empty.textContent = activeGroup
         ? 'Nothing in this group yet - drag a tile onto its name to put it here.'
-        : 'No tiles yet. Hit + to add your first site.';
+        : settings.showAddButton
+          ? 'No tiles yet. Hit + to add your first site.'
+          : 'No tiles yet. Right-click anywhere to add your first site.';
     }
   }
 
@@ -1085,11 +1092,24 @@
 
   btnCancel.addEventListener('click', () => closeDialog(modal));
 
-  btnDelete.addEventListener('click', async () => {
-    tiles = tiles.filter(t => t.id !== editingId);
+  /**
+   * Takes a tile away.
+   *
+   * No confirmation, the same as the sheet's own Delete has always been: the
+   * tile is a bookmark, and putting it back is typing an address. The menu
+   * item that calls this is marked destructive so it does not get hit by
+   * accident on the way past.
+   */
+  async function deleteTile(id) {
+    tiles = tiles.filter(t => t.id !== id);
     await persistTiles();
     render();
+  }
+
+  btnDelete.addEventListener('click', async () => {
+    // Closed first: the sheet is showing the tile that is about to go.
     closeDialog(modal);
+    await deleteTile(editingId);
   });
 
   // Opening a tile is what a visit is. The click is not intercepted - the link
@@ -1099,14 +1119,192 @@
     if (el) countVisit(el.dataset.id);
   });
 
-  btnAddTile.addEventListener('click', () => openTileModal(null));
+  // --------------------------------------------------------- context menu
 
-  // Right-click a tile to edit it.
-  grid.addEventListener('contextmenu', e => {
-    const el = e.target.closest('.tile[data-id]');
-    if (!el) return;
+  /**
+   * The menu that opens where it was asked for.
+   *
+   * Adding a tile and making a group used to be buttons standing on the page.
+   * They are rare things to do and they were on screen the whole time, so they
+   * are here instead: the page has no chrome to hunt through, and a right-click
+   * is where a desktop looks for what it can do. What the menu offers depends
+   * on what was under the pointer - a tile can be edited and deleted, the page
+   * itself cannot.
+   *
+   * One menu exists at a time and it is built fresh each time it opens, so
+   * nothing has to be kept in step with a tile that has since been deleted.
+   */
+  let dismissMenu = null;
+
+  const MENU_MARGIN = 8;
+
+  /** Stands between two runs of items; not an item itself. */
+  const SEPARATOR = Symbol('separator');
+
+  function buildMenuItem(item, close) {
+    const el = document.createElement('button');
+    el.type = 'button';
+    el.className = 'menu__item';
+    el.setAttribute('role', 'menuitem');
+    if (item.danger) el.classList.add('menu__item--danger');
+
+    el.append(Icons.create(item.icon, { size: 15 }));
+
+    const text = document.createElement('span');
+    text.className = 'menu__label';
+    text.textContent = item.label;
+    el.append(text);
+
+    el.addEventListener('click', () => {
+      // Closed first: the menu is not meant to be standing behind whatever
+      // the item opens, and several of these open a dialog.
+      close();
+      item.run();
+    });
+    return el;
+  }
+
+  /**
+   * Puts the menu where it was asked for, and inside the window.
+   *
+   * It hangs down and to the right of the pointer, the way a desktop menu
+   * does, and flips to the other side of it when that would run off an edge -
+   * flipping rather than sliding, so the pointer never ends up on top of an
+   * item it could trigger by accident.
+   */
+  function placeMenu(menu, x, y) {
+    const width = menu.offsetWidth;
+    const height = menu.offsetHeight;
+
+    let left = x;
+    if (left + width > window.innerWidth - MENU_MARGIN) left = x - width;
+    left = Math.max(MENU_MARGIN, Math.min(left, window.innerWidth - width - MENU_MARGIN));
+
+    let top = y;
+    if (top + height > window.innerHeight - MENU_MARGIN) top = y - height;
+    top = Math.max(MENU_MARGIN, Math.min(top, window.innerHeight - height - MENU_MARGIN));
+
+    menu.style.left = Math.round(left) + 'px';
+    menu.style.top = Math.round(top) + 'px';
+  }
+
+  function openMenu(x, y, items) {
+    if (dismissMenu) dismissMenu();
+
+    const menu = document.createElement('div');
+    menu.className = 'menu';
+    menu.setAttribute('role', 'menu');
+    // Focusable so the menu can hold focus without any row holding it, which
+    // is what keeps the arrow keys working with nothing yet chosen.
+    menu.tabIndex = -1;
+
+    items.forEach(item => {
+      if (item === SEPARATOR) {
+        const rule = document.createElement('div');
+        rule.className = 'menu__sep';
+        menu.append(rule);
+        return;
+      }
+      menu.append(buildMenuItem(item, close));
+    });
+
+    const entries = () => Array.from(menu.querySelectorAll('.menu__item'));
+
+    function onOutside(e) {
+      if (!menu.contains(e.target)) close();
+    }
+
+    function onKey(e) {
+      if (e.key === 'Escape') {
+        // The dialogs are listening for Escape too, and the menu is what is
+        // on top, so the menu is what closes.
+        e.stopPropagation();
+        close();
+        return;
+      }
+      if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp') return;
+      e.preventDefault();
+
+      const all = entries();
+      const at = all.indexOf(document.activeElement);
+      const down = e.key === 'ArrowDown';
+
+      // From the menu itself, with no row chosen yet, the first key press
+      // enters at the near end - top going down, bottom going up. After that
+      // it wraps, so holding one arrow walks the whole menu round.
+      const next = at === -1
+        ? (down ? 0 : all.length - 1)
+        : (at + (down ? 1 : -1) + all.length) % all.length;
+
+      if (all[next]) all[next].focus();
+    }
+
+    function close() {
+      if (dismissMenu !== close) return;
+      dismissMenu = null;
+
+      menu.remove();
+      document.removeEventListener('pointerdown', onOutside, true);
+      document.removeEventListener('keydown', onKey, true);
+      window.removeEventListener('resize', close);
+      window.removeEventListener('blur', close);
+      window.removeEventListener('scroll', close, true);
+    }
+
+    dismissMenu = close;
+    document.body.append(menu);
+    placeMenu(menu, x, y);
+
+    // Capture, so a press that lands on a control which stops the event from
+    // bubbling still shuts the menu.
+    document.addEventListener('pointerdown', onOutside, true);
+    document.addEventListener('keydown', onKey, true);
+    window.addEventListener('resize', close);
+    window.addEventListener('blur', close);
+    window.addEventListener('scroll', close, true);
+
+    // The menu takes focus, not the first item in it. Focusing an item would
+    // light that row up and leave it lit: Firefox counts a programmatic focus
+    // as focus-visible, so the row reads as hovered when the pointer is
+    // nowhere near it. A menu opened by pointer starts with nothing chosen,
+    // which is what a desktop menu does; the arrow keys are what choose.
+    menu.focus({ preventScroll: true });
+  }
+
+  /** What can be done to the page, whatever was right-clicked to get here. */
+  function pageItems() {
+    return [
+      { icon: 'plus', label: 'Add tile', run: () => openTileModal(null) },
+      { icon: 'tag', label: 'New group', run: () => openGroupModal(null) }
+    ];
+  }
+
+  function tileItems(id) {
+    return [
+      { icon: 'pencil', label: 'Edit tile', run: () => openTileModal(id) },
+      { icon: 'trash-2', label: 'Delete tile', danger: true, run: () => deleteTile(id) },
+      SEPARATOR,
+      ...pageItems()
+    ];
+  }
+
+  document.addEventListener('contextmenu', e => {
+    // A text field keeps the browser's own menu: copy, paste and spelling
+    // live there, and nothing here replaces them. So does anything inside a
+    // dialog, which is a place with its own buttons for what it can do.
+    if (e.target.closest('input, textarea, .modal, .picker, .menu')) return;
+
     e.preventDefault();
-    openTileModal(el.dataset.id);
+
+    const tile = e.target.closest('.tile[data-id]');
+    // A menu asked for from the keyboard has no pointer to open at, and says
+    // so with a zero. The thing it was asked about is where it belongs.
+    const from = (e.clientX || e.clientY)
+      ? { x: e.clientX, y: e.clientY }
+      : (rect => ({ x: rect.left, y: rect.bottom }))(
+          (tile || document.body).getBoundingClientRect());
+
+    openMenu(from.x, from.y, tile ? tileItems(tile.dataset.id) : pageItems());
   });
 
   // --------------------------------------------------------------- group dialog
@@ -1462,6 +1660,9 @@
     'openInNewTab', 'showVisits', 'showAddButton', 'tileOrder'
   ]);
 
+  /** The same, for the block of group chips: what it holds, not how it looks. */
+  const REBUILDS_GROUPS = new Set(['showGroupAdd']);
+
   async function onSettingChange(key, value) {
     if (key === 'font') return changeFont(value);
     if (key === 'reset') return resetSettings();
@@ -1471,6 +1672,7 @@
 
     const effective = updateSetting(key, value);
     if (REBUILDS_GRID.has(key)) render();
+    if (REBUILDS_GROUPS.has(key)) renderGroups();
     return { value: effective };
   }
 
