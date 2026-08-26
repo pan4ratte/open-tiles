@@ -498,9 +498,130 @@ const Favicons = (() => {
     return canvas.toDataURL('image/png');
   }
 
+  // --------------------------------------------------------- pasted SVG code
+
+  const SVG_NS = 'http://www.w3.org/2000/svg';
+
+  /** Room for a hand-drawn logo, and well short of the 256 KB at which storage
+   *  drops a tile's icon without a word - a refusal here can say why. */
+  const OWN_SVG_MAX = 128 * 1024;
+
+  /** Elements that do something rather than draw something. */
+  const SVG_RUNNING = new Set(['script', 'foreignobject', 'iframe', 'embed', 'object']);
+
+  /**
+   * SVG source, as opposed to an address, a data URI or a stray tag.
+   *
+   * Kept deliberately cheap and certain: it is asked on every paste into the
+   * sheet, and anything it says yes to is taken out of the field it was
+   * dropped in. A leading prolog, doctype or comment is ordinary in a file
+   * saved by a drawing program.
+   */
+  function looksLikeSvg(text) {
+    return /^\s*(?:<\?xml[\s\S]*?\?>\s*|<!--[\s\S]*?-->\s*|<!doctype[^>]*>\s*)*<svg[\s>]/i
+      .test(String(text || ''));
+  }
+
+  /**
+   * Reads SVG source, strictly first and forgivingly second.
+   *
+   * Markup copied out of a running page is often not well-formed XML - an
+   * unclosed tag, a bare attribute, an HTML entity - and the XML parser
+   * refuses the lot. The HTML parser takes what the XML one will not, and it
+   * is the same parser that read the page the markup was copied from, so it
+   * fails in the same places.
+   */
+  function parseSvg(text) {
+    const xml = new DOMParser().parseFromString(text, 'image/svg+xml');
+    const root = xml.documentElement;
+    if (root && root.localName === 'svg' && !xml.querySelector('parsererror')) return root;
+
+    return new DOMParser().parseFromString(text, 'text/html').body.querySelector('svg');
+  }
+
+  /**
+   * Takes the running parts out of an SVG.
+   *
+   * An <img> is already a sealed room: the browser runs no script in an SVG
+   * loaded that way and fetches nothing the picture refers to, and that - not
+   * this - is what makes a pasted logo safe to draw. This is for afterwards.
+   * The source is kept in storage and handed back out in a backup file, so it
+   * should carry nothing that would run if it ever landed somewhere less
+   * careful than an <img>.
+   */
+  function scrubSvg(root) {
+    const doomed = [];
+
+    (function walk(el) {
+      if (SVG_RUNNING.has(el.localName.toLowerCase())) {
+        doomed.push(el);
+        return;
+      }
+
+      Array.from(el.attributes).forEach(attr => {
+        const name = attr.name.toLowerCase();
+        // onclick, onload and the rest of them.
+        if (name.startsWith('on')) el.removeAttribute(attr.name);
+        // And a link that runs instead of pointing.
+        else if (/(^|:)(href|src)$/.test(name) && /^\s*javascript:/i.test(attr.value)) {
+          el.removeAttribute(attr.name);
+        }
+      });
+
+      Array.from(el.children).forEach(walk);
+    })(root);
+
+    doomed.forEach(el => el.remove());
+  }
+
+  /**
+   * Turns pasted SVG source into a picture a tile can draw.
+   *
+   * Two things are put right on the way through, because both are ordinary in
+   * copied markup and both fail silently - the tile simply shows its letter
+   * and nothing says why:
+   *
+   *   - no xmlns. An <img> draws nothing at all for an SVG that does not name
+   *     its namespace, and markup lifted out of a page's DOM arrives without
+   *     one, because the page had already established it.
+   *   - no viewBox. Then the picture has a fixed size rather than a shape, and
+   *     a tile scales its logo to whatever the tile size is. Width and height,
+   *     where they were given, say what the shape was meant to be.
+   */
+  function fromSvg(source) {
+    const text = String(source || '').trim();
+    if (!looksLikeSvg(text)) throw new Error('That does not look like SVG code.');
+
+    const svg = parseSvg(text);
+    if (!svg) throw new Error('That SVG could not be read — it may be incomplete.');
+
+    scrubSvg(svg);
+
+    if (!svg.getAttribute('xmlns')) svg.setAttribute('xmlns', SVG_NS);
+
+    if (!svg.getAttribute('viewBox')) {
+      const width = parseFloat(svg.getAttribute('width'));
+      const height = parseFloat(svg.getAttribute('height'));
+      if (width > 0 && height > 0) svg.setAttribute('viewBox', `0 0 ${width} ${height}`);
+    }
+
+    // Percent-encoded rather than base64: it carries UTF-8 without any dance,
+    // and it leaves the picture readable in a backup file.
+    const uri = 'data:image/svg+xml,'
+      + encodeURIComponent(new XMLSerializer().serializeToString(svg));
+
+    if (uri.length > OWN_SVG_MAX) {
+      throw new Error('That SVG is too long to keep on a tile — try a simpler one.');
+    }
+
+    return uri;
+  }
+
   return {
     resolve,
     fromFile,
+    fromSvg,
+    looksLikeSvg,
     clearCache: () => Store.icons.clear(),
     hasSiteAccess,
     requestSiteAccess,

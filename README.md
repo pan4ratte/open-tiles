@@ -457,10 +457,10 @@ an impression of one; the only thing it changes is `--tile-size`, capped so a
 ### Its icon
 
 A tile normally finds its own picture — see [Site icons](#site-icons) below.
-Any tile can override that with one of its own: fill in **Icon**, either as a
-web address or by choosing a file. A set icon is drawn straight away and the
-lookup never runs, so it is also the way to fix a site whose own icon is wrong,
-ugly, or missing.
+Any tile can override that with one of its own: fill in **Icon** with a web
+address, choose a file, or paste one — see below. A set icon is drawn straight
+away and the lookup never runs, so it is also the way to fix a site whose own
+icon is wrong, ugly, or missing.
 
 A chosen file is scaled to fit 256px and kept inline as a PNG — transparent, so
 a logo sits on the tile rather than in a white box, and fitted rather than
@@ -471,6 +471,46 @@ rewritten on every drag, so nothing on it may grow to the size of a background.
 Only `https:`, `http:` and `data:image/` are accepted. Anything else — a
 `javascript:` address in a hand-edited or imported file, most of all — is
 dropped on the way into storage.
+
+#### Pasting one
+
+Two things can be pasted into the tile sheet and mean *use this as the icon*.
+
+**A picture on the clipboard** — copied out of a drawing program, or with
+*Copy image* in a browser — is taken wherever the caret happens to be, because
+a file cannot be typed into a field and there is nothing else it could have
+meant. It goes through exactly the same scaling as a chosen file. Paste a file
+that is not a picture and it says so rather than doing nothing.
+
+**SVG source** — what a design tool or a code editor puts on the clipboard —
+is converted to a data URI and kept whole, so it stays sharp at any tile size.
+This one is only taken from the **Icon** field, or from the sheet with nothing
+focused: it is still text, and pasting it into the address or name field should
+give you the text you asked for rather than watch it disappear into a picture.
+An address pasted into the Icon field is likewise left alone to paste itself.
+
+Two things are put right on the way through, because both are ordinary in
+copied markup and both otherwise fail in silence — the tile simply shows its
+letter and nothing says why:
+
+- **No `xmlns`.** An `<img>` draws nothing at all for an SVG that does not name
+  its namespace, and markup lifted out of a page's DOM never carries one,
+  because the page had already established it. One is added.
+- **No `viewBox`.** Then the picture has a fixed size rather than a shape, and
+  will not scale to the tile. Where `width` and `height` were given, they say
+  what the shape was meant to be, and a `viewBox` is built from them.
+
+The running parts — a `<script>`, a `<foreignObject>`, an `onclick`, a
+`javascript:` href — are stripped out. An `<img>` is already a sealed room: the
+browser runs no script in an SVG loaded that way and fetches nothing the
+picture refers to, and that, not the stripping, is what makes a pasted logo
+safe to draw. The stripping is for afterwards, because the source is kept in
+storage and handed back out in a backup file, and it should carry nothing that
+would run if it ever landed somewhere less careful than an `<img>`.
+
+Pasted SVG is refused above 128 KB. That is deliberately under the 256 KB cap
+on a tile's icon, because storage drops anything over that by storing nothing
+at all — a refusal in the sheet can say why, where a silent drop cannot.
 
 ### Its background
 
@@ -656,6 +696,7 @@ node test/gesture.test.js      # the permission user-gesture chain
 node test/background.test.js   # the background picker and the settings tabs
 node test/groups.test.js       # groups, conditional fields, markup ids
 node test/groupswitch.test.js  # the group transition and the scroll gesture
+node test/paste.test.js        # pasted SVG code and pasted pictures
 node test/live.test.js         # the change feed, subsections, the accent picker
 node test/transfer.test.js     # the backup envelope, its refusals, the buttons
 node test/importers.test.js    # reading a Speed Dial 2 backup

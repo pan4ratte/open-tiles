@@ -1017,12 +1017,82 @@
     fieldIconFile.value = '';
     if (!picked) return;
 
+    setIcon(() => Favicons.fromFile(picked));
+  });
+
+  // ------------------------------------------------- pasting into the sheet
+
+  /*
+   * Two things can be pasted into the tile sheet meaning "use this as the
+   * icon": a picture on the clipboard - copied out of a drawing program, or
+   * with "Copy image" in a browser - and the SVG source of one, which is what
+   * a design tool and a code editor put there instead.
+   *
+   * A picture is taken wherever the caret happens to be. A file cannot be
+   * typed into a field, so there is nothing else it could have meant.
+   *
+   * SVG source is only taken from the icon field, or from the sheet with no
+   * field focused. It is still text, and somebody pasting it into the address
+   * or the name field should get the text they asked for rather than watch it
+   * disappear into a picture.
+   */
+
+  /** Whatever files the clipboard is offering, however it offers them. */
+  function clipboardFiles(data) {
+    const files = data.files ? Array.from(data.files) : [];
+    if (files.length) return files;
+
+    // getAsFile() only answers while the event is being handled, so this runs
+    // now and not inside the work that follows.
+    return data.items
+      ? Array.from(data.items)
+          .filter(item => item.kind === 'file')
+          .map(item => item.getAsFile())
+          .filter(Boolean)
+      : [];
+  }
+
+  /** Puts whatever `work` produces in the icon field, and says how it went. */
+  async function setIcon(work) {
     try {
-      fieldIcon.value = await Favicons.fromFile(picked);
+      fieldIcon.value = await work();
       paintPreview();
+      SettingsUI.setStatus(modalError, null);
     } catch (err) {
       SettingsUI.setStatus(modalError, { kind: 'error', text: err.message });
     }
+  }
+
+  modal.addEventListener('paste', e => {
+    const data = e.clipboardData;
+    if (!data) return;
+
+    const files = clipboardFiles(data);
+    if (files.length) {
+      // Whatever it turns out to be, it was never going to paste as text.
+      e.preventDefault();
+
+      const picture = files.find(file => /^image\//.test(file.type || ''));
+      if (!picture) {
+        SettingsUI.setStatus(modalError,
+          { kind: 'error', text: 'That is not a picture.' });
+        return;
+      }
+
+      setIcon(() => Favicons.fromFile(picture));
+      return;
+    }
+
+    // Only where SVG source is what was meant - see above.
+    const meantAsIcon = e.target === fieldIcon
+      || !(e.target.closest && e.target.closest('input, textarea, select'));
+    if (!meantAsIcon) return;
+
+    const text = data.getData('text/plain');
+    if (!Favicons.looksLikeSvg(text)) return;
+
+    e.preventDefault();
+    setIcon(() => Favicons.fromSvg(text));
   });
 
   // ---------------------------------------------------- the background well
