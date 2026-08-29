@@ -45,7 +45,7 @@ const sandbox = {
 vm.createContext(sandbox);
 
 for (const file of ['schema.js', 'settings.js']) {
-  vm.runInContext(fs.readFileSync(path.join(SRC, file), 'utf8'), sandbox, { filename: file });
+  vm.runInContext(fs.readFileSync(path.join(SRC, file), 'utf8').replace(/\r\n/g, '\n'), sandbox, { filename: file });
 }
 
 const SettingsUI = vm.runInContext('SettingsUI', sandbox);
@@ -105,7 +105,7 @@ check('the dim and blur sliders are stored settings',
 // ------------------------------------------------------------ what is gone
 
 const source = ['schema.js', 'settings.js', 'backgrounds.js', 'newtab.js', 'storage.js']
-  .map(file => fs.readFileSync(path.join(SRC, file), 'utf8'))
+  .map(file => fs.readFileSync(path.join(SRC, file), 'utf8').replace(/\r\n/g, '\n'))
   .join('\n');
 
 check('no trace of Unsplash is left', !/unsplash/i.test(source),

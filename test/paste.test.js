@@ -29,7 +29,12 @@ const vm = require('vm');
 const path = require('path');
 
 const SRC = process.argv[2] || path.join(__dirname, '..', 'src');
-const read = file => fs.readFileSync(path.join(SRC, file), 'utf8');
+/* Source is read with its line endings normalised. Several checks below find
+   a run of code by its first and last lines and lift what is between them,
+   and those markers are written here with plain newlines - on a checkout with
+   CRLF endings they would match nothing and the test would fail on the line
+   endings rather than on the code. */
+const read = file => fs.readFileSync(path.join(SRC, file), 'utf8').replace(/\r\n/g, '\n');
 
 const js = read('newtab.js');
 

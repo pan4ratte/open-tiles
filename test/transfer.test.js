@@ -70,7 +70,7 @@ const sandbox = {
 vm.createContext(sandbox);
 
 for (const file of ['schema.js', 'importers.js', 'transfer.js', 'settings.js']) {
-  vm.runInContext(fs.readFileSync(path.join(SRC, file), 'utf8'), sandbox, { filename: file });
+  vm.runInContext(fs.readFileSync(path.join(SRC, file), 'utf8').replace(/\r\n/g, '\n'), sandbox, { filename: file });
 }
 
 const Transfer = vm.runInContext('Transfer', sandbox);

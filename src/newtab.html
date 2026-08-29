@@ -65,49 +65,87 @@
              inside a label steals the click meant for the field. -->
         <div class="field">
           <span class="field__label">Appearance</span>
+
+          <!-- The tile above, the things that shape it underneath: each is a
+               row of its own, so no control has to share a line with the
+               picture it changes. -->
           <div class="tilefield">
             <!-- The tile as it will really be drawn: same classes, same custom
                  properties, so shape, size, padding and label all follow the
                  settings without this having to know any of them. -->
             <div class="tilefield__stage">
               <div class="tile tile--preview" id="tilePreview"></div>
+              <!-- Under the tile: it carries the colour being pointed at, and
+                   a hex code should not wrap. -->
+              <span class="tilefield__hint" id="pipetteHint" hidden></span>
             </div>
 
-            <div class="tilefield__controls">
-              <label class="tilefield__sub" for="fieldIcon">Icon <em>(optional)</em></label>
-              <div class="tilefield__row">
-                <input class="field__input" id="fieldIcon" type="text"
-                       placeholder="An address, or paste a picture or SVG code"
-                       autocomplete="off" spellcheck="false">
-                <button class="btn btn--sm" type="button" id="btnIconReload"
-                        title="Look up the site's own icon again"
-                        aria-label="Look up the site's own icon again"
-                        data-icon="refresh-cw" data-icon-size="15"></button>
-                <button class="btn btn--sm" type="button" id="btnIconFile"
-                        title="Choose a file" aria-label="Choose a file"
-                        data-icon="upload" data-icon-size="15"></button>
-                <input class="file-input" id="fieldIconFile" type="file" accept="image/*">
+            <div class="tilefield__rows">
+              <div class="tilefield__group">
+                <label class="tilefield__sub" for="fieldIcon">Icon <em>(optional)</em></label>
+                <div class="tilefield__row">
+                  <input class="field__input" id="fieldIcon" type="text"
+                         placeholder="Web address, or paste a picture or SVG"
+                         autocomplete="off" spellcheck="false">
+                  <button class="btn btn--sm" type="button" id="btnIconReload"
+                          title="Look up the site's own icon again"
+                          aria-label="Look up the site's own icon again"
+                          data-icon="refresh-cw" data-icon-size="15"></button>
+                  <button class="btn btn--sm" type="button" id="btnIconFile"
+                          title="Choose a picture file"
+                          aria-label="Choose a picture file"
+                          data-icon="upload" data-icon-size="15"></button>
+                  <input class="file-input" id="fieldIconFile" type="file" accept="image/*">
+                </div>
+                <!-- Two of the three ways in leave no mark on the sheet, so
+                     they are said out loud rather than left to be discovered. -->
+                <p class="tilefield__note" id="iconHelp">
+                  Paste a picture, or the SVG code of one, anywhere in this sheet —
+                  or press <span class="tilefield__key" data-icon="upload" data-icon-size="12"></span>
+                  to choose a file.
+                </p>
               </div>
 
-              <span class="tilefield__sub">Background</span>
-              <div class="tilefield__row" id="tileBgRow">
+              <div class="tilefield__group">
+                <span class="tilefield__sub">Icon colour</span>
                 <!-- The colour well is built in newtab.js, from the same
                      picker the accent uses. -->
-                <button class="btn btn--sm" type="button" id="btnPipette"
-                        title="Pick a colour out of the icon"
-                        aria-label="Pick a colour out of the icon"
-                        aria-pressed="false"
-                        data-icon="pipette" data-icon-size="15"></button>
-                <button class="btn btn--sm" type="button" id="btnBgClear"
-                        title="Back to the usual tile"
-                        aria-label="Back to the usual tile"
-                        data-icon="rotate-ccw" data-icon-size="15"></button>
+                <div class="tilefield__row" id="tileIconRow">
+                  <button class="btn btn--sm" type="button" id="btnIconColorClear"
+                          title="Back to the icon's own colours"
+                          aria-label="Back to the icon's own colours"
+                          data-icon="rotate-ccw" data-icon-size="15"></button>
+                </div>
+              </div>
+
+              <div class="tilefield__group">
+                <span class="tilefield__sub">Background</span>
+                <div class="tilefield__row" id="tileBgRow">
+                  <button class="btn btn--sm" type="button" id="btnPipette"
+                          title="Pick a colour out of the icon"
+                          aria-label="Pick a colour out of the icon"
+                          aria-pressed="false"
+                          data-icon="pipette" data-icon-size="15"></button>
+                  <button class="btn btn--sm" type="button" id="btnBgClear"
+                          title="Back to the usual tile"
+                          aria-label="Back to the usual tile"
+                          data-icon="rotate-ccw" data-icon-size="15"></button>
+                </div>
+              </div>
+
+              <div class="tilefield__group">
+                <span class="tilefield__sub">Padding</span>
+                <!-- The slider is built in newtab.js, from the same control
+                     the Logo padding setting uses. -->
+                <div class="tilefield__row" id="tilePadRow">
+                  <button class="btn btn--sm" type="button" id="btnPadClear"
+                          title="Back to the padding set for every tile"
+                          aria-label="Back to the padding set for every tile"
+                          data-icon="rotate-ccw" data-icon-size="15"></button>
+                </div>
               </div>
             </div>
           </div>
-          <!-- Under the whole field rather than under the tile: it carries the
-               colour being pointed at, and a hex code should not wrap. -->
-          <span class="tilefield__hint" id="pipetteHint" hidden></span>
         </div>
 
         <label class="field">

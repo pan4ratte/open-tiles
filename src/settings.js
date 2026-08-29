@@ -1178,5 +1178,21 @@ const SettingsUI = (() => {
    */
   const colorControl = (field, value, commit) => buildColor(field, value, commit);
 
-  return { mount, setStatus, colorControl, closePicker: () => dismissPicker && dismissPicker() };
+  /**
+   * The slider on its own, on the same terms - the tile sheet's own padding.
+   *
+   * @param {{key:string, label:string, min:number, max:number,
+   *          step:number, unit:string}} field
+   * @param {number} value
+   * @param {(n:number) => *} commit
+   */
+  const rangeControl = (field, value, commit) => buildRange(field, value, commit);
+
+  return {
+    mount,
+    setStatus,
+    colorControl,
+    rangeControl,
+    closePicker: () => dismissPicker && dismissPicker()
+  };
 })();

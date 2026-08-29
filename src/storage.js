@@ -6,9 +6,11 @@
  * makes the page testable by opening src/newtab.html directly in a browser.
  *
  * Keys
- *   tiles      - [{ id, url, title, groupId, icon, bg, visits }]
+ *   tiles      - [{ id, url, title, groupId, icon, iconColor, bg, pad, visits }]
  *                groupId is null when loose; icon is '' when the site's own
- *                is to be looked up; bg is '' for the usual frosted tile;
+ *                is to be looked up; iconColor is '' when it keeps its own
+ *                colours; bg is '' for the usual frosted tile; pad is null
+ *                when the tile follows the logo padding set for every tile;
  *                visits counts opens from this add-on
  *   groups     - [{ id, name }]                 the bar across the top
  *   settings   - see schema.js
@@ -158,6 +160,22 @@ const Store = (() => {
     return /^#[0-9a-f]{6}$/.test(hex) ? hex : '';
   }
 
+  /**
+   * A tile's own logo padding, as a percentage of the room inside it, or null
+   * where it follows the one setting that governs every tile.
+   *
+   * Null and zero are different answers here and both are real, so this cannot
+   * lean on a falsy check: 0% is "fill the tile", and it has to survive a
+   * round trip through storage as something other than "no answer given".
+   */
+  const MAX_PAD = 40;
+
+  function sanitizePad(raw) {
+    const n = Math.round(Number(raw));
+    if (raw === null || raw === '' || !Number.isFinite(n)) return null;
+    return Math.min(MAX_PAD, Math.max(0, n));
+  }
+
   /** Opens counted by this add-on. Never negative, never a fraction. */
   function sanitizeVisits(raw) {
     const n = Math.floor(Number(raw));
@@ -176,7 +194,9 @@ const Store = (() => {
         // it shows under "All" and nowhere else.
         groupId: typeof t.groupId === 'string' && t.groupId ? t.groupId : null,
         icon: sanitizeIcon(t.icon),
+        iconColor: sanitizeColor(t.iconColor),
         bg: sanitizeColor(t.bg),
+        pad: sanitizePad(t.pad),
         visits: sanitizeVisits(t.visits)
       }));
   }

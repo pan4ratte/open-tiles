@@ -257,9 +257,8 @@ const Schema = (() => {
           type: 'toggle',
           default: true,
           note: 'The chip at the front of the block that clears the filter. '
-              + 'With it off the page always sits in a group, and a tile is '
-              + 'taken out of one from the tile dialog rather than by dragging '
-              + 'it onto All.'
+              + 'With it off the page always sits in a group, and dragging a '
+              + 'tile onto All is no longer the way to take it out of one.'
         },
         {
           key: 'showGroupAdd',

@@ -33,7 +33,7 @@ const sandbox = {
 vm.createContext(sandbox);
 
 for (const file of ['schema.js', 'settings.js']) {
-  vm.runInContext(fs.readFileSync(path.join(SRC, file), 'utf8'), sandbox, { filename: file });
+  vm.runInContext(fs.readFileSync(path.join(SRC, file), 'utf8').replace(/\r\n/g, '\n'), sandbox, { filename: file });
 }
 
 // A top-level `const` in a vm script lands in the context's lexical scope
@@ -108,7 +108,7 @@ function awaitsBefore(slice) {
 }
 
 function checkNoAwait(name, file, from, to) {
-  const slice = sliceBetween(fs.readFileSync(path.join(SRC, file), 'utf8'), from, to);
+  const slice = sliceBetween(fs.readFileSync(path.join(SRC, file), 'utf8').replace(/\r\n/g, '\n'), from, to);
   if (slice === null) {
     check(name, false, `could not find ${from} ... ${to} in ${file}`);
     return;

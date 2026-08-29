@@ -521,8 +521,10 @@ body.has-bg .tile.has-own-bg .tile__label { text-shadow: none; }
   min-width: 1.5em;
   padding: 0 .4em;
   border-radius: 999px;
-  background: var(--fill-tertiary);
-  color: var(--label-secondary);
+  /* The plate is the ink at its faintest, so the badge stays a badge on a
+     coloured tile instead of a grey lozenge nobody chose. */
+  background: var(--tile-ink-plate, var(--fill-tertiary));
+  color: var(--tile-ink-dim, var(--label-secondary));
   font-size: max(9px, calc(var(--tile-size) * .075));
   font-weight: 600;
   font-variant-numeric: tabular-nums;
@@ -1092,6 +1094,19 @@ body.gb-bar .chip { border-radius: var(--r-control); }
    that stands in for it is sized as a fraction of its box. */
 .tile__icon { width: var(--logo-span); }
 
+/* A recoloured icon: the colour shows through the picture's own alpha channel,
+   so every shape and every soft edge in it survives and only the hue is
+   replaced. That is a mask, and it needs an element of its own - an <img>
+   would paint its own pixels straight over the colour behind them, and there
+   is no way to hide a picture while keeping the box it fills. The span is
+   sized and placed by the rules above, and `contain` on the mask fits the
+   picture into it exactly as object-fit does for the real one. */
+.tile__icon--tint {
+  background-color: var(--icon-tint, currentColor);
+  -webkit-mask: var(--icon-mask) no-repeat center / contain;
+  mask: var(--icon-mask) no-repeat center / contain;
+}
+
 .tile:hover .tile__icon,
 .tile:hover .tile__fallback { transform: scale(1.04); }
 
@@ -1130,7 +1145,11 @@ body.gb-bar .chip { border-radius: var(--r-control); }
   font-size: var(--label-line);
   font-weight: 500;
   letter-spacing: -.005em;
-  color: var(--label-secondary);
+  /* On a tile standing on its own colour, the ink worked out to read against
+     that colour - dimmed, the way --label-secondary is a dimmed --label. A
+     grey chosen for the page material would be the one thing on the tile that
+     had not been told what it is standing on. */
+  color: var(--tile-ink-dim, var(--label-secondary));
   text-align: center;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -1139,7 +1158,7 @@ body.gb-bar .chip { border-radius: var(--r-control); }
   transition: color var(--t-fast) var(--ease);
 }
 
-.tile:hover .tile__label { color: var(--label); }
+.tile:hover .tile__label { color: var(--tile-ink, var(--label)); }
 
 body.no-labels .tile__label { display: none; }
 body.no-labels .tile { --label-room: 0px; }
@@ -1246,7 +1265,9 @@ body.tile-round .tile {
   display: flex;
   flex-direction: column;
   width: min(420px, calc(100% - 40px));
-  max-height: min(86vh, 720px);
+  /* Tall enough for the tile sheet, which is the longest of them: the group
+     pop-up at the foot of it should not be the one thing below the fold. */
+  max-height: min(88vh, 760px);
   padding: 22px 24px 18px;
   border-radius: 0 0 var(--r-window) var(--r-window);
   background: var(--mat-thick);
@@ -2261,40 +2282,47 @@ body.tile-round .tile {
 
 .backupfield .btn { flex: 1; }
 
-/* The appearance field: the tile as it will be, with the controls that shape
-   it beside it. The preview is a real .tile, so it is already the right size -
-   the stage only has to give it somewhere to stand. */
+/* The appearance field: the tile as it will be, with the things that shape it
+   underneath. The preview is a real .tile, so it is already the right size -
+   the stage only has to give it somewhere to stand.
+
+   Stacked rather than set side by side: four controls beside a 132px tile
+   would each be a third of a sheet wide, and the one that matters most - the
+   icon field, which takes a whole web address - would be the worst off. */
 .tilefield {
   display: flex;
-  align-items: flex-start;
-  gap: 14px;
+  flex-direction: column;
+  gap: 12px;
 }
 
-/* The tile stands here at whatever size it is really drawn at, up to the cap
-   newtab.js puts on --tile-size for the preview alone - past which a sheet
-   this wide has nowhere to put it. */
+/* The tile stands here at the size it is really drawn at, held down only where
+   the sheet is narrower than that - newtab.js measures this box to find out.
+   Centred, because with nothing beside it there is no edge to line up with. */
 .tilefield__stage {
-  flex: none;
   display: flex;
-  align-items: flex-start;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
 }
 
-.tilefield__controls {
-  flex: 1;
+.tilefield__rows {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
   min-width: 0;
 }
 
+.tilefield__group { min-width: 0; }
+
 .tilefield__sub {
   display: block;
-  margin-bottom: 5px;
+  margin-bottom: 4px;
   font-size: var(--t-caption);
   font-weight: 500;
   color: var(--label-secondary);
 }
 
 .tilefield__sub em { font-style: normal; opacity: .75; }
-
-.tilefield__row + .tilefield__sub { margin-top: 12px; }
 
 .tilefield__row {
   display: flex;
@@ -2308,9 +2336,32 @@ body.tile-round .tile {
    beside it, so it takes the same height and does not stretch. */
 .tilefield__row .color { flex: 1; min-width: 0; }
 
+/* The slider is fixed-width in the settings window, where it sits at the end
+   of a row with a label; here it is the row. */
+.tilefield__row .range { flex: 1; min-width: 0; }
+.tilefield__row .range input { width: auto; flex: 1; min-width: 0; }
+
+/* What the field cannot say for itself: a picture pasted from the clipboard
+   and a file off the disk both end up here, and neither leaves a mark on the
+   sheet to hint that it could. */
+.tilefield__note {
+  margin: 5px 0 0;
+  font-size: var(--t-caption);
+  line-height: 1.45;
+  color: var(--label-tertiary);
+}
+
+/* The upload glyph, set inline in that sentence so "press this" points at the
+   button rather than describing it. Nudged down to sit on the text's
+   centreline rather than its baseline. */
+.tilefield__key {
+  display: inline-flex;
+  vertical-align: -2px;
+  color: var(--label-secondary);
+}
+
 .tilefield__hint {
   display: block;
-  margin-top: 8px;
   font-size: var(--t-caption);
   font-variant-numeric: tabular-nums;
   color: var(--label-secondary);

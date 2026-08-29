@@ -244,9 +244,9 @@ so it travels the distance in the same beat the new tiles arrive in. With
 
 **Show the All category** takes the *All* chip away. The page then always sits
 in a group — opening on the first one where it would have opened on *All* —
-and a tile leaves a group from the tile dialog rather than by being dragged
-onto the chip that is no longer there. The scroll gesture walks the same
-shortened line, so there is nowhere along it the block cannot show.
+and dragging a tile onto the chip that is no longer there is no longer the way
+to take it out of a group. The scroll gesture walks the same shortened line, so
+there is nowhere along it the block cannot show.
 
 Chips are put in order by dragging them about the block, the same way tiles are
 ordered in the grid — the chip travels under the pointer and where it is let go
@@ -537,8 +537,22 @@ Right-click a tile and choose **Edit tile**. **Appearance** shows it as it will 
 be drawn — the same `.tile` element, the same classes, the same custom
 properties — so shape, corner, logo padding and whether the name shows all
 follow the settings without the sheet knowing any of them. It is a preview, not
-an impression of one; the only thing it changes is `--tile-size`, capped so a
-200px tile still fits the sheet.
+an impression of one: it stands at the size the grid will really draw it, which
+is the size the sheet is showing you. The one thing it may change is
+`--tile-size`, and only where the sheet is narrower than the tile — everything
+inside a tile is worked out from its width, so holding that down scales the
+whole thing faithfully rather than cropping it.
+
+The tile stands at the top of the field and the four things that shape it —
+**Icon**, **Icon colour**, **Background** and **Padding** — are rows beneath it,
+each on a line of its own. None of them has to share a line with the picture it
+changes, which is what lets the Icon field be wide enough for a whole web
+address.
+
+Typing a name does not rebuild the preview. Only the label and the letter under
+it depend on the name, and both are changed in place — a rebuild would throw
+the picture away and put an identical one back, and a fresh `<img>` is hidden
+until it has loaded, so the icon blinked out and returned on every keystroke.
 
 ### Its icon
 
@@ -561,6 +575,10 @@ dropped on the way into storage.
 #### Pasting one
 
 Two things can be pasted into the tile sheet and mean *use this as the icon*.
+
+The sheet says both of these out loud under the Icon field, because neither
+leaves a mark on it to be discovered: a picture off the clipboard and a file
+off the disk both end up in the same place, and only the address is typed.
 
 **A picture on the clipboard** — copied out of a drawing program, or with
 *Copy image* in a browser — is taken wherever the caret happens to be, because
@@ -598,6 +616,27 @@ Pasted SVG is refused above 128 KB. That is deliberately under the 256 KB cap
 on a tile's icon, because storage drops anything over that by storing nothing
 at all — a refusal in the sheet can say why, where a silent drop cannot.
 
+### Its colour
+
+**Icon colour** recolours the picture itself. The colour is shown through the
+picture's own alpha channel, so every shape in it and every soft edge survives
+and only the hue is replaced — a black wordmark becomes a white one on a dark
+tile without being redrawn, and a logo with a faded half keeps that half faded.
+Clear it with the arrow to have the picture back in its own colours.
+
+It is a CSS mask, which needs an element of its own: an `<img>` would paint its
+own pixels straight over the colour behind them, and there is no way to hide a
+picture while keeping the box it fills. So a recoloured icon is a `<span>`
+carrying the picture as its mask, sized by exactly the rules the picture would
+have been. It is still loaded through an `<img>` that never joins the page, so
+the monogram stands until there is something to put in its place.
+
+Nothing is read back out of the picture to do this, which is why it works on a
+remote icon the page may not sample — the browser draws the mask, and the page
+never sees a pixel. The pipette, which does read pixels, answers with the
+colour set here while one is: the icon is that one colour now, and there is
+nothing else left in it to read.
+
 ### Its background
 
 A tile can stand on a colour of its own instead of the frosted material.
@@ -616,6 +655,31 @@ The name on a coloured tile is set to black or white by the colour's relative
 luminance, so it stays readable on a dark navy and on a bright yellow alike, and
 it drops the text shadow it would otherwise wear over a background picture — it
 is standing on its own colour, not on the picture.
+
+### Its padding
+
+**Padding** is *Logo padding* for this tile alone — the same 0–40% of the room
+inside it, kept clear around the icon. It is there for the tile that does not
+suit the number every other tile is happy with: a logo drawn to the edge of its
+own canvas needs room the setting does not give it, and a small mark on a large
+tile can be pushed out to fill one.
+
+The slider always shows a number, because a slider has nowhere to put *no
+answer* — with nothing set it shows what every tile is getting, which is the
+number this tile is drawn with. Touching it makes that number the tile's own;
+the arrow beside it hands the tile back to the setting, and is only there while
+there is something to hand back. Underneath it is the same `--logo-pad` custom
+property the setting writes to the root, set on the one tile instead.
+
+### Its group
+
+**Group** offers the groups there are and nothing else; the whole field stays
+out of sight until there is one to offer. A tile made or edited here lands in a
+group, and *All* — by dragging a tile onto the chip — is what takes it out of
+one again. A tile that is in none of them, one made before there were any or
+one whose group has since been deleted, has to be shown as something, so it is
+shown as the group being looked at, or failing that the first: saving is what
+actually puts it there.
 
 ## Visit counts
 
@@ -789,7 +853,7 @@ permissions are needed. Leaving the field empty falls back to the system font.
 
 | Key | Shape |
 | --- | --- |
-| `tiles` | `[{ id, url, title, groupId, icon, bg, visits }]` — `groupId` is `null` when loose; `icon` is `''` when the site's own is looked up; `bg` is `''` for the usual frosted tile |
+| `tiles` | `[{ id, url, title, groupId, icon, iconColor, bg, pad, visits }]` — `groupId` is `null` when loose; `icon` is `''` when the site's own is looked up; `iconColor` is `''` when the icon keeps its own colours; `bg` is `''` for the usual frosted tile; `pad` is `null` when the tile follows *Logo padding* |
 | `groups` | `[{ id, name }]` |
 | `activeGroup` | id of the group last shown, or `null` for *All* |
 | `settings` | see `src/schema.js` |
