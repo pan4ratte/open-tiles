@@ -952,9 +952,18 @@ const SettingsUI = (() => {
    * Until it arrives (or if it never does) every card falls back to Inter,
    * which is the same thing that happens to a family Google has never heard of.
    */
-  function buildFont(field, value, commit) {
+  function buildFont(field, value, commit, ctx) {
     const wrap = document.createElement('div');
     wrap.className = 'fontfield';
+
+    /**
+     * What an empty value means on this field. On the page font it is the
+     * system font - no family at all. On the clock's and the date's it is
+     * "whatever the page is set to", which is a family, and one worth drawing
+     * the card and the sample line in.
+     */
+    const inherited = () =>
+      (field.inherit && ctx && (ctx.values[field.inherit] || '').trim()) || '';
 
     let current = (value || '').trim();
     let styleFilter = FONT_ALL;
@@ -1002,7 +1011,10 @@ const SettingsUI = (() => {
       const name = document.createElement('span');
       name.className = 'fontcard__name';
       name.textContent = entry.label;
-      name.style.fontFamily = Fonts.previewStack(entry.name);
+      // `drawAs` is for the card that stands for a family rather than being
+      // one: "Match page font" is drawn in the page font, not in nothing.
+      name.style.fontFamily =
+        Fonts.previewStack(entry.drawAs === undefined ? entry.name : entry.drawAs);
 
       // No tick beside it: the accent fill is what says "this one", the way a
       // macOS source list does, and a glyph here would cost every card the
@@ -1047,7 +1059,7 @@ const SettingsUI = (() => {
       const roving = visible.find(card => card.dataset.family === current) || visible[0];
       cards.forEach(card => { card.tabIndex = card === roving ? 0 : -1; });
 
-      preview.style.fontFamily = Fonts.stackFor(current);
+      preview.style.fontFamily = Fonts.stackFor(current || inherited());
     }
 
     async function choose(name) {
@@ -1061,7 +1073,12 @@ const SettingsUI = (() => {
 
     // -- the list itself
 
-    const entries = [{ name: '', label: 'System font', any: true }];
+    const entries = [{
+      name: '',
+      label: field.emptyLabel || 'System font',
+      any: true,
+      drawAs: inherited()
+    }];
     Fonts.CATALOG.forEach(font => entries.push({ ...font, label: font.name }));
     if (current && !Fonts.CATALOG.some(font => font.name === current)) {
       entries.splice(1, 0, { name: current, label: current, any: true });
@@ -1259,7 +1276,7 @@ const SettingsUI = (() => {
       return result.value;
     };
 
-    const built = (BUILDERS[field.type] || buildToggle)(field, value, commit);
+    const built = (BUILDERS[field.type] || buildToggle)(field, value, commit, ctx);
     if (built.focusId) label.setAttribute('for', built.focusId);
 
     row.classList.toggle('row--wide', Boolean(built.wide));

@@ -495,15 +495,22 @@ body.has-bg .toolbar .toolbtn:hover { color: var(--label); }
 /* The type that stands on the background itself rather than on a material of
    its own. Light in both themes, because what is under it is a picture faded
    towards black whichever theme is on - the ink here cannot follow the theme
-   the way the rest of the chrome does without going dark on dark. */
+   the way the rest of the chrome does without going dark on dark.
+
+   The clock and the date name their colour and their shadow through a custom
+   property with that value as the fallback, so a reader who has set neither
+   gets exactly what they always got, and one who has set either overrides both
+   this rule and the plain-background one in a single place. The page sets the
+   property only when it has something to say - see applySettings. */
 body.has-bg .page__clock,
-body.has-bg .page__date,
-body.has-bg .empty {
-  text-shadow: 0 1px 12px rgba(0, 0, 0, .28);
+body.has-bg .page__date {
+  text-shadow: var(--header-shadow, 0 1px 12px rgba(0, 0, 0, .28));
 }
 
-body.has-bg .page__clock { color: rgba(255, 255, 255, .92); }
-body.has-bg .page__date,
+body.has-bg .empty { text-shadow: 0 1px 12px rgba(0, 0, 0, .28); }
+
+body.has-bg .page__clock { color: var(--header-color, rgba(255, 255, 255, .92)); }
+body.has-bg .page__date { color: var(--header-color, rgba(255, 255, 255, .62)); }
 body.has-bg .empty { color: rgba(255, 255, 255, .62); }
 
 body.has-bg .tile__label { text-shadow: 0 1px 6px rgba(0, 0, 0, .3); }
@@ -887,28 +894,38 @@ body.gb-bar .chip { border-radius: var(--r-control); }
 .page__header[hidden] { display: none; }
 
 /* The lock-screen arrangement: the date sits above the time, small and firm,
-   and the time carries the weight of the page in a very light face. */
+   and the time carries the weight of the page in a very light face.
+
+   Face, weight and tracking are set apart for the two lines - they are type at
+   two very different sizes, and a face that carries an 86px clock rarely
+   carries a 15px caption. Each is a custom property with the value above as
+   its fallback, so the defaults live here in the stylesheet rather than being
+   written out by the page on every load. */
 .page__date {
   order: -1;
   margin: 0 0 2px;
-  color: var(--label-secondary);
-  font-family: var(--font-family);
+  color: var(--header-color, var(--label-secondary));
+  font-family: var(--date-font, var(--font-family));
   font-size: var(--t-title3);
-  font-weight: 590;
-  letter-spacing: -.01em;
+  font-weight: var(--date-weight, 590);
+  letter-spacing: var(--date-tracking, -.01em);
+  text-shadow: var(--header-shadow, none);
 }
 
 .page__date[hidden] { display: none; }
 
 .page__clock {
   margin: 0;
-  font-family: var(--font-family);
+  color: var(--header-color, var(--label));
+  font-family: var(--clock-font, var(--font-family));
   font-size: clamp(56px, 8.5vw, 86px);
-  font-weight: 300;
-  /* Apple tracks large type in, never out. */
-  letter-spacing: -.025em;
+  font-weight: var(--clock-weight, 300);
+  /* Apple tracks large type in, never out - which is what the slider defaults
+     to, though it will let you track out if you want to. */
+  letter-spacing: var(--clock-tracking, -.025em);
   line-height: 1.04;
   font-variant-numeric: tabular-nums;
+  text-shadow: var(--header-shadow, none);
 }
 
 .page__clock[hidden] { display: none; }

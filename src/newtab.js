@@ -169,6 +169,8 @@
       home.insertBefore(groupBar, inline ? null : toolbar);
     }
 
+    applyHeaderType(root);
+
     clock.hidden = !settings.showClock;
     dateLine.hidden = !settings.showDate;
     // The column is the block's home in this placement, so it stays even with
@@ -176,6 +178,66 @@
     header.hidden = !settings.showClock && !settings.showDate && !inline;
 
     tick();
+    scheduleTick();
+  }
+
+  /** The three fields that name a family, and so need one downloading. */
+  const FONT_KEYS = ['font', 'clockFont', 'dateFont'];
+
+  /**
+   * The family a header line is actually drawn in: the one it names, or the
+   * page's where it names none. An empty clock font is not "no font" the way an
+   * empty page font is - it is the line saying it has no opinion.
+   */
+  const headerFamily = (key, view) => (view[key] || '').trim() || view.font;
+
+  /**
+   * Writes the three font stacks. `overrides` puts a family on the page before
+   * it has been committed to `settings`, which is how a choice takes effect at
+   * once without a font that turns out not to exist being stored.
+   */
+  function applyFontStacks(overrides) {
+    const view = overrides ? { ...settings, ...overrides } : settings;
+    Fonts.applyStack(view.font);
+    Fonts.applyStack(headerFamily('clockFont', view), '--clock-font');
+    Fonts.applyStack(headerFamily('dateFont', view), '--date-font');
+  }
+
+  /** Brings down whatever the settings name now, and drops the rest. */
+  const loadFonts = () =>
+    Fonts.sync(FONT_KEYS.map(key => headerFamily(key, settings))).catch(() => {});
+
+  /**
+   * How the time and the date are drawn: a face, a weight and a tracking each,
+   * and a colour and a shadow they share.
+   *
+   * Every one of these is a custom property the stylesheet already reads with
+   * its own value behind it, so a setting left alone is written as the property
+   * not being there at all - which is why the colour and the shadow are removed
+   * rather than set when they are off. That is what lets the shadow keep its
+   * two meanings: none on a plain page, a soft one over a picture.
+   */
+  function applyHeaderType(root) {
+    applyFontStacks();
+
+    root.style.setProperty('--clock-weight', settings.clockWeight);
+    root.style.setProperty('--date-weight', settings.dateWeight);
+    // Tracking is set as a share of the type size, so it holds at every size
+    // the clock is drawn at.
+    root.style.setProperty('--clock-tracking', settings.clockTracking / 100 + 'em');
+    root.style.setProperty('--date-tracking', settings.dateTracking / 100 + 'em');
+
+    if (settings.headerTint) root.style.setProperty('--header-color', settings.headerColor);
+    else root.style.removeProperty('--header-color');
+
+    const shadow = settings.headerShadow / 100;
+    if (shadow > 0) {
+      root.style.setProperty('--header-shadow',
+        `0 ${(1 + shadow).toFixed(2)}px ${(shadow * 26).toFixed(1)}px `
+        + `rgba(0, 0, 0, ${(shadow * .75).toFixed(3)})`);
+    } else {
+      root.style.removeProperty('--header-shadow');
+    }
   }
 
   // ------------------------------------------------------------------ groups
@@ -2190,19 +2252,34 @@
     network: 'downloaded and cached'
   };
 
-  async function changeFont(value) {
+  async function changeFont(key, value) {
     const name = value.trim();
+
+    // On the page at once, but not yet in storage: the stack takes hold before
+    // a single file has arrived, so choosing a family is not a wait - and a
+    // family that never arrives was never written down.
+    applyFontStacks({ [key]: name });
+
     try {
-      const source = await Fonts.use(name);
-      updateSetting('font', name);
+      // A header line handed back to the page font has nothing of its own to
+      // fetch: whatever it is now following is already here.
+      const source = (name || key === 'font') ? await Fonts.load(name) : null;
+
+      updateSetting(key, name);
+      // The family just left may now be the family nothing names, in which
+      // case its stylesheet goes with it.
+      loadFonts();
+
       return {
         value: name,
-        status: { kind: 'ok', text: `${name || 'System font'} — ${FONT_SOURCE[source]}` }
+        status: source
+          ? { kind: 'ok', text: `${name || 'System font'} — ${FONT_SOURCE[source]}` }
+          : { kind: 'ok', text: 'Following the page font.' }
       };
     } catch (err) {
-      // Keep the last font that worked on screen.
-      Fonts.applyStack(settings.font);
-      return { value: settings.font, status: { kind: 'error', text: err.message } };
+      // Keep the last family that worked on screen.
+      applyFontStacks();
+      return { value: settings[key], status: { kind: 'error', text: err.message } };
     }
   }
 
@@ -2530,7 +2607,7 @@
 
     Backgrounds.apply(background);
     applySettings();
-    Fonts.use(settings.font).catch(() => {});
+    loadFonts();
     renderGroups();
     render();
 
@@ -2566,7 +2643,7 @@
 
     Backgrounds.apply(background);
     applySettings();
-    Fonts.use(settings.font).catch(() => {});
+    loadFonts();
     mountSettings();
     render();
 
@@ -2590,7 +2667,7 @@
   const REBUILDS_GROUPS = new Set(['showGroupAdd', 'showAllGroup']);
 
   async function onSettingChange(key, value) {
-    if (key === 'font') return changeFont(value);
+    if (FONT_KEYS.includes(key)) return changeFont(key, value);
     if (key === 'reset') return resetSettings();
     if (key === 'deepIcons') return changeDeepIcons(value);
     if (key === 'background') return changeBackground(value);
@@ -2665,16 +2742,54 @@
 
   // ---------------------------------------------------------------- clock
 
+  /**
+   * What each format asks Intl for. Option bags rather than patterns, so the
+   * separators, the order of the parts and where the AM/PM suffix falls are
+   * the browser's language to decide - "29/08" and "08/29" are the same choice
+   * made in two places.
+   */
+  const TIME_FORMATS = {
+    '24':  { hour: '2-digit', minute: '2-digit', hour12: false },
+    '24s': { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false },
+    '12':  { hour: 'numeric', minute: '2-digit', hour12: true },
+    '12s': { hour: 'numeric', minute: '2-digit', second: '2-digit', hour12: true }
+  };
+
+  const DATE_FORMATS = {
+    full:    { weekday: 'long', day: 'numeric', month: 'long' },
+    weekday: { weekday: 'long' },
+    medium:  { weekday: 'short', day: 'numeric', month: 'short' },
+    long:    { day: 'numeric', month: 'long', year: 'numeric' },
+    short:   { day: '2-digit', month: '2-digit', year: 'numeric' }
+  };
+
   function tick() {
     const now = new Date();
 
-    clock.textContent = now.toLocaleTimeString([], settings.clock24
-      ? { hour: '2-digit', minute: '2-digit', hour12: false }
-      : { hour: 'numeric', minute: '2-digit', hour12: true });
+    clock.textContent = now.toLocaleTimeString(
+      [], TIME_FORMATS[settings.timeFormat] || TIME_FORMATS['24']);
 
-    dateLine.textContent = now.toLocaleDateString([], {
-      weekday: 'long', day: 'numeric', month: 'long'
-    });
+    dateLine.textContent = now.toLocaleDateString(
+      [], DATE_FORMATS[settings.dateFormat] || DATE_FORMATS.full);
+  }
+
+  /** How often the clock is redrawn, in ms, and the timer doing it. */
+  let clockCadence = 0;
+  let clockTimer = null;
+
+  /**
+   * Seconds have to be redrawn every second. Anything else is a minute hand,
+   * and ten seconds catches the turn closely enough without waking the page
+   * sixty times a minute. Re-armed only when the cadence actually changes, so
+   * dragging a slider does not keep resetting the phase under the clock.
+   */
+  function scheduleTick() {
+    const wanted = String(settings.timeFormat).endsWith('s') ? 1000 : 10000;
+    if (wanted === clockCadence) return;
+
+    clockCadence = wanted;
+    clearInterval(clockTimer);
+    clockTimer = setInterval(tick, wanted);
   }
 
   // ---------------------------------------------------------------- boot
@@ -2697,14 +2812,14 @@
     trackPageShape();
     applySettings();
     Backgrounds.apply(background);
-    Fonts.use(settings.font).catch(() => Fonts.applyStack(Schema.DEFAULTS.font));
+    // The stacks are already written - applySettings does that - so a family
+    // that will not come down still leaves the page on Inter behind it.
+    loadFonts();
     renderGroups();
     render();
 
     syncSiteAccess();
     Favicons.onAccessChange(() => syncSiteAccess());
-
-    setInterval(tick, 10000);
 
     Store.onExternalChange((key, value) => {
       if (key === 'tiles' && !dragEl) {
@@ -2725,7 +2840,7 @@
         // applySettings() has already done the whole job. Only the two that are
         // baked into a tile's markup are worth tearing the grid down for -
         // rebuilding it sends every icon back to the network.
-        if (before.font !== settings.font) Fonts.use(settings.font).catch(() => {});
+        if (FONT_KEYS.some(key => before[key] !== settings[key])) loadFonts();
         if ([...REBUILDS_GROUPS].some(key => before[key] !== settings[key])) renderGroups();
         if (before.deepIcons !== settings.deepIcons
             || [...REBUILDS_GRID].some(key => before[key] !== settings[key])) render();

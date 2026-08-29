@@ -7,6 +7,12 @@
  * and cached in extension storage. After the first use the font renders from
  * cache, so Google is not contacted on every new tab.
  *
+ * Three families can be in play at once - the page's, and the clock's and the
+ * date's where those are given faces of their own - so each gets a stylesheet
+ * of its own rather than sharing one that the next family would clear. `sync`
+ * is what keeps that set honest: it brings down whatever is named now and
+ * takes away the sheets for whatever is not.
+ *
  * The picker draws every family in its own face, which means loading all of
  * them at once. That is a second, much smaller stylesheet: one request for the
  * whole catalogue cut down to letters and digits, so a family costs a couple of
@@ -16,7 +22,12 @@
  */
 const Fonts = (() => {
   const BUNDLED = 'Inter';
-  const STYLE_ID = 'webfont';
+  /**
+   * One stylesheet per family, named after it. The prefix is long enough that
+   * the specimen sheet ("webfont-specimens") cannot be mistaken for a family's
+   * own by the `sync` sweep below.
+   */
+  const STYLE_PREFIX = 'webfont-family-';
   const FALLBACK = 'Inter, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif';
   const SYSTEM = 'system-ui, -apple-system, "Segoe UI", Roboto, sans-serif';
 
@@ -132,8 +143,12 @@ const Fonts = (() => {
     return `${quote(name)}, ${FALLBACK}`;
   }
 
-  function applyStack(family) {
-    document.documentElement.style.setProperty('--font-family', stackFor(family));
+  /**
+   * Writes a family's stack into a custom property. The page's own is
+   * `--font-family`; the clock and the date name theirs beside it.
+   */
+  function applyStack(family, prop = '--font-family') {
+    document.documentElement.style.setProperty(prop, stackFor(family));
   }
 
   function cssUrl(family, weights) {
@@ -196,19 +211,55 @@ const Fonts = (() => {
 
   // -------------------------------------------------------------- network
 
+  /**
+   * The weight axes worth asking for, widest first.
+   *
+   * A variable family answers one of these with a single file per subset
+   * covering every weight the Weight menus offer - and does it in a third of
+   * the bytes the static cuts below take to cover three of them (Montserrat:
+   * 167 KB against 502 KB). css2 has no way to say "whatever axis this family
+   * has", so the common ones are named; between them these four cover most of
+   * the catalogue, and a family that answers to none of them is genuinely
+   * static.
+   */
+  const AXES = ['100..900', '200..800', '300..800', '400..700'];
+
+  /** The static cuts for a family with no axis at all, then the family bare. */
+  const CUTS = ['300;400;600', null];
+
   async function fetchCss(family) {
-    // Most families carry 300/400/600; the retry covers the ones that do not.
-    for (const weights of ['300;400;600', null]) {
-      const res = await fetch(cssUrl(family, weights), {
-        credentials: 'omit',
-        cache: 'no-cache'
-      });
-      if (res.ok) return res.text();
-      if (res.status !== 400) {
-        throw new Error(`Google Fonts replied ${res.status}.`);
+    let trouble = null;
+
+    /** The stylesheet for one weight spec, or null where it is not served. */
+    const ask = async spec => {
+      let res;
+      try {
+        res = await fetch(cssUrl(family, spec), { credentials: 'omit', cache: 'no-cache' });
+      } catch {
+        // A refusal arrives as a network error rather than as a status: css2
+        // answers a range - or a family - it does not have with a 400 carrying
+        // no Access-Control-Allow-Origin, so the page never gets to read it.
+        return null;
       }
+      if (res.ok) return res.text();
+      // Kept for the message, but only from a reply that is not the ordinary
+      // "not served": a 503 is worth telling the reader about, a 400 is not.
+      if (res.status !== 400) trouble = `Google Fonts replied ${res.status}.`;
+      return null;
+    };
+
+    // All four axes at once. Three of them are usually refused, and asking in
+    // turn would spend a round trip on each refusal before the download could
+    // start; the replies are a kilobyte of CSS each, so racing them is free.
+    const widest = (await Promise.all(AXES.map(ask))).find(Boolean);
+    if (widest) return widest;
+
+    for (const cut of CUTS) {
+      const css = await ask(cut);
+      if (css) return css;
     }
-    throw new Error(`Google Fonts has no family called "${family}".`);
+
+    throw new Error(trouble || `Google Fonts has no family called "${family}".`);
   }
 
   /** Replaces every gstatic URL with a data: URI so the CSS is self-contained. */
@@ -217,11 +268,15 @@ const Fonts = (() => {
       .filter(f => !f.subset || SUBSETS.includes(f.subset));
     const faces = wanted.length ? wanted : parseFaces(css).slice(0, 2);
 
-    const blocks = await Promise.all(faces.map(async ({ subset, block }) => {
+    // Pooled rather than all at once: the static fallback for a family with no
+    // variable axis is three cuts across seven subsets, and twenty-one
+    // simultaneous requests is how one of them gets dropped rather than
+    // answered.
+    const blocks = await mapPool(faces, 8, async ({ subset, block }) => {
       const inlined = await inlineBlock(block);
       if (!inlined) return null;
       return subset ? `/* ${subset} */\n${inlined}` : inlined;
-    }));
+    });
 
     const out = blocks.filter(Boolean).join('\n');
     if (!out) throw new Error('Could not download the font files.');
@@ -241,9 +296,37 @@ const Fonts = (() => {
     style.textContent = css;
   }
 
-  function clearCss() {
-    const style = document.getElementById(STYLE_ID);
-    if (style) style.textContent = '';
+  /** The id of the sheet a family's faces live in. */
+  function styleIdFor(family) {
+    return STYLE_PREFIX + family.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+  }
+
+  /**
+   * The families whose faces are on the page, each held as the job that put
+   * them there. Holding the job rather than a flag is what keeps a family
+   * named twice - by the clock and the date both - to one download; a job that
+   * fails is dropped, so choosing that family again tries afresh.
+   *
+   * @type {Map<string, Promise<'cache'|'network'>>}
+   */
+  const jobs = new Map();
+
+  async function fetchFamily(name) {
+    const cached = await Store.getFontCss(name);
+    const css = cached || await inlineFaces(await fetchCss(name));
+
+    const style = document.createElement('style');
+    style.id = styleIdFor(name);
+    // What `sync` reads to tell which family a sheet belongs to; the id has
+    // been through a slug and cannot be turned back into a name.
+    style.dataset.family = name;
+    style.textContent = css;
+    const existing = document.getElementById(style.id);
+    if (existing) existing.replaceWith(style);
+    else document.head.append(style);
+
+    if (!cached) await Store.putFontCss(name, css);
+    return cached ? 'cache' : 'network';
   }
 
   /**
@@ -251,33 +334,60 @@ const Fonts = (() => {
    * @returns {Promise<'bundled'|'system'|'cache'|'network'>}
    * @throws {Error} with a message fit to show the user
    */
-  async function load(family) {
+  function load(family) {
     const name = (family || '').trim();
-    if (!name) {
-      clearCss();
-      return 'system';
-    }
-    if (name === BUNDLED) {
-      clearCss();
-      return 'bundled';
-    }
+    if (!name) return Promise.resolve('system');
+    if (name === BUNDLED) return Promise.resolve('bundled');
 
-    const cached = await Store.getFontCss(name);
-    if (cached) {
-      injectCss(STYLE_ID, cached);
-      return 'cache';
+    if (!jobs.has(name)) {
+      jobs.set(name, fetchFamily(name).catch(err => {
+        jobs.delete(name);
+        throw err;
+      }));
     }
-
-    const css = await inlineFaces(await fetchCss(name));
-    injectCss(STYLE_ID, css);
-    await Store.putFontCss(name, css);
-    return 'network';
+    return jobs.get(name);
   }
 
-  /** Applies the stack right away, then loads the files behind it. */
-  async function use(family) {
-    applyStack(family);
-    return load(family);
+  /** The sheet ids the page is currently asking for; `sweep` judges by it. */
+  let keeping = new Set();
+
+  /** Takes away the sheet for every family no longer named. */
+  function sweep() {
+    document.querySelectorAll('style[id^="' + STYLE_PREFIX + '"]').forEach(style => {
+      if (keeping.has(style.id)) return;
+      style.remove();
+      // The job is the record of "already on the page", so it goes with it.
+      jobs.delete(style.dataset.family);
+    });
+  }
+
+  /**
+   * Brings down every family in `families` and takes away the sheets for the
+   * ones no longer named - a font tried on and moved away from should not go
+   * on costing the page a stylesheet. It stays in the storage cache, so trying
+   * it again is instant.
+   *
+   * @param {string[]} families
+   * @returns {Promise<void>} settles once they are all on the page, or one of
+   *   them has failed
+   */
+  function sync(families) {
+    const wanted = [...new Set(
+      families.map(one => (one || '').trim()).filter(one => one && one !== BUNDLED)
+    )];
+
+    keeping = new Set(wanted.map(styleIdFor));
+    sweep();
+
+    // Swept again once they have all landed. A family dropped while it was
+    // still downloading is not on the page for the first sweep to find, and
+    // would otherwise arrive just after the sweep meant to have removed it -
+    // so the second one reads `keeping` as it stands by then, which is the
+    // newest set asked for rather than this call's.
+    return Promise.all(wanted.map(load)).then(sweep, err => {
+      sweep();
+      throw err;
+    });
   }
 
   // ---------------------------------------------------------------- specimens
@@ -391,7 +501,7 @@ const Fonts = (() => {
 
   return {
     BUNDLED, CATALOG, STYLES, SCRIPTS, SUGGESTED,
-    stackFor, applyStack, load, use,
+    stackFor, applyStack, load, sync,
     previewStack, loadPreviews
   };
 })();

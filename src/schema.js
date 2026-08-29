@@ -39,6 +39,24 @@
 const Schema = (() => {
   const columnChoices = ['auto', 3, 4, 5, 6, 7, 8, 9, 10, 12];
 
+  /**
+   * The nine CSS weights under the names the type world gives them. A family
+   * that does not carry one of these is drawn in its nearest neighbour, or
+   * thickened by the browser - which is why the list is the same everywhere
+   * rather than cut down per family.
+   */
+  const WEIGHTS = [
+    { value: 100, label: 'Thin' },
+    { value: 200, label: 'Extra light' },
+    { value: 300, label: 'Light' },
+    { value: 400, label: 'Regular' },
+    { value: 500, label: 'Medium' },
+    { value: 600, label: 'Semibold' },
+    { value: 700, label: 'Bold' },
+    { value: 800, label: 'Extra bold' },
+    { value: 900, label: 'Black' }
+  ];
+
   const RAW_SECTIONS = [
     {
       id: 'appearance',
@@ -69,9 +87,10 @@ const Schema = (() => {
           type: 'font',
           default: 'Inter',
           busyText: 'Loading font…',
-          note: 'Sets the clock and the tile names. Filter the list, or name '
-              + 'any other family on Google Fonts under "Other family". The '
-              + 'dialogs and buttons always stay on Inter.'
+          note: 'Sets the tile names, and the clock and the date wherever they '
+              + 'are not given a face of their own under Header. Filter the '
+              + 'list, or name any other family on Google Fonts under "Other '
+              + 'family". The dialogs and buttons always stay on Inter.'
         }
       ]
     },
@@ -214,10 +233,136 @@ const Schema = (() => {
       label: 'Header',
       icon: 'clock',
       tint: 'var(--system-orange)',
-      fields: [
-        { key: 'showClock', label: 'Show the clock', type: 'toggle', default: true },
-        { key: 'clock24', label: '24-hour time', type: 'toggle', default: true },
-        { key: 'showDate', label: 'Show the date', type: 'toggle', default: false }
+      // The time and the date are set separately - they are two lines of very
+      // different type, and a face that carries a 86px clock rarely carries a
+      // 15px caption. What they share is what they stand on: one colour and
+      // one shadow, because they read as a single block over the page.
+      groups: [
+        {
+          label: 'Time',
+          fields: [
+            { key: 'showClock', label: 'Show the clock', type: 'toggle', default: true },
+            {
+              key: 'timeFormat',
+              label: 'Format',
+              type: 'choice',
+              default: '24',
+              options: [
+                { value: '24', label: '13:45' },
+                { value: '24s', label: '13:45:30' },
+                { value: '12', label: '1:45 PM' },
+                { value: '12s', label: '1:45:30 PM' }
+              ],
+              note: 'The separators and the position of the suffix follow '
+                  + 'the language your browser is set to, so these are examples rather than '
+                  + 'the exact shape you will get.'
+            },
+            {
+              key: 'clockFont',
+              label: 'Font',
+              type: 'font',
+              default: '',
+              emptyLabel: 'Match page font',
+              inherit: 'font',
+              busyText: 'Loading font…',
+              note: 'The clock on its own. Leave it on "Match page font" and it '
+                  + 'follows Appearance → Font with everything else.'
+            },
+            { key: 'clockWeight', label: 'Weight', type: 'choice', default: 300, options: WEIGHTS },
+            {
+              key: 'clockTracking',
+              label: 'Spacing',
+              type: 'range',
+              default: -2.5,
+              min: -6,
+              max: 20,
+              step: .5,
+              unit: '%',
+              note: 'The room between the letters, as a share of the type size. '
+                  + 'Apple tracks large type in, never out.'
+            }
+          ]
+        },
+        {
+          label: 'Date',
+          fields: [
+            { key: 'showDate', label: 'Show the date', type: 'toggle', default: false },
+            {
+              key: 'dateFormat',
+              label: 'Format',
+              type: 'choice',
+              default: 'full',
+              options: [
+                { value: 'full', label: 'Wednesday, 29 August' },
+                { value: 'weekday', label: 'Wednesday' },
+                { value: 'medium', label: 'Wed, 29 Aug' },
+                { value: 'long', label: '29 August 2026' },
+                { value: 'short', label: '29/08/2026' }
+              ],
+              note: 'The order of the day, the month and the year follows '
+                  + 'the language your browser is set to, so these are examples rather than '
+                  + 'the exact shape you will get.'
+            },
+            {
+              key: 'dateFont',
+              label: 'Font',
+              type: 'font',
+              default: '',
+              emptyLabel: 'Match page font',
+              inherit: 'font',
+              busyText: 'Loading font…',
+              note: 'The date on its own, the same way.'
+            },
+            { key: 'dateWeight', label: 'Weight', type: 'choice', default: 600, options: WEIGHTS },
+            {
+              key: 'dateTracking',
+              label: 'Spacing',
+              type: 'range',
+              default: -1,
+              min: -6,
+              max: 20,
+              step: .5,
+              unit: '%'
+            }
+          ]
+        },
+        {
+          label: 'Both lines',
+          fields: [
+            {
+              key: 'headerTint',
+              label: 'Custom colour',
+              type: 'toggle',
+              default: false,
+              note: 'Off, the time and the date follow the theme — dark ink on a '
+                  + 'light page, light ink on a dark one, and white over a picture.'
+            },
+            {
+              key: 'headerColor',
+              label: 'Colour',
+              type: 'color',
+              // A neutral grey rather than white: this is the colour the two
+              // lines take the instant the toggle above is flipped, and white
+              // would make them disappear on a light page before the reader
+              // has had a chance to pick anything.
+              default: '#8e8e93',
+              when: { headerTint: true }
+            },
+            {
+              key: 'headerShadow',
+              label: 'Shadow',
+              type: 'range',
+              default: 0,
+              min: 0,
+              max: 100,
+              step: 5,
+              unit: '%',
+              note: 'At 0 they carry the shadow the page gives them: none on a '
+                  + 'plain background, a soft one over a picture. Anything above '
+                  + 'it is yours, on either.'
+            }
+          ]
+        }
       ]
     },
     {
@@ -432,7 +577,13 @@ const Schema = (() => {
       case 'range': {
         const n = Number(value);
         if (!Number.isFinite(n)) return field.default;
-        return Math.min(field.max, Math.max(field.min, Math.round(n)));
+        const clamped = Math.min(field.max, Math.max(field.min, n));
+        // Snapped to the step rather than to whole numbers: letter spacing is
+        // set in half a percent, and rounding it would flatten every other
+        // stop on the slider. Every other range steps in whole numbers, so
+        // they come out exactly as they went in.
+        const step = field.step || 1;
+        return Number((Math.round(clamped / step) * step).toFixed(3));
       }
 
       case 'choice': {
@@ -483,9 +634,22 @@ const Schema = (() => {
     return out;
   }
 
+  /**
+   * Settings written by an older version, read in the shape this one speaks.
+   *
+   * `clock24` was a toggle with two answers in it; the clock now has a format
+   * menu with four, so the toggle is read as whichever of them it meant. It is
+   * not written back - `coerce` drops it on the way past, and the menu is what
+   * is stored from then on.
+   */
+  function migrate(source) {
+    if (!('clock24' in source) || 'timeFormat' in source) return source;
+    return { ...source, timeFormat: source.clock24 === false ? '12' : '24' };
+  }
+
   /** Fills in defaults and drops anything invalid or unknown. */
   function coerce(raw) {
-    const source = raw && typeof raw === 'object' ? raw : {};
+    const source = migrate(raw && typeof raw === 'object' ? raw : {});
     const out = {};
     STORED.forEach(field => {
       out[field.key] = field.key in source

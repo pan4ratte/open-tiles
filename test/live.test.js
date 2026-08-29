@@ -288,8 +288,11 @@ Store.onExternalChange((key, value) => heard.push({ key, value }));
      'openInNewTab', 'deepIcons'].every(key => layout.fields.some(f => f.key === key)),
     layout.fields.map(f => f.key).join(', '));
 
+  const appearance = Schema.SECTIONS.find(section => section.id === 'appearance');
+
   check('a section written as a plain list still reports one group',
-    Schema.SECTIONS.find(s => s.id === 'header').groups.length === 1);
+    appearance.groups.length === 1 && appearance.groups[0].label === null,
+    appearance.groups.length + ' group(s)');
 
   check('the flat field list still carries every default',
     Schema.FIELDS.length === Schema.SECTIONS.flatMap(s => s.fields).length

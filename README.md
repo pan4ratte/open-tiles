@@ -103,9 +103,19 @@ them and are written to storage in the background.
 | | Show the add button | on |
 | | Open sites in a new tab | off |
 | | Deep icon lookup | off |
-| Header | Show the clock | on |
-| | 24-hour time | on |
-| | Show the date | off |
+| Header · Time | Show the clock | on |
+| | Format — 13:45 / 13:45:30 / 1:45 PM / 1:45:30 PM | 13:45 |
+| | Font — the same specimen grid, headed by *Match page font* | Match page font |
+| | Weight — Thin to Black | Light (300) |
+| | Spacing — −6% to 20% of the type size | −2.5% |
+| Header · Date | Show the date | off |
+| | Format — weekday and date / weekday / short / with the year / all figures | Wednesday, 29 August |
+| | Font | Match page font |
+| | Weight | Semibold (600) |
+| | Spacing | −1% |
+| Header · Both lines | Custom colour | off |
+| | Colour *(custom colour)* | `#8E8E93` (systemGray) |
+| | Shadow — 0–100% | 0% |
 | Groups | Appearance — floating / status bar | Floating |
 | | Display — always / on hover | Always |
 | | Show the All category | on |
@@ -122,7 +132,9 @@ them and are written to storage in the background.
 
 *Layout* covers two decisions that are really one — how the tiles are arranged
 and how each one is drawn — so it is a single section split into two named
-boxes down the same panel rather than two sidebar rows. Any section may be
+boxes down the same panel rather than two sidebar rows. *Header* is written the
+same way, in three: the time and the date each get a face, a weight and a
+spacing of their own, over a colour and a shadow they share. Any section may be
 written that way: give it `groups` instead of `fields` in the schema and each
 group becomes a box under its own heading.
 
@@ -149,7 +161,42 @@ alone.
 
 The two status-bar-only options carry a `when` in the schema and appear only
 while *Appearance* is set to *Status bar* — a field is hidden, not disabled, so
-the panel never shows a control that does nothing.
+the panel never shows a control that does nothing. *Header → Colour* is the
+same: it appears only once *Custom colour* is switched on.
+
+### The clock and the date
+
+Two lines of type at very different sizes, so almost everything about them is
+set apart. What they share is what they stand on — one colour and one shadow,
+because they read as a single block over the page.
+
+**Format** is an option bag handed to `Intl`, never a pattern: the separators,
+the order of the day and the month, and where an AM/PM suffix falls are all the
+browser's language to decide. The menu shows examples of the four times and the
+five dates, not the exact shape every reader will get. Asking for seconds moves
+the redraw from every ten seconds to every second, and nothing else does — a
+minute hand does not need waking sixty times a minute.
+
+**Font** is the same specimen grid the page font uses, headed by *Match page
+font* rather than *System font*: an empty value on these two fields means "no
+opinion, follow Appearance → Font", which is what they start on. That card is
+drawn in the family it stands for, so it shows what following actually looks
+like. Three families can therefore be in play at once, and each gets a
+stylesheet of its own — see [Fonts](#fonts).
+
+**Weight** is the nine CSS steps under their own names, from Thin to Black. Any
+family the loader brings down is fetched across the whole `100..900` axis where
+it has one, so the menu is not a promise the font cannot keep.
+
+**Spacing** is tracking, set as a share of the type size rather than in pixels,
+so it holds at every size the clock is drawn at — including the `clamp()` that
+sizes it off the window. It is the one slider that steps in halves.
+
+**Colour** and **Shadow** are written as custom properties only when they have
+something to say, and the stylesheet carries the old value behind each as the
+`var()` fallback. That is what lets *Shadow* at 0 keep both of its meanings:
+no shadow on a plain background, and the soft one the page has always given the
+header over a picture. Anything above 0 is yours, on either.
 
 The tile grid holds the centre of the window, across and down, and nothing else
 is allowed to move it: turning the clock off empties the space above the tiles
@@ -807,20 +854,44 @@ The default is **Inter**, bundled with the extension (`fonts/`, ~174 KB of
 woff2 covering latin, latin-ext, cyrillic and cyrillic-ext) so it renders
 offline and costs no request.
 
-Settings → *Font* sets the clock and the tile names, and nothing else — the
-dialogs, buttons and labels stay on Inter whatever is chosen, so an ornamental
-family cannot make the UI hard to read. The first time a family is chosen,
-`src/fonts.js`
+Settings → *Font* sets the tile names, and the clock and the date wherever
+those have not been given a face of their own under *Header* — and nothing
+else. The dialogs, buttons and labels stay on Inter whatever is chosen, so an
+ornamental family cannot make the UI hard to read. The first time a family is
+chosen, `src/fonts.js`
 
-1. fetches `https://fonts.googleapis.com/css2?family=<name>:wght@300;400;600`,
-2. downloads the woff2 for the latin, cyrillic, greek and vietnamese subsets
-   and rewrites the stylesheet with each file inlined as a `data:` URI,
+1. asks `https://fonts.googleapis.com/css2` for the family's **weight axis**,
+   trying `wght@100..900`, `200..800`, `300..800` and `400..700` at once and
+   taking the widest that answers. A variable family covers every weight the
+   Header panel's Weight menus offer in one file per subset, at roughly a third
+   of the bytes the static cuts take to cover three of them — Montserrat is
+   167 KB against 502 KB. `css2` has no way to say "whatever axis this family
+   has", which is why the common ones are named; a family that answers to none
+   of them is genuinely static and falls back to `wght@300;400;600` and then to
+   the family alone. Refusals arrive as a **network error, not a status**: the
+   400 `css2` sends for a range it does not have carries no
+   `Access-Control-Allow-Origin`, so the page never gets to read it — which is
+   also why the four are raced rather than tried in turn, since each refusal
+   would otherwise cost a round trip before the download could start,
+2. downloads the woff2 for the latin, cyrillic, greek and vietnamese subsets —
+   eight at a time, since the static fallback is three cuts across seven
+   subsets and twenty-one simultaneous requests is how one gets dropped rather
+   than answered — and rewrites the stylesheet with each file inlined as a
+   `data:` URI,
 3. stores that stylesheet under `fontCache` in extension storage (six most
    recent families are kept).
 
 From then on the font is served from cache, so Google is not contacted again on
-every new tab. Both endpoints send `Access-Control-Allow-Origin: *`, so no host
-permissions are needed.
+every new tab. Both endpoints send `Access-Control-Allow-Origin: *` on a reply
+they will actually serve, so no host permissions are needed.
+
+Up to three families can be named at once — the page's, the clock's and the
+date's — so each gets a `<style id="webfont-family-…">` of its own rather than
+sharing one that the next family would clear. `Fonts.sync` is what keeps that
+set honest: it brings down whatever the settings name now and takes away the
+sheets for whatever they no longer do, so a family tried on and moved away from
+does not go on costing the page a stylesheet. It stays in `fontCache`, so
+trying it again is instant.
 
 ### The picker
 
@@ -832,6 +903,13 @@ actually brings down, so filtering to Greek cannot hand back a font whose Greek
 glyphs were dropped on the way in. *System font* heads the list and no filter
 hides it, and **Other family…** still takes **any name Google Fonts serves**,
 catalogue or not — a family named that way keeps a card of its own at the top.
+
+The clock's and the date's fields are the same grid, with a different card at
+the head of it: *Match page font*, drawn in the family it stands for. An empty
+value means "follow Appearance → Font" on those two and "the system font" on
+the page's own, which is the one difference between them — in the schema it is
+an `emptyLabel` for the wording and an `inherit` naming the field to fall back
+to, and nothing else about the picker changes.
 
 Drawing fifty families at once is a second, much smaller stylesheet: one
 request for the whole catalogue with `&text=` cut down to letters and digits
@@ -901,8 +979,10 @@ video, and with six more of them in the history.
 ## Tests
 
 Several things here fail quietly rather than loudly, so each is guarded. They
-run the real `schema.js`, `settings.js`, `storage.js`, `transfer.js` and
-`importers.js` against a small DOM shim — no browser, no dependencies:
+run the real `schema.js`, `settings.js`, `storage.js`, `fonts.js`,
+`transfer.js` and `importers.js` against a small DOM shim, and lift the odd run
+of code straight out of `newtab.js` to run against stubs — no browser, no
+dependencies:
 
 ```
 node test/gesture.test.js      # the permission user-gesture chain
@@ -914,6 +994,7 @@ node test/favicon.test.js      # icon resolution: probing, keeping, the cache
 node test/live.test.js         # the change feed, subsections, the accent picker
 node test/transfer.test.js     # the backup envelope, its refusals, the buttons
 node test/importers.test.js    # reading a Speed Dial 2 backup
+node test/header.test.js      # the clock and date settings, and a sheet per font
 ```
 
 The last of those also checks that every `getElementById` in `src/newtab.js`
