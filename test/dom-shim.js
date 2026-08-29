@@ -50,6 +50,15 @@ class El {
     this.children.unshift(...kids);
   }
 
+  /** For the font picker, which slots a hand-named family in near the top. */
+  insertBefore(kid, before) {
+    kid.parent = this;
+    const at = before ? this.children.indexOf(before) : -1;
+    if (at === -1) this.children.push(kid);
+    else this.children.splice(at, 0, kid);
+    return kid;
+  }
+
   /** Enough of it for the download link, which mounts itself and leaves. */
   remove() {
     if (!this.parent) return;

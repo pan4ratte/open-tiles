@@ -88,7 +88,19 @@ const sandbox = {
   crypto: { randomUUID: () => 'id-' + Math.random().toString(36).slice(2) },
   browser: { storage: { local: area.local, onChanged: area.onChanged } },
   Icons: { create: () => new El('svg') },
-  Fonts: { SUGGESTED: ['Inter'], stackFor: name => name || 'system-ui' }
+  Fonts: {
+    CATALOG: [
+      { name: 'Inter', style: 'sans', scripts: ['latin-ext', 'cyrillic'] },
+      { name: 'Roboto', style: 'sans', scripts: ['latin-ext', 'greek'] },
+      { name: 'Lora', style: 'serif', scripts: ['latin-ext'] }
+    ],
+    STYLES: [{ id: 'sans', label: 'Sans' }, { id: 'serif', label: 'Serif' }],
+    SCRIPTS: [{ id: 'latin-ext', label: 'Latin ext' }, { id: 'greek', label: 'Greek' }],
+    SUGGESTED: ['Inter', 'Roboto', 'Lora'],
+    stackFor: name => name || 'system-ui',
+    previewStack: name => name || 'system-ui',
+    loadPreviews: () => Promise.resolve('cache')
+  }
 };
 vm.createContext(sandbox);
 

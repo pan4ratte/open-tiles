@@ -353,6 +353,7 @@ body {
 .switch input:focus-visible + .switch__track,
 .bgfield__chip:focus-visible,
 .bgfield__forget:focus-visible,
+.fontcard:focus-visible,
 .color__well:focus-visible {
   outline: none;
   box-shadow: 0 0 0 3.5px var(--accent-ring);
@@ -1774,6 +1775,11 @@ body.tile-round .tile {
   padding: 0 11px;
 }
 
+/* The font filters carry more segments than a settings row is wide, so theirs
+   is allowed to fold onto a second line inside the trough rather than push the
+   window out of shape. */
+.segmented--wrap { flex-wrap: wrap; }
+
 .segmented__item:hover { color: var(--label); }
 
 .segmented__item.is-on {
@@ -2416,7 +2422,136 @@ body.tile-round .tile {
 
 .bgfield__url .field__input { flex: 1; min-width: 0; }
 
-.fontfield .field__input { margin-bottom: 10px; }
+/* -- font picker --
+   A specimen grid: every family drawn in its own face, because that is the
+   only thing about a typeface worth choosing on. Two filters sit above it and
+   the sample line below shows the chosen family at reading size. */
+
+.fontfield {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.fontfield__filters {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.fontfield__filter {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.fontfield__filter-label {
+  flex: none;
+  width: 38px;
+  color: var(--label-secondary);
+  font-size: var(--t-subhead);
+  font-weight: 500;
+}
+
+/* The list is a sunken well, the way a macOS source list is: the cards inside
+   it carry no chrome of their own until one is hovered or chosen. */
+.fontfield__grid {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(172px, 1fr));
+  gap: 4px;
+  max-height: 320px;
+  padding: 8px;
+  border-radius: var(--r-box);
+  background: var(--fill-quaternary);
+  box-shadow: inset 0 0 0 .5px var(--separator);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: var(--label-tertiary) transparent;
+}
+
+.fontcard {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  padding: 8px 10px;
+  border: 0;
+  border-radius: var(--r-control);
+  background: transparent;
+  color: var(--label);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: background var(--t-fast) var(--ease),
+              color var(--t-fast) var(--ease);
+}
+
+/* display:flex outranks the browser's own [hidden] rule. */
+.fontcard[hidden] { display: none; }
+
+.fontcard:hover { background: var(--fill-tertiary); }
+
+.fontcard.is-on {
+  background: var(--accent);
+  color: var(--on-accent);
+}
+
+.fontcard.is-on:hover { background: var(--accent); filter: brightness(1.06); }
+
+/* The specimen. It is set in the family it names, so it is the one piece of
+   text in the dialog that is deliberately not Inter. */
+.fontcard__name {
+  flex: 1;
+  min-width: 0;
+  font-size: var(--t-title3);
+  line-height: 1.5;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.fontfield__empty,
+.fontfield__hint {
+  margin: 0;
+  padding: 0 2px;
+  color: var(--label-secondary);
+  font-size: var(--t-subhead);
+  line-height: 1.36;
+}
+
+.fontfield__empty[hidden],
+.fontfield__hint[hidden] { display: none; }
+
+/* Naming a family by hand: still there, still works, but folded away - the
+   grid is the way in now. */
+.fontfield__other {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.fontfield__other-form {
+  display: flex;
+  gap: 8px;
+  width: 100%;
+}
+
+.fontfield__other-form[hidden] { display: none; }
+
+.fontfield__other-form .field__input { flex: 1; min-width: 0; }
+
+/* Too narrow to keep the caption beside the segments. */
+@media (max-width: 620px) {
+  .fontfield__filter {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+  }
+
+  .fontfield__filter-label { width: auto; }
+}
 
 .preview {
   margin: 0;

@@ -69,9 +69,9 @@ const Schema = (() => {
           type: 'font',
           default: 'Inter',
           busyText: 'Loading font…',
-          note: 'Sets the clock and the tile names. Any family on Google Fonts '
-              + 'works, not just the suggestions. Leave empty to use the system '
-              + 'font. The dialogs and buttons always stay on Inter.'
+          note: 'Sets the clock and the tile names. Filter the list, or name '
+              + 'any other family on Google Fonts under "Other family". The '
+              + 'dialogs and buttons always stay on Inter.'
         }
       ]
     },

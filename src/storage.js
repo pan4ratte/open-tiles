@@ -21,6 +21,10 @@
  *                can be put back without finding the file again; `effects` is
  *                the { bgBlur, bgDim } that entry was last looked at with
  *   fontCache  - { [family]: { css, savedAt } }     CSS with the woff2 inlined
+ *   fontPreviews- { sig, css, savedAt }   one stylesheet holding a tiny letters
+ *                and digits cut of every family in the picker, for the specimen
+ *                grid; `sig` names the catalogue it was built for, so a changed
+ *                list rebuilds itself
  *   iconCache  - { [origin]: { url, data, size, mode, savedAt } }
  *                url is the address the icon was found at; data is the picture
  *                itself as a data: URI when it was small enough to keep, null
@@ -34,6 +38,7 @@ const Store = (() => {
   const BACKGROUND = 'background';
   const BG_RECENT = 'bgRecent';
   const FONT_CACHE = 'fontCache';
+  const FONT_PREVIEWS = 'fontPreviews';
   const ICON_CACHE = 'iconCache';
 
   const ext = (typeof browser !== 'undefined' && browser.storage && browser.storage.local)
@@ -546,6 +551,18 @@ const Store = (() => {
 
   const putFontCss = (family, css) => fonts.put(family, { css });
 
+  /**
+   * The picker's specimen stylesheet. One value rather than a cache: it is
+   * built for the whole catalogue at once, so there is nothing to evict - a
+   * `sig` that no longer matches is simply rebuilt over.
+   */
+  async function getFontPreviews(sig) {
+    const entry = await get(FONT_PREVIEWS);
+    return entry && entry.sig === sig && entry.css ? entry.css : null;
+  }
+
+  const putFontPreviews = (sig, css) => set(FONT_PREVIEWS, { sig, css, savedAt: Date.now() });
+
   // ------------------------------------------------------------- change feed
 
   /**
@@ -587,6 +604,7 @@ const Store = (() => {
     loadRecentBackgrounds, rememberBackground, noteRecentEffects,
     forgetRecentBackground, clearRecentBackgrounds, MAX_RECENT,
     getFontCss, putFontCss,
+    getFontPreviews, putFontPreviews,
     icons,
     onExternalChange
   };

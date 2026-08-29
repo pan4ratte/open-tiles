@@ -88,7 +88,7 @@ them and are written to storage in the background.
 | --- | --- | --- |
 | Appearance | Theme — system / dark / light | System |
 | | Accent colour | `#007AFF` (systemBlue) |
-| | Font — any Google Fonts family | Inter |
+| | Font — a specimen grid, filtered by style and script, or any Google Fonts family by name | Inter |
 | Background | Picture or video — a file, or a web address | none |
 | | Blur — 0–40px | 0px |
 | | Dim — 0–90% | 35% |
@@ -809,18 +809,38 @@ offline and costs no request.
 
 Settings → *Font* sets the clock and the tile names, and nothing else — the
 dialogs, buttons and labels stay on Inter whatever is chosen, so an ornamental
-family cannot make the UI hard to read. It accepts **any family Google Fonts
-serves**, not just the ~50 suggestions in the dropdown. The first time a family is chosen, `src/fonts.js`
+family cannot make the UI hard to read. The first time a family is chosen,
+`src/fonts.js`
 
 1. fetches `https://fonts.googleapis.com/css2?family=<name>:wght@300;400;600`,
-2. downloads the woff2 for the latin/cyrillic subsets and rewrites the
-   stylesheet with each file inlined as a `data:` URI,
+2. downloads the woff2 for the latin, cyrillic, greek and vietnamese subsets
+   and rewrites the stylesheet with each file inlined as a `data:` URI,
 3. stores that stylesheet under `fontCache` in extension storage (six most
    recent families are kept).
 
 From then on the font is served from cache, so Google is not contacted again on
 every new tab. Both endpoints send `Access-Control-Allow-Origin: *`, so no host
-permissions are needed. Leaving the field empty falls back to the system font.
+permissions are needed.
+
+### The picker
+
+The field is a grid of specimens rather than a text box: every family in
+`Fonts.CATALOG` is drawn in its own face, over two filters — **Style** (sans,
+serif, monospaced, display) and **Script** (extended Latin, Cyrillic, Greek,
+Vietnamese). A family's `scripts` list only names writing systems the loader
+actually brings down, so filtering to Greek cannot hand back a font whose Greek
+glyphs were dropped on the way in. *System font* heads the list and no filter
+hides it, and **Other family…** still takes **any name Google Fonts serves**,
+catalogue or not — a family named that way keeps a card of its own at the top.
+
+Drawing fifty families at once is a second, much smaller stylesheet: one
+request for the whole catalogue with `&text=` cut down to letters and digits
+(~10 KB a family), inlined the same way and cached under `fontPreviews`. It is
+fetched the first time the Appearance panel is on screen, and never again.
+Its `@font-face` rules are renamed `Tiles Specimen <family>` on the way in, so
+a specimen cut down to sixty glyphs can never stand in for the full font the
+page is set in. Without the previews — offline, on a first run — every card
+falls back to Inter and everything still works.
 
 ## Layout
 
@@ -860,6 +880,7 @@ permissions are needed. Leaving the field empty falls back to the system font.
 | `background` | `{ src, name, type, savedAt }`, or `null` — `src` is a `data:` URI or a web address, `type` is `image` or `video` |
 | `bgRecent` | `[background & { effects }]` — the last six, newest first; `effects` is the `{ bgBlur, bgDim }` that entry was last looked at with |
 | `fontCache` | `{ [family]: { css, savedAt } }` |
+| `fontPreviews` | `{ sig, css, savedAt }` — the picker's specimen stylesheet; `sig` names the catalogue it was built for |
 | `iconCache` | `{ [origin]: { url, size, mode, savedAt } }` |
 
 Open new tab pages stay in sync through `storage.onChanged`. That feed reports

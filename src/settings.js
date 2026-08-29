@@ -887,51 +887,330 @@ const SettingsUI = (() => {
     return { control: wrap, wide: true };
   }
 
+  /** The "everything" segment of either font filter. */
+  const FONT_ALL = 'all';
+
+  /**
+   * One filter above the specimen grid: a caption and a segmented control,
+   * with "All" put in front of whatever it is filtering by.
+   */
+  function buildFontFilter(name, options, onPick) {
+    const row = document.createElement('div');
+    row.className = 'fontfield__filter';
+
+    const caption = document.createElement('span');
+    caption.className = 'fontfield__filter-label';
+    caption.id = 'fontfilter-' + name.toLowerCase();
+    caption.textContent = name;
+
+    const group = document.createElement('div');
+    group.className = 'segmented segmented--wrap';
+    group.setAttribute('role', 'radiogroup');
+    group.setAttribute('aria-labelledby', caption.id);
+
+    const buttons = [{ id: FONT_ALL, label: 'All' }, ...options].map(option => {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'segmented__item segmented__item--text';
+      button.setAttribute('role', 'radio');
+      button.setAttribute('aria-checked', String(option.id === FONT_ALL));
+      if (option.title) button.title = option.title;
+      button.textContent = option.label;
+      if (option.id === FONT_ALL) button.classList.add('is-on');
+
+      button.addEventListener('click', () => {
+        buttons.forEach(other => {
+          const on = other === button;
+          other.classList.toggle('is-on', on);
+          other.setAttribute('aria-checked', String(on));
+        });
+        onPick(option.id);
+      });
+
+      group.append(button);
+      return button;
+    });
+
+    row.append(caption, group);
+    return row;
+  }
+
+  /**
+   * The font picker: every family drawn in its own face, over two filters that
+   * narrow the list - what the letterforms are, and which scripts the family
+   * covers beyond plain Latin.
+   *
+   * There is no text field in front of the grid any more. A name is a poor way
+   * to choose a typeface when the point of choosing one is how it looks, and
+   * the old field's suggestions were a list of names the reader had to already
+   * know. Naming a family by hand still works - Google Fonts serves far more
+   * than the catalogue - but it is folded away under "Other family…", where it
+   * is the exception rather than the front door.
+   *
+   * The specimens are one cut-down stylesheet for the whole catalogue, fetched
+   * the first time this grid is on screen and cached after that; see fonts.js.
+   * Until it arrives (or if it never does) every card falls back to Inter,
+   * which is the same thing that happens to a family Google has never heard of.
+   */
   function buildFont(field, value, commit) {
     const wrap = document.createElement('div');
     wrap.className = 'fontfield';
+
+    let current = (value || '').trim();
+    let styleFilter = FONT_ALL;
+    let scriptFilter = FONT_ALL;
+
+    const grid = document.createElement('div');
+    grid.className = 'fontfield__grid';
+    grid.setAttribute('role', 'listbox');
+    grid.setAttribute('aria-label', field.label);
+
+    const empty = document.createElement('p');
+    empty.className = 'fontfield__empty';
+    empty.textContent = 'No family in the list covers both of those.';
+    empty.hidden = true;
+
+    const hint = document.createElement('p');
+    hint.className = 'fontfield__hint';
+    hint.textContent = 'The specimens need a connection the first time. '
+      + 'Every family still works; they are just all drawn in Inter for now.';
+    hint.hidden = true;
+
+    const preview = document.createElement('p');
+    preview.className = 'preview';
+    preview.textContent = 'The quick brown fox jumps over the lazy dog';
+
+    /** The cards, in the order they sit in the grid. */
+    const cards = [];
+
+    /**
+     * `any` marks a card no filter applies to: the system font, which is not a
+     * family at all, and anything typed in by hand, whose scripts nothing here
+     * knows. Hiding either would be guessing.
+     */
+    function makeCard(entry) {
+      const card = document.createElement('button');
+      card.type = 'button';
+      card.className = 'fontcard';
+      card.dataset.family = entry.name;
+      card.dataset.style = entry.style || '';
+      card.dataset.scripts = (entry.scripts || []).join(' ');
+      if (entry.any) card.dataset.any = 'true';
+      card.setAttribute('role', 'option');
+      card.tabIndex = -1;
+
+      const name = document.createElement('span');
+      name.className = 'fontcard__name';
+      name.textContent = entry.label;
+      name.style.fontFamily = Fonts.previewStack(entry.name);
+
+      // No tick beside it: the accent fill is what says "this one", the way a
+      // macOS source list does, and a glyph here would cost every card the
+      // width its specimen wants.
+      card.append(name);
+      card.addEventListener('click', () => choose(entry.name));
+      return card;
+    }
+
+    /** A family the catalogue does not carry, kept at the top so it is findable. */
+    function keepCustom(name) {
+      if (!name || cards.some(card => card.dataset.family === name)) return;
+      const card = makeCard({ name, label: name, any: true });
+      cards.splice(1, 0, card);
+      grid.insertBefore(card, grid.children[1] || null);
+    }
+
+    function refresh() {
+      let matched = 0;
+
+      cards.forEach(card => {
+        const any = card.dataset.any === 'true';
+        const shown = any || (
+          (styleFilter === FONT_ALL || card.dataset.style === styleFilter)
+          && (scriptFilter === FONT_ALL
+            || card.dataset.scripts.split(' ').includes(scriptFilter))
+        );
+        card.hidden = !shown;
+        if (shown && !any) matched++;
+
+        const on = card.dataset.family === current;
+        card.classList.toggle('is-on', on);
+        card.setAttribute('aria-selected', String(on));
+      });
+
+      empty.hidden = matched > 0;
+
+      // One tab stop for the whole grid - fifty of them would bury everything
+      // under the picker. It lands on the chosen family, or on the first one
+      // still showing when the filters have hidden it.
+      const visible = cards.filter(card => !card.hidden);
+      const roving = visible.find(card => card.dataset.family === current) || visible[0];
+      cards.forEach(card => { card.tabIndex = card === roving ? 0 : -1; });
+
+      preview.style.fontFamily = Fonts.stackFor(current);
+    }
+
+    async function choose(name) {
+      current = (name || '').trim();
+      refresh();
+      const effective = await commit(current);
+      current = (typeof effective === 'string' ? effective : '').trim();
+      keepCustom(current);
+      refresh();
+    }
+
+    // -- the list itself
+
+    const entries = [{ name: '', label: 'System font', any: true }];
+    Fonts.CATALOG.forEach(font => entries.push({ ...font, label: font.name }));
+    if (current && !Fonts.CATALOG.some(font => font.name === current)) {
+      entries.splice(1, 0, { name: current, label: current, any: true });
+    }
+    entries.forEach(entry => {
+      const card = makeCard(entry);
+      cards.push(card);
+      grid.append(card);
+    });
+
+    // -- arrow keys, over the cards the filters have left showing
+
+    /** How many cards the top row holds, as the grid actually laid them out. */
+    function columnsOf(visible) {
+      const top = visible[0].offsetTop;
+      let n = 0;
+      while (n < visible.length && visible[n].offsetTop === top) n++;
+      return Math.max(1, n);
+    }
+
+    grid.addEventListener('keydown', e => {
+      const visible = cards.filter(card => !card.hidden);
+      const at = visible.indexOf(document.activeElement);
+      if (at < 0) return;
+
+      const cols = columnsOf(visible);
+      const step = { ArrowRight: 1, ArrowLeft: -1, ArrowDown: cols, ArrowUp: -cols }[e.key];
+
+      let to;
+      if (step !== undefined) to = at + step;
+      else if (e.key === 'Home') to = 0;
+      else if (e.key === 'End') to = visible.length - 1;
+      else return;
+
+      e.preventDefault();
+      to = Math.max(0, Math.min(visible.length - 1, to));
+      visible[at].tabIndex = -1;
+      visible[to].tabIndex = 0;
+      visible[to].focus();
+    });
+
+    // -- naming a family the catalogue does not carry
+
+    const other = document.createElement('div');
+    other.className = 'fontfield__other';
+
+    const otherBtn = document.createElement('button');
+    otherBtn.type = 'button';
+    otherBtn.className = 'btn btn--sm';
+    otherBtn.setAttribute('aria-expanded', 'false');
+    otherBtn.append(
+      Icons.create('plus', { size: 14 }),
+      document.createTextNode('Other family…')
+    );
+
+    const form = document.createElement('div');
+    form.className = 'fontfield__other-form';
+    form.hidden = true;
 
     const input = document.createElement('input');
     input.type = 'text';
     input.className = 'field__input';
     input.id = 'set-' + field.key;
-    input.value = value;
-    input.placeholder = field.default;
+    input.placeholder = 'Any family on Google Fonts';
     input.autocomplete = 'off';
     input.spellcheck = false;
-    input.setAttribute('list', 'fontList');
+    input.setAttribute('aria-label', 'Another font family');
 
-    const list = document.createElement('datalist');
-    list.id = 'fontList';
-    Fonts.SUGGESTED.forEach(name => {
-      const option = document.createElement('option');
-      option.value = name;
-      list.append(option);
-    });
+    const use = document.createElement('button');
+    use.type = 'button';
+    use.className = 'btn btn--sm';
+    use.textContent = 'Use';
 
-    const preview = document.createElement('p');
-    preview.className = 'preview';
-    preview.textContent = 'The quick brown fox jumps over the lazy dog';
-    preview.style.fontFamily = Fonts.stackFor(value);
-
-    let timer;
-    const run = async () => {
-      preview.style.fontFamily = Fonts.stackFor(input.value);
-      const effective = await commit(input.value);
-      preview.style.fontFamily = Fonts.stackFor(effective);
+    const send = () => {
+      const name = input.value.trim();
+      if (name) choose(name);
     };
 
-    input.addEventListener('input', () => {
-      clearTimeout(timer);
-      timer = setTimeout(run, 600);
-    });
-    input.addEventListener('change', () => {
-      clearTimeout(timer);
-      run();
+    use.addEventListener('click', send);
+    input.addEventListener('keydown', e => {
+      if (e.key !== 'Enter') return;
+      e.preventDefault();
+      send();
     });
 
-    wrap.append(input, list, preview);
-    return { control: wrap, focusId: input.id, wide: true };
+    otherBtn.addEventListener('click', () => {
+      const open = form.hidden;
+      form.hidden = !open;
+      otherBtn.classList.toggle('is-on', open);
+      otherBtn.setAttribute('aria-expanded', String(open));
+      if (open) input.focus();
+    });
+
+    form.append(input, use);
+    other.append(otherBtn, form);
+
+    // -- first look
+
+    /** Puts the chosen family in the middle of the grid rather than off it. */
+    function showCurrent() {
+      const card = cards.find(one => one.dataset.family === current && !one.hidden);
+      if (!card || !grid.clientHeight) return;
+      grid.scrollTop = Math.max(
+        0,
+        card.offsetTop - (grid.clientHeight - card.offsetHeight) / 2
+      );
+    }
+
+    function wake() {
+      Fonts.loadPreviews().catch(() => { hint.hidden = false; });
+      showCurrent();
+    }
+
+    // Every panel is built at mount and the inactive ones hidden, so there is
+    // nothing to measure and no reason to ask Google for anything until this
+    // one is actually on screen.
+    if (typeof IntersectionObserver === 'function') {
+      const watch = new IntersectionObserver(seen => {
+        if (!seen.some(one => one.isIntersecting)) return;
+        watch.disconnect();
+        wake();
+      });
+      watch.observe(grid);
+    } else {
+      wake();
+    }
+
+    refresh();
+
+    const filters = document.createElement('div');
+    filters.className = 'fontfield__filters';
+    filters.append(
+      buildFontFilter('Style', Fonts.STYLES, id => {
+        styleFilter = id;
+        grid.scrollTop = 0;
+        refresh();
+      }),
+      buildFontFilter('Script', Fonts.SCRIPTS, id => {
+        scriptFilter = id;
+        grid.scrollTop = 0;
+        refresh();
+      })
+    );
+
+    wrap.append(filters, grid, empty, hint, other, preview);
+
+    // No `focusId`: the grid is the control, and a <label for> only reaches
+    // one element - which would have to be the hidden "other family" field.
+    return { control: wrap, wide: true };
   }
 
   const BUILDERS = {
