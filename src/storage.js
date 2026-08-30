@@ -6,12 +6,14 @@
  * makes the page testable by opening src/newtab.html directly in a browser.
  *
  * Keys
- *   tiles      - [{ id, url, title, groupId, icon, iconColor, bg, pad, visits }]
+ *   tiles      - [{ id, url, title, groupId, icon, iconColor, bg, pad, round,
+ *                visits }]
  *                groupId is null when loose; icon is '' when the site's own
  *                is to be looked up; iconColor is '' when it keeps its own
  *                colours; bg is '' for the usual frosted tile; pad is null
  *                when the tile follows the logo padding set for every tile;
- *                visits counts opens from this add-on
+ *                round is how far the icon's own corners are taken off, 0 for
+ *                the picture as it comes; visits counts opens from this add-on
  *   groups     - [{ id, name }]                 the bar across the top
  *   settings   - see schema.js
  *   activeGroup- id of the group last shown, or null for "All"
@@ -181,6 +183,21 @@ const Store = (() => {
     return Math.min(MAX_PAD, Math.max(0, n));
   }
 
+  /**
+   * How far a tile's icon has its corners taken off, as a share of its short
+   * side: 0 is the picture as it comes, 50 rounds a square one to a circle.
+   *
+   * Zero rather than null, because there is no setting behind this one to
+   * follow - a tile either rounds its icon or it does not.
+   */
+  const MAX_ROUND = 50;
+
+  function sanitizeRound(raw) {
+    const n = Math.round(Number(raw));
+    if (!Number.isFinite(n)) return 0;
+    return Math.min(MAX_ROUND, Math.max(0, n));
+  }
+
   /** Opens counted by this add-on. Never negative, never a fraction. */
   function sanitizeVisits(raw) {
     const n = Math.floor(Number(raw));
@@ -202,6 +219,7 @@ const Store = (() => {
         iconColor: sanitizeColor(t.iconColor),
         bg: sanitizeColor(t.bg),
         pad: sanitizePad(t.pad),
+        round: sanitizeRound(t.round),
         visits: sanitizeVisits(t.visits)
       }));
   }

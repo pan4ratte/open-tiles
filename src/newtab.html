@@ -78,6 +78,9 @@
               <!-- Under the tile: it carries the colour being pointed at, and
                    a hex code should not wrap. -->
               <span class="tilefield__hint" id="pipetteHint" hidden></span>
+              <!-- What the icon lookup found, said where the icon it is
+                   talking about can be seen. -->
+              <p class="status" id="iconStatus" hidden></p>
             </div>
 
             <div class="tilefield__rows">
@@ -111,6 +114,11 @@
                 <!-- The colour well is built in newtab.js, from the same
                      picker the accent uses. -->
                 <div class="tilefield__row" id="tileIconRow">
+                  <button class="btn btn--sm" type="button" id="btnIconPipette"
+                          title="Pick a colour out of the icon"
+                          aria-label="Pick a colour out of the icon"
+                          aria-pressed="false"
+                          data-icon="pipette" data-icon-size="15"></button>
                   <button class="btn btn--sm" type="button" id="btnIconColorClear"
                           title="Back to the icon's own colours"
                           aria-label="Back to the icon's own colours"
@@ -141,6 +149,18 @@
                   <button class="btn btn--sm" type="button" id="btnPadClear"
                           title="Back to the padding set for every tile"
                           aria-label="Back to the padding set for every tile"
+                          data-icon="rotate-ccw" data-icon-size="15"></button>
+                </div>
+              </div>
+
+              <div class="tilefield__group">
+                <span class="tilefield__sub">Icon rounding</span>
+                <!-- The slider is built in newtab.js, from the same control
+                     the padding above uses. -->
+                <div class="tilefield__row" id="tileRoundRow">
+                  <button class="btn btn--sm" type="button" id="btnRoundClear"
+                          title="Back to the icon's own corners"
+                          aria-label="Back to the icon's own corners"
                           data-icon="rotate-ccw" data-icon-size="15"></button>
                 </div>
               </div>
@@ -212,6 +232,22 @@
         <button class="btn btn--primary" type="submit">Save</button>
       </div>
     </form>
+  </div>
+
+  <!-- The alert that stands in front of something that cannot be undone. It
+       has no title bar and no close button: an alert is answered, not
+       dismissed. Last in the file, so it stands over every other dialog. -->
+  <div class="modal alert" id="confirmAlert" role="alertdialog" aria-modal="true"
+       aria-labelledby="confirmTitle" aria-describedby="confirmText" hidden>
+    <div class="alert__box">
+      <span class="alert__glyph" data-icon="trash-2" data-icon-size="24"></span>
+      <h2 class="alert__title" id="confirmTitle">Delete this tile?</h2>
+      <p class="alert__text" id="confirmText"></p>
+      <div class="alert__actions">
+        <button class="btn" type="button" id="btnConfirmCancel">Cancel</button>
+        <button class="btn btn--destructive" type="button" id="btnConfirmOk">Delete</button>
+      </div>
+    </div>
   </div>
 
   <script src="icons.js"></script>

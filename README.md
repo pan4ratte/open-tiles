@@ -21,7 +21,8 @@ overridden — accept it, otherwise the default page stays.
 
 - **+** tile — add a site (`example.com` is enough, `https://` is filled in)
 - **drag a tile** — reorder; the new order is saved automatically
-- **right-click a tile** — edit or delete it, or add another
+- **right-click a tile** — edit or delete it, or add another (turn on
+  *Confirm before deleting a tile* to be asked first)
 - **right-click the page** — add a tile or start a group; this is the way in
   when either **+** is turned off
 - **+ New group** — start a group; **click a group** to show only its tiles
@@ -102,6 +103,7 @@ them and are written to storage in the background.
 | | Show visit counts | off |
 | | Show the add button | on |
 | | Open sites in a new tab | off |
+| | Confirm before deleting a tile | off |
 | | Deep icon lookup | off |
 | Header · Time | Show the clock | on |
 | | Format — 13:45 / 13:45:30 / 1:45 PM / 1:45:30 PM | 13:45 |
@@ -590,11 +592,16 @@ is the size the sheet is showing you. The one thing it may change is
 inside a tile is worked out from its width, so holding that down scales the
 whole thing faithfully rather than cropping it.
 
-The tile stands at the top of the field and the four things that shape it —
-**Icon**, **Icon colour**, **Background** and **Padding** — are rows beneath it,
-each on a line of its own. None of them has to share a line with the picture it
-changes, which is what lets the Icon field be wide enough for a whole web
-address.
+The tile stands at the top of the field and the five things that shape it —
+**Icon**, **Icon colour**, **Background**, **Padding** and **Icon rounding** —
+are rows beneath it, each on a line of its own. None of them has to share a line
+with the picture it changes, which is what lets the Icon field be wide enough
+for a whole web address.
+
+Directly under the tile is what the icon lookup has to say — see *Its icon*
+below. It is there rather than at the foot of the sheet because it is talking
+about the picture immediately above it: the sheet's own status line stands over
+the buttons and is for what is stopping the tile being saved.
 
 Typing a name does not rebuild the preview. Only the label and the letter under
 it depend on the name, and both are changed in place — a rebuild would throw
@@ -603,11 +610,21 @@ until it has loaded, so the icon blinked out and returned on every keystroke.
 
 ### Its icon
 
-A tile normally finds its own picture — see [Site icons](#site-icons) below.
-Any tile can override that with one of its own: fill in **Icon** with a web
-address, choose a file, or paste one — see below. A set icon is drawn straight
-away and the lookup never runs, so it is also the way to fix a site whose own
-icon is wrong, ugly, or missing.
+A tile normally finds its own picture — see [Site icons](#site-icons) below. The
+lookup starts as soon as the address is one: typing `stripe.com` sets it going,
+and the line under the tile says *Looking for the sharpest icon this site has…*
+and then what it found and how large — a size worth saying out loud, because
+*the icon is blurry* and *this site only publishes a 32-pixel icon* look
+identical on a tile and only one of them is something you can do anything
+about. A site that offers nothing says so there and then, while the sheet is
+still open to choose a picture instead. The **refresh** button beside the Icon
+field does the same lookup again from scratch, past every cache, for a site
+that has changed its logo since.
+
+Any tile can override the lookup with a picture of its own: fill in **Icon**
+with a web address, choose a file, or paste one — see below. A set icon is drawn
+straight away and the lookup never runs, so it is also the way to fix a site
+whose own icon is wrong, ugly, or missing.
 
 A chosen file is scaled to fit 256px and kept inline as a PNG — transparent, so
 a logo sits on the tile rather than in a white box, and fitted rather than
@@ -678,11 +695,16 @@ carrying the picture as its mask, sized by exactly the rules the picture would
 have been. It is still loaded through an `<img>` that never joins the page, so
 the monogram stands until there is something to put in its place.
 
-Nothing is read back out of the picture to do this, which is why it works on a
-remote icon the page may not sample — the browser draws the mask, and the page
-never sees a pixel. The pipette, which does read pixels, answers with the
-colour set here while one is: the icon is that one colour now, and there is
-nothing else left in it to read.
+The **pipette** beside it takes a colour straight out of the icon, the same one
+the background row has: arm it, and the next click on the icon recolours the
+logo in the pixel under the pointer. The two are one tool between them — arming
+either puts the other away, because a click on the icon can only mean one thing.
+
+Nothing is read back out of the picture to draw the recoloured icon, which is
+why that works on a remote icon the page may not sample — the browser draws the
+mask, and the page never sees a pixel. The pipette, which does read pixels,
+answers with the colour set here while one is: the icon is that one colour now,
+and there is nothing else left in it to read.
 
 ### Its background
 
@@ -718,6 +740,28 @@ the arrow beside it hands the tile back to the setting, and is only there while
 there is something to hand back. Underneath it is the same `--logo-pad` custom
 property the setting writes to the root, set on the one tile instead.
 
+### Its rounding
+
+**Icon rounding** takes the corners off the picture itself — 0% for the logo as
+its designer drew it, 50% for a square one turned into a circle. It is a share
+of the icon's short side rather than a number of pixels, so the shape holds as
+*Tile size* changes, and a wordmark at 50% is a lozenge because the short side
+is the one being measured either way.
+
+There is no setting behind this one, so nothing to fall back to and no *no
+answer* for the slider to have to show: 0 is a real value, and the arrow beside
+it is simply the one press back to it.
+
+For the corner to have something to cut, the box an icon is drawn in is fitted
+to the picture standing in it. That box is as wide as the tile allows but only
+as tall as it has room for, so a square favicon sits in it with air either side —
+which costs nothing until a radius is asked for, and then it is the air that
+gets rounded rather than the logo. The picture's own ratio is measured as it
+loads and handed to CSS as `--icon-aspect`, which closes the box up to it.
+Nothing moves: `contain` was already drawing the picture at exactly that size.
+A picture that will not say what shape it is — an SVG with no size and no
+`viewBox` — keeps the square box it always had.
+
 ### Its group
 
 **Group** offers the groups there are and nothing else; the whole field stays
@@ -727,6 +771,26 @@ one again. A tile that is in none of them, one made before there were any or
 one whose group has since been deleted, has to be shown as something, so it is
 shown as the group being looked at, or failing that the first: saving is what
 actually puts it there.
+
+### Deleting it
+
+**Delete**, at the far left of the sheet's buttons where macOS banishes anything
+destructive, and *Delete tile* in the right-click menu, both take the tile away.
+By default it simply goes: a tile is a bookmark, and putting one back is typing
+an address.
+
+Settings → *Layout* → **Confirm before deleting a tile** puts an alert in front
+of that, for a page full of tiles that took a while to arrange. It is a macOS
+alert — a small centred panel with no title bar and no close button, because an
+alert is answered rather than dismissed — and it names the tile, since the menu
+was opened over one tile out of forty and the name is how you know it was the
+right one. *Delete* is the default button and takes focus, so Return answers the
+question that was actually asked; Escape and a click outside both mean Cancel.
+
+Asked from the sheet, the sheet stays up behind the alert rather than closing
+first, so cancelling puts you back in the sheet you were in. With the setting
+off it still closes first, which is the older behaviour: it is showing the tile
+that is about to go.
 
 ## Visit counts
 
@@ -951,7 +1015,7 @@ falls back to Inter and everything still works.
 
 | Key | Shape |
 | --- | --- |
-| `tiles` | `[{ id, url, title, groupId, icon, iconColor, bg, pad, visits }]` — `groupId` is `null` when loose; `icon` is `''` when the site's own is looked up; `iconColor` is `''` when the icon keeps its own colours; `bg` is `''` for the usual frosted tile; `pad` is `null` when the tile follows *Logo padding* |
+| `tiles` | `[{ id, url, title, groupId, icon, iconColor, bg, pad, round, visits }]` — `groupId` is `null` when loose; `icon` is `''` when the site's own is looked up; `iconColor` is `''` when the icon keeps its own colours; `bg` is `''` for the usual frosted tile; `pad` is `null` when the tile follows *Logo padding*; `round` is `0` when the icon keeps its own corners |
 | `groups` | `[{ id, name }]` |
 | `activeGroup` | id of the group last shown, or `null` for *All* |
 | `settings` | see `src/schema.js` |

@@ -1109,8 +1109,29 @@ body.gb-bar .chip { border-radius: var(--r-control); }
 /* A square logo is bounded by the height and comes out exactly as it would
    have; only one wider than it is tall notices the extra room. The monogram
    keeps the square: it is a letter placed in the middle of one, and the globe
-   that stands in for it is sized as a fraction of its box. */
-.tile__icon { width: var(--logo-span); }
+   that stands in for it is sized as a fraction of its box.
+
+   The box is then fitted to the picture standing in it rather than left at the
+   full width the tile allows. Nothing about the drawing changes - `contain`
+   was already laying the picture out this way, and the box is centred either
+   way - but a corner radius has something to cut: rounding a box with slack
+   beside the picture would round the empty air rather than the logo.
+   --icon-aspect is written by paintIcon once the picture has been measured;
+   until then, and for anything that cannot say, the box is the square it has
+   always been. The height falls back to that square too on a browser that will
+   not divide by a custom property, which is the old behaviour exactly. */
+.tile__icon {
+  --icon-w: min(var(--logo-span), calc(var(--logo-size) * var(--icon-aspect, 1)));
+  --icon-h: min(var(--logo-size), calc(var(--logo-span) / var(--icon-aspect, 1)));
+
+  width: var(--icon-w);
+  height: var(--icon-h);
+  /* Taking the icon's own corners off: a share of its short side, so a square
+     logo at 50% is a circle and a wordmark at 50% is a lozenge. Set per tile
+     in the tile sheet; 0 is the picture as its designer drew it. */
+  border-radius: calc(min(var(--icon-w), var(--icon-h)) * var(--icon-round, 0));
+  overflow: hidden;
+}
 
 /* A recoloured icon: the colour shows through the picture's own alpha channel,
    so every shape and every soft edge in it survives and only the hue is
@@ -1337,6 +1358,59 @@ body.tile-round .tile {
 }
 
 .sheet__spacer { flex: 1; }
+
+/* -- the alert --
+   macOS's: a small centred panel that names what is about to happen and offers
+   exactly two ways out of it. No title bar and no close button - an alert is
+   answered rather than dismissed - and no more than a couple of lines of text,
+   because anything longer is a sheet. */
+
+.alert { place-items: center; }
+
+.alert__box {
+  width: min(300px, calc(100% - 48px));
+  padding: 20px 20px 16px;
+  border-radius: var(--r-window);
+  background: var(--mat-thick);
+  -webkit-backdrop-filter: var(--mat-filter);
+  backdrop-filter: var(--mat-filter);
+  box-shadow: inset 0 0 0 .5px var(--stroke-inner), var(--shadow-window);
+  text-align: center;
+  animation: window-in var(--t-base) var(--ease-out) both;
+}
+
+/* The glyph of the deed, in the colour of it: macOS puts the application's
+   icon here, and an add-on's page has none worth showing. */
+.alert__glyph {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 9px;
+  color: var(--system-red);
+}
+
+.alert__title {
+  margin: 0 0 4px;
+  font-size: var(--t-title3);
+  font-weight: 640;
+  letter-spacing: -.01em;
+}
+
+.alert__text {
+  margin: 0;
+  color: var(--label-secondary);
+  font-size: var(--t-subhead);
+  line-height: 1.45;
+}
+
+/* Two buttons of equal width, the safe way out on the left - the same hand
+   macOS deals them in a sheet. */
+.alert__actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 18px;
+}
+
+.alert__actions .btn { flex: 1; }
 
 /* -- the window -- */
 
@@ -2092,6 +2166,23 @@ body.tile-round .tile {
 
 .btn--danger:hover { background: color-mix(in srgb, var(--system-red) 12%, transparent); }
 
+/* The default button of an alert whose answer cannot be undone. Filled the way
+   the accent button is - it is the button Return presses - but in red, because
+   what it does is the destructive thing rather than the safe one. */
+.btn--destructive {
+  background: var(--system-red);
+  box-shadow: inset 0 0 0 .5px rgba(0, 0, 0, .1), var(--shadow-control);
+  color: #fff;
+  font-weight: 500;
+}
+
+.btn--destructive:hover {
+  background: var(--system-red);
+  filter: brightness(1.07);
+}
+
+.btn--destructive:active { filter: brightness(.94); }
+
 
 /* ---------------------------------------------------------------------------
    13. Composite fields
@@ -2392,6 +2483,20 @@ body.tile-round .tile {
 }
 
 .tilefield__hint[hidden] { display: none; }
+
+/* The icon lookup's report, under the tile it is about rather than at the foot
+   of the sheet: what was found, and how large, is only worth reading beside the
+   picture it found. Centred on the tile, and with no room left under it - the
+   rows below bring their own.
+
+   Matched on where it stands rather than on a class of its own, because
+   setStatus rewrites className every time it writes a line and any class put
+   on the element in the markup would last exactly until the first one. */
+.tilefield__stage .status {
+  margin: 0;
+  justify-content: center;
+  text-align: center;
+}
 
 /* The preview is shown, not used: no lift on hover, no drag, no navigation. */
 .tile--preview {

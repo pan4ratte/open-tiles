@@ -213,6 +213,15 @@ const Schema = (() => {
             },
             { key: 'openInNewTab', label: 'Open sites in a new tab', type: 'toggle', default: false },
             {
+              key: 'confirmDelete',
+              label: 'Confirm before deleting a tile',
+              type: 'toggle',
+              default: false,
+              note: 'Asks first, whether the tile is being deleted from its own '
+                  + 'sheet or from the right-click menu. Off, it goes at once — a '
+                  + 'tile is a bookmark, and putting one back is typing an address.'
+            },
+            {
               key: 'deepIcons',
               label: 'Deep icon lookup',
               type: 'toggle',

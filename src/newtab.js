@@ -25,8 +25,17 @@
   const btnIconReload = document.getElementById('btnIconReload');
   const btnIconColorClear = document.getElementById('btnIconColorClear');
   const btnPadClear = document.getElementById('btnPadClear');
+  const btnRoundClear = document.getElementById('btnRoundClear');
   const tileIconRow = document.getElementById('tileIconRow');
   const tilePadRow = document.getElementById('tilePadRow');
+  const tileRoundRow = document.getElementById('tileRoundRow');
+  const iconStatus = document.getElementById('iconStatus');
+  const btnIconPipette = document.getElementById('btnIconPipette');
+
+  const confirmAlert = document.getElementById('confirmAlert');
+  const confirmText = document.getElementById('confirmText');
+  const btnConfirmOk = document.getElementById('btnConfirmOk');
+  const btnConfirmCancel = document.getElementById('btnConfirmCancel');
 
   const groupBar = document.getElementById('groupBar');
   const groupChips = document.getElementById('groupChips');
@@ -45,7 +54,7 @@
   const btnSettingsClose = document.getElementById('btnSettingsClose');
 
   /** @type {{id:string,url:string,title:string,groupId:?string,icon:string,
-   *   iconColor:string,bg:string,pad:?number,visits:number}[]} */
+   *   iconColor:string,bg:string,pad:?number,round:number,visits:number}[]} */
   let tiles = [];
   /** @type {{id:string,name:string}[]} the chips across the top */
   let groups = [];
@@ -921,6 +930,21 @@
     else el.style.removeProperty('--logo-pad');
   }
 
+  /**
+   * How far this tile takes the corners off its icon, as a share of the icon's
+   * short side - so 50% rounds a square logo to a circle.
+   *
+   * Unlike the padding above there is no setting behind it to fall back to, so
+   * zero is a real answer rather than an absent one, and the property is simply
+   * taken off again where nothing was asked for. The stylesheet reads it on
+   * .tile__icon, which by then is a box fitted to the picture inside it - see
+   * --icon-aspect in paintIcon.
+   */
+  function applyIconRound(el, round) {
+    if (round > 0) el.style.setProperty('--icon-round', round / 100);
+    else el.style.removeProperty('--icon-round');
+  }
+
   /** Monogram shown until the site's real icon arrives, or when there is none. */
   function buildFallback(label, seed) {
     const el = document.createElement('span');
@@ -950,8 +974,24 @@
    */
   const cssUrl = url => 'url(' + JSON.stringify(url) + ')';
 
-  /** Reveals a loaded icon and retires the letter that was standing in for it. */
-  function iconArrived(el, icon) {
+  /**
+   * Reveals a loaded icon and retires the letter that was standing in for it.
+   *
+   * The picture's own proportions go on with it. The box an icon is drawn in is
+   * as wide as the tile allows and only as tall as it has room for, so a square
+   * logo sits in it with air either side - which is nothing at all until a
+   * corner radius is asked for, and then it is the air that gets rounded rather
+   * than the logo. Handing the ratio to CSS lets the box close up to the
+   * picture; `contain` was already drawing it at exactly that size, so nothing
+   * moves. A picture that will not say - an SVG with no size and no viewBox -
+   * keeps the square box, which is where this started.
+   */
+  function iconArrived(el, icon, measured) {
+    if (measured && measured.naturalWidth && measured.naturalHeight) {
+      icon.style.setProperty('--icon-aspect',
+        String(measured.naturalWidth / measured.naturalHeight));
+    }
+
     icon.hidden = false;
     const fallback = el.querySelector('.tile__fallback');
     if (fallback) fallback.remove();
@@ -988,7 +1028,7 @@
 
     const probe = color ? new Image() : icon;
     probe.referrerPolicy = 'no-referrer';
-    probe.addEventListener('load', () => iconArrived(el, icon));
+    probe.addEventListener('load', () => iconArrived(el, icon, probe));
     probe.addEventListener('error', () => icon.remove());
     probe.src = url;
 
@@ -1024,6 +1064,7 @@
     el.title = label + '\n' + tile.url;
     applyTileBg(el, tile.bg);
     applyTilePad(el, tile.pad);
+    applyIconRound(el, tile.round);
 
     const text = document.createElement('span');
     text.className = 'tile__label';
@@ -1240,9 +1281,57 @@
 
   document.addEventListener('keydown', e => {
     if (e.key !== 'Escape') return;
-    if (!settingsModal.hidden) closeDialog(settingsModal);
+    // The alert stands over every other dialog, so it is the one that answers -
+    // and the answer Escape gives is the safe one.
+    if (settleAlert) settleAlert(false);
+    else if (!settingsModal.hidden) closeDialog(settingsModal);
     else if (!groupModal.hidden) closeDialog(groupModal);
     else if (!modal.hidden) closeDialog(modal);
+  });
+
+  // ----------------------------------------------------------------- alerts
+
+  /**
+   * The alert that stands in front of something that cannot be undone.
+   *
+   * A promise for the answer rather than a callback, because what it guards is
+   * already an await: the caller asks, and then carries on or does not. There
+   * is one alert in the markup and one at a time on screen, so the way to
+   * settle the one that is up is a single variable - which is also how every
+   * other part of the page can tell there is one up at all.
+   *
+   * Cancel is what a click on the scrim and Escape both mean. There is no third
+   * answer: an alert is answered rather than dismissed.
+   *
+   * @returns {Promise<boolean>} whether the deed was agreed to
+   */
+  let settleAlert = null;
+
+  function askAlert(text) {
+    // Anything already being asked is answered no, so its promise settles
+    // rather than hanging on a dialog that has been replaced under it.
+    if (settleAlert) settleAlert(false);
+
+    confirmText.textContent = text;
+    confirmAlert.hidden = false;
+    // The destructive button takes focus, the way macOS does it, so Return
+    // answers the question that was actually asked - and Escape still cancels.
+    btnConfirmOk.focus();
+
+    return new Promise(resolve => {
+      settleAlert = answer => {
+        settleAlert = null;
+        confirmAlert.hidden = true;
+        resolve(answer);
+      };
+    });
+  }
+
+  btnConfirmOk.addEventListener('click', () => settleAlert && settleAlert(true));
+  btnConfirmCancel.addEventListener('click', () => settleAlert && settleAlert(false));
+
+  confirmAlert.addEventListener('mousedown', e => {
+    if (e.target === confirmAlert && settleAlert) settleAlert(false);
   });
 
   // ---------------------------------------------------------------- tile dialog
@@ -1287,6 +1376,8 @@
   let previewIconColor = '';
   /** null where the tile follows the padding set for every tile. */
   let previewPad = null;
+  /** 0 where the icon keeps its own corners - see applyIconRound. */
+  let previewRound = 0;
   /** Bumped on every repaint, so a slow icon lookup can tell it is stale. */
   let previewToken = 0;
   /**
@@ -1325,22 +1416,43 @@
 
   function previewFields() {
     const raw = fieldUrl.value.trim();
-    const url = normalizeUrl(raw) || raw;
+    const valid = normalizeUrl(raw);
+    const url = valid || raw;
     return {
       url,
+      // The address a lookup can actually be made against, or null. Half an
+      // address typed so far is not a site that publishes no icon, and a
+      // report saying so would be wrong on the way to every real one.
+      lookup: valid,
       label: fieldTitle.value.trim() || (url ? defaultTitle(url) : 'Example'),
       icon: fieldIcon.value.trim()
     };
   }
 
-  function paintPreview() {
+  /**
+   * What the icon lookup is doing, said under the tile.
+   *
+   * A line of its own rather than the sheet's: modalError stands over the
+   * buttons and is for what is stopping the tile being saved, and a report
+   * about the picture on show was six rows away from it down there.
+   */
+  const setIconStatus = status => SettingsUI.setStatus(iconStatus, status);
+
+  /**
+   * @param {{force?:boolean, extra?:string}} [opts] `force` looks past every
+   *   cache there is, which is what the reload button means; `extra` is a
+   *   sentence hung on the end of whatever the lookup reports.
+   * @returns {Promise} settles once the lookup, if there was one, has reported
+   */
+  function paintPreview(opts = {}) {
     const token = ++previewToken;
-    const { url, label, icon } = previewFields();
+    const { url, lookup, label, icon } = previewFields();
     previewUrl = url;
 
     tilePreview.textContent = '';
     applyTileBg(tilePreview, previewBg);
     applyTilePad(tilePreview, previewPad);
+    applyIconRound(tilePreview, previewRound);
     sizePreview();
 
     const text = document.createElement('span');
@@ -1349,21 +1461,52 @@
 
     tilePreview.append(buildFallback(label, url || label), text);
 
+    armPipette(null);
+
+    // A tile that names its own picture asks the network nothing - that is the
+    // point of setting one - so there is nothing to report on.
     if (icon) {
       paintIcon(tilePreview, icon, previewIconColor);
-    } else if (url) {
-      // The same lookup the grid does, so what is on show here is what will be
-      // on the tile - and what the pipette has to work with.
-      Favicons.resolve(url, { deep: settings.deepIcons })
-        .then(found => {
-          if (found && token === previewToken) {
-            paintIcon(tilePreview, found.url, previewIconColor);
-          }
-        })
-        .catch(() => {});
+      setIconStatus(null);
+      return Promise.resolve();
     }
 
-    armPipette(false);
+    if (!lookup) {
+      setIconStatus(null);
+      return Promise.resolve();
+    }
+
+    return lookupPreviewIcon(lookup, token, opts);
+  }
+
+  /**
+   * The same lookup the grid does, so what is on show here is what will be on
+   * the tile - and what the pipette has to work with.
+   *
+   * It says what it is doing while it does it and what it found when it is
+   * done. That report used to wait for the reload button; now an address typed
+   * into the sheet starts the lookup and the lookup speaks for itself, which is
+   * what lets a site with no icon of its own say so while there is still a
+   * sheet open to do something about it.
+   */
+  async function lookupPreviewIcon(url, token, opts) {
+    setIconStatus({ kind: 'loading', text: 'Looking for the sharpest icon this site has…' });
+
+    let found = null;
+    try {
+      found = await Favicons.resolve(url, { deep: settings.deepIcons, force: opts.force });
+    } catch (err) {
+      if (token === previewToken) setIconStatus({ kind: 'error', text: err.message });
+      return;
+    }
+
+    // The address moved on while this was in the air.
+    if (token !== previewToken) return;
+
+    if (found) paintIcon(tilePreview, found.url, previewIconColor);
+
+    const report = iconReport(found);
+    setIconStatus(opts.extra ? { ...report, text: report.text + opts.extra } : report);
   }
 
   /**
@@ -1449,9 +1592,8 @@
    * one is set, and nothing here is written until Save is pressed.
    */
   btnIconReload.addEventListener('click', async () => {
-    const url = normalizeUrl(fieldUrl.value);
-    if (!url) {
-      SettingsUI.setStatus(modalError,
+    if (!normalizeUrl(fieldUrl.value)) {
+      setIconStatus(
         { kind: 'error', text: 'Fill in the address first — that is what is looked up.' });
       return;
     }
@@ -1460,19 +1602,14 @@
     fieldIcon.value = '';
 
     btnIconReload.disabled = true;
-    SettingsUI.setStatus(modalError,
-      { kind: 'loading', text: 'Looking for the sharpest icon this site has…' });
-
     try {
-      const found = await Favicons.resolve(url, { deep: settings.deepIcons, force: true });
-      paintPreview();
-
-      const report = iconReport(found);
-      SettingsUI.setStatus(modalError, had
-        ? { ...report, text: report.text + ' The picture that was set has been cleared.' }
-        : report);
-    } catch (err) {
-      SettingsUI.setStatus(modalError, { kind: 'error', text: err.message });
+      // The repaint owns the lookup and the report both, so pressing this is
+      // the ordinary lookup done again from scratch rather than a second one
+      // racing it.
+      await paintPreview({
+        force: true,
+        extra: had ? ' The picture that was set has been cleared.' : ''
+      });
     } finally {
       btnIconReload.disabled = false;
     }
@@ -1522,10 +1659,11 @@
   async function setIcon(work) {
     try {
       fieldIcon.value = await work();
+      // Which clears the line under the tile: a picture of one's own is not
+      // something the lookup has anything left to say about.
       paintPreview();
-      SettingsUI.setStatus(modalError, null);
     } catch (err) {
-      SettingsUI.setStatus(modalError, { kind: 'error', text: err.message });
+      setIconStatus({ kind: 'error', text: err.message });
     }
   }
 
@@ -1540,8 +1678,7 @@
 
       const picture = files.find(file => /^image\//.test(file.type || ''));
       if (!picture) {
-        SettingsUI.setStatus(modalError,
-          { kind: 'error', text: 'That is not a picture.' });
+        setIconStatus({ kind: 'error', text: 'That is not a picture.' });
         return;
       }
 
@@ -1594,7 +1731,7 @@
   btnBgClear.addEventListener('click', () => {
     setPreviewBg('');
     mountBgWell('');
-    armPipette(false);
+    armPipette(null);
   });
 
   // -------------------------------------------------- the icon colour well
@@ -1680,6 +1817,48 @@
     mountPadRange(null);
   });
 
+  // ----------------------------------------------------- the rounding slider
+
+  /**
+   * Taking the corners off this tile's icon.
+   *
+   * A share of the icon's short side rather than a number of pixels, the same
+   * reasoning as the padding above: the tile keeps its proportions as Tile size
+   * changes. At 50% a square logo is a circle, which is what a favicon drawn as
+   * a square badge by a site that never expected one usually wants; a wordmark
+   * at 50% is a lozenge, because it is the short side either way.
+   *
+   * There is no setting behind this one, so nothing to fall back to and no
+   * reason for the slider to have to say "no answer": 0 is the picture as its
+   * designer drew it. The arrow beside it is the one press back to that, and is
+   * only there while there is something to go back from.
+   */
+  let roundRange = null;
+
+  function mountRoundRange(value) {
+    if (roundRange) roundRange.remove();
+
+    const built = SettingsUI.rangeControl(
+      { key: 'tileRound', label: 'Icon rounding', min: 0, max: 50, step: 5, unit: '%' },
+      value,
+      n => { setPreviewRound(n); return n; }
+    );
+
+    roundRange = built.control;
+    tileRoundRow.prepend(roundRange);
+  }
+
+  function setPreviewRound(round) {
+    previewRound = round;
+    applyIconRound(tilePreview, round);
+    btnRoundClear.hidden = round === 0;
+  }
+
+  btnRoundClear.addEventListener('click', () => {
+    setPreviewRound(0);
+    mountRoundRange(0);
+  });
+
   // ------------------------------------------------------------ the pipette
 
   /**
@@ -1695,7 +1874,19 @@
    * has been scaled - no arithmetic about letterboxing.
    */
   const sampler = { canvas: null, ctx: null, ready: false };
-  let pipetteOn = false;
+
+  /**
+   * Which colour the next click on the icon fills in - 'bg', 'icon', or null
+   * for a pipette that is not armed.
+   *
+   * One state for both buttons rather than one each: the pointer can only be
+   * pointing at one thing, and arming either has to disarm the other or a
+   * click would have two answers.
+   */
+  let pipetteFor = null;
+
+  /** The button that arms each of them, and shows which one is. */
+  const PIPETTES = { bg: btnPipette, icon: btnIconPipette };
 
   const iconEl = () => tilePreview.querySelector('.tile__icon');
   /** The stencil, where the icon has been recoloured - see paintIcon. */
@@ -1874,35 +2065,51 @@
     pipetteHint.hidden = !text;
   }
 
-  async function armPipette(on) {
-    if (on && !pipetteOn && !tintedIcon() && iconEl() && !(await prepareSampler())) {
+  async function armPipette(target) {
+    if (target && target !== pipetteFor
+        && !tintedIcon() && iconEl() && !(await prepareSampler())) {
       hint('That icon will not let itself be read — try one from a file.');
       return;
     }
 
-    pipetteOn = on;
-    tilePreview.classList.toggle('is-sampling', on);
-    btnPipette.classList.toggle('is-on', on);
-    btnPipette.setAttribute('aria-pressed', String(on));
-    hint(on ? 'Click the icon to take its colour.' : '');
+    pipetteFor = target;
+    tilePreview.classList.toggle('is-sampling', Boolean(target));
+
+    Object.keys(PIPETTES).forEach(key => {
+      const on = key === target;
+      PIPETTES[key].classList.toggle('is-on', on);
+      PIPETTES[key].setAttribute('aria-pressed', String(on));
+    });
+
+    hint(target ? 'Click the icon to take its colour.' : '');
   }
 
-  btnPipette.addEventListener('click', () => armPipette(!pipetteOn));
+  /** Pressing an armed pipette puts it away; pressing the other one takes it. */
+  const togglePipette = target => armPipette(pipetteFor === target ? null : target);
+
+  btnPipette.addEventListener('click', () => togglePipette('bg'));
+  btnIconPipette.addEventListener('click', () => togglePipette('icon'));
 
   tilePreview.addEventListener('pointermove', e => {
-    if (!pipetteOn) return;
+    if (!pipetteFor) return;
     const hex = sampleAt(e);
     hint(hex ? hex.toUpperCase() : 'Point at the icon.');
   });
 
   tilePreview.addEventListener('click', e => {
-    if (!pipetteOn) return;
+    if (!pipetteFor) return;
     const hex = sampleAt(e);
     if (!hex) return;
 
-    setPreviewBg(hex);
-    mountBgWell(hex);
-    armPipette(false);
+    if (pipetteFor === 'icon') {
+      setPreviewIconColor(hex);
+      mountIconWell(hex);
+    } else {
+      setPreviewBg(hex);
+      mountBgWell(hex);
+    }
+
+    armPipette(null);
   });
 
   function openTileModal(id) {
@@ -1922,14 +2129,19 @@
     previewBg = tile ? tile.bg : '';
     previewIconColor = tile ? tile.iconColor : '';
     previewPad = tile && typeof tile.pad === 'number' ? tile.pad : null;
+    previewRound = tile ? tile.round || 0 : 0;
 
     btnBgClear.hidden = !previewBg;
     btnIconColorClear.hidden = !previewIconColor;
     btnPadClear.hidden = previewPad === null;
+    btnRoundClear.hidden = previewRound === 0;
 
     mountBgWell(previewBg);
     mountIconWell(previewIconColor);
     mountPadRange(previewPad);
+    mountRoundRange(previewRound);
+    // Which also starts the icon lookup, so a tile being added has its picture
+    // on the way before anything else has been filled in.
     paintPreview();
 
     openDialog(modal, fieldUrl);
@@ -1951,7 +2163,13 @@
     const title = fieldTitle.value.trim();
     const groupId = fieldGroup.value || null;
     const icon = fieldIcon.value.trim();
-    const look = { icon, iconColor: previewIconColor, bg: previewBg, pad: previewPad };
+    const look = {
+      icon,
+      iconColor: previewIconColor,
+      bg: previewBg,
+      pad: previewPad,
+      round: previewRound
+    };
 
     if (editingId) {
       const tile = tiles.find(t => t.id === editingId);
@@ -1968,23 +2186,41 @@
   btnCancel.addEventListener('click', () => closeDialog(modal));
 
   /**
-   * Takes a tile away.
+   * Takes a tile away, asking first where the setting says to.
    *
-   * No confirmation, the same as the sheet's own Delete has always been: the
-   * tile is a bookmark, and putting it back is typing an address. The menu
-   * item that calls this is marked destructive so it does not get hit by
-   * accident on the way past.
+   * With Confirm before deleting a tile off - which is how it has always
+   * been - the tile simply goes: it is a bookmark, and putting one back is
+   * typing an address. The menu item that calls this is marked destructive so
+   * it does not get hit by accident on the way past. With it on, the alert
+   * names the tile: the menu was opened over one tile out of forty, and the
+   * name is how you know it was the right one.
+   *
+   * @returns {Promise<boolean>} whether the tile actually went
    */
   async function deleteTile(id) {
+    const tile = tiles.find(t => t.id === id);
+    if (!tile) return false;
+
+    if (settings.confirmDelete) {
+      const name = tile.title || defaultTitle(tile.url);
+      if (!(await askAlert('“' + name + '” will be taken off the page.'))) return false;
+    }
+
     tiles = tiles.filter(t => t.id !== id);
     await persistTiles();
     render();
+    return true;
   }
 
   btnDelete.addEventListener('click', async () => {
-    // Closed first: the sheet is showing the tile that is about to go.
-    closeDialog(modal);
-    await deleteTile(editingId);
+    const id = editingId;
+
+    // With nothing to ask, the sheet goes first: it is showing the tile that is
+    // about to go. With the alert on it stays up behind it instead, so
+    // cancelling puts you back in the sheet you were in rather than leaving it
+    // closed over a tile that is still there.
+    if (!settings.confirmDelete) closeDialog(modal);
+    if (await deleteTile(id)) closeDialog(modal);
   });
 
   // Opening a tile is what a visit is. The click is not intercepted - the link

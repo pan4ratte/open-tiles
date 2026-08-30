@@ -264,16 +264,17 @@ const calls = [];
 const fieldIcon = { value: '', tag: 'fieldIcon' };
 let status = null;
 
-const build = new Function('modal', 'fieldIcon', 'modalError', 'paintPreview',
-  'SettingsUI', 'Favicons',
+const build = new Function('modal', 'fieldIcon', 'setIconStatus', 'paintPreview',
+  'Favicons',
   block + '\n; return { clipboardFiles };');
 
 build(
   { addEventListener: (type, fn) => { if (type === 'paste') onPaste = fn; } },
   fieldIcon,
-  {},
+  // The sheet's icon report, which lives under the tile preview rather than at
+  // the foot of the sheet - see setIconStatus in newtab.js.
+  next => { status = next; },
   () => calls.push({ call: 'paintPreview' }),
-  { setStatus: (el, next) => { status = next; } },
   {
     looksLikeSvg: Favicons.looksLikeSvg,
     fromFile: file => { calls.push({ call: 'fromFile', file }); return 'data:image/png;base64,AA'; },
