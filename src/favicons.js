@@ -576,6 +576,36 @@ const Favicons = (() => {
     return canvas.toDataURL('image/png');
   }
 
+  /**
+   * A tile icon named by web address, downloaded so the tile can keep it.
+   *
+   * An address on a tile is a promise somebody else has to go on keeping: it is
+   * fetched again on every new tab, and the day the file moves the tile loses
+   * its picture with nothing to say why. Fetched once and stored inline it is
+   * the tile's own - drawn the instant the page is, and still there when the
+   * link stops working.
+   *
+   * It goes through exactly the scaling a chosen file does, so an address and a
+   * file end up as the same kind of thing on the same kind of record.
+   *
+   * Reading someone else's bytes needs their consent, which not every host
+   * gives. Refused, this answers null rather than throwing: the address still
+   * draws perfectly well as an <img>, which is what the tile has always done
+   * with one, and the caller is left to say so.
+   *
+   * @returns {Promise<?string>} a data: URI, or null where it cannot be kept
+   */
+  async function fromUrl(address) {
+    if (!/^https?:\/\//i.test(String(address == null ? '' : address).trim())) return null;
+
+    try {
+      const blob = await fetchBlob(address, false);
+      return blob ? await fromFile(blob) : null;
+    } catch {
+      return null;
+    }
+  }
+
   // --------------------------------------------------------- pasted SVG code
 
   const SVG_NS = 'http://www.w3.org/2000/svg';
@@ -698,6 +728,7 @@ const Favicons = (() => {
   return {
     resolve,
     fromFile,
+    fromUrl,
     fromSvg,
     looksLikeSvg,
     clearCache: () => Store.icons.clear(),

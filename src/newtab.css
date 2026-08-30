@@ -981,12 +981,27 @@ body.gb-bar .chip { border-radius: var(--r-control); }
    thumb on, not to a window on a desk. Only opacity and transform are touched,
    so neither half is laid out twice. */
 
-.grid.is-leaving,
+/* The grid carries the class; the tiles inside it carry the animation.
+
+   A container that fades is a backdrop root: everything painted inside it can
+   only sample what is inside it, so for as long as the fade lasts a tile's
+   frosted material has nothing behind it to blur and comes out flat - then
+   snaps to frosted the moment the animation ends. That is the quarter of a
+   second of "the background effects arrive late" on every group change.
+
+   Moved onto the tiles it goes away: an element's own opacity is applied after
+   its own backdrop-filter, so each tile blurs the page behind it in every
+   frame and then fades as a whole. Visually it is the same move - they all set
+   off together, travel the same distance and arrive together.
+
+   The empty line keeps the animation itself: it has no children to hand it to,
+   and no material to lose. */
+.grid.is-leaving > .tile,
 .empty.is-leaving {
   animation: group-leave var(--t-group-out) var(--ease) both;
 }
 
-.grid.is-entering,
+.grid.is-entering > .tile,
 .empty.is-entering {
   animation: group-enter var(--t-group-in) var(--ease-out) both;
 }
@@ -1004,7 +1019,7 @@ body.gb-bar .chip { border-radius: var(--r-control); }
 /* The end of the block. The gesture has nowhere left to go, so the content
    gives a little in the direction it was pushed and comes back - the rubber
    band that says "that is the last one" rather than nothing happening at all. */
-.grid.is-nudged,
+.grid.is-nudged > .tile,
 .empty.is-nudged {
   animation: group-nudge var(--t-base) var(--ease-out);
 }

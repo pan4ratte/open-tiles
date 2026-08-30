@@ -17,6 +17,7 @@
   const fieldUrl = document.getElementById('fieldUrl');
   const fieldTitle = document.getElementById('fieldTitle');
   const btnCancel = document.getElementById('btnCancel');
+  const btnSave = document.getElementById('btnSave');
   const btnDelete = document.getElementById('btnDelete');
   const fieldGroup = document.getElementById('fieldGroup');
   const fieldIcon = document.getElementById('fieldIcon');
@@ -488,8 +489,20 @@
    *  is drawn in its place. */
   const GROUP_OUT_MS = 110;
 
+  /** Mirrors --t-group-in: how long the arriving one takes to settle. */
+  const GROUP_IN_MS = 260;
+
   /** set while the grid is on its way out, holding the redraw that follows */
   let switchTimer;
+
+  /** Mirrors --t-base, which is what group-nudge runs for. */
+  const GROUP_NUDGE_MS = 220;
+
+  /** set while the arriving grid is still moving, holding its tidy-up */
+  let settleTimer;
+
+  /** the same, for the give at either end of the block */
+  let nudgeTimer;
 
   /**
    * Puts the page at the top of the group just arrived in.
@@ -557,18 +570,38 @@
 
     clearTimeout(switchTimer);
     switchTimer = setTimeout(() => {
+      // Every class off before the new tiles are made. The animations are on
+      // the tiles now rather than on the grid, so a class left on the grid
+      // would be picked up by whatever is appended into it - a tile arriving
+      // mid-render already playing the animation the last lot left with.
+      // The stylesheet puts .is-nudged last, so that a nudge can play over a
+      // settled .is-entering; that order also means a nudge left on from a
+      // moment ago would sit on top of this one.
+      //
+      // Before the measurement below rather than after it, and it makes no
+      // difference which: all three animate transform and opacity, and neither
+      // moves anything on the page.
+      stage.forEach(el => {
+        el.classList.remove('is-leaving');
+        el.classList.remove('is-nudged');
+        el.classList.remove('is-entering');
+      });
+
       const from = groupBarAt();
       render();
       startOfGroup();
       glideGroupBar(from);
-      stage.forEach(el => {
-        el.classList.remove('is-leaving');
-        // The stylesheet puts .is-nudged last, so that a nudge can play over a
-        // settled .is-entering. That order also means a nudge left on from a
-        // moment ago would sit on top of this one, so it goes first.
-        el.classList.remove('is-nudged');
-        replay(el, 'is-entering');
-      });
+
+      stage.forEach(el => replay(el, 'is-entering'));
+
+      // And off again once it has played. The animation fills forwards, so
+      // left on it would go on dictating each tile's transform - and a tile
+      // whose transform is being animated no longer lifts under the pointer.
+      // Finished, it says nothing the base style does not.
+      clearTimeout(settleTimer);
+      settleTimer = setTimeout(() => {
+        stage.forEach(el => el.classList.remove('is-entering'));
+      }, GROUP_IN_MS);
     }, GROUP_OUT_MS);
   }
 
@@ -593,6 +626,15 @@
     if (!animatesGroups()) return;
     document.documentElement.style.setProperty('--group-dir', step < 0 ? '-1' : '1');
     stage.forEach(el => replay(el, 'is-nudged'));
+
+    // And off again once it has played. The animation is on the tiles now, so
+    // a class left on the grid is one that every tile built into it afterwards
+    // picks up - and the grid is rebuilt for reasons that have nothing to do
+    // with groups, like a visit being counted.
+    clearTimeout(nudgeTimer);
+    nudgeTimer = setTimeout(() => {
+      stage.forEach(el => el.classList.remove('is-nudged'));
+    }, GROUP_NUDGE_MS);
   }
 
   // --------------------------------------------- changing group by gesture
@@ -975,6 +1017,71 @@
   const cssUrl = url => 'url(' + JSON.stringify(url) + ')';
 
   /**
+   * The picture each tile is showing, held on to across a redraw.
+   *
+   * A group change rebuilds the whole grid, and a rebuilt tile used to start
+   * again from its letter: a fresh <img> is hidden until it has loaded, and
+   * even a picture the browser already holds is not handed back inside the
+   * frame that asked for it. So every group change blinked every icon. What is
+   * kept here is the element itself - already loaded, and moved straight into
+   * the tile being built - so the picture never leaves the screen.
+   *
+   * Keyed on what decides the picture rather than on the picture: the address
+   * the lookup runs against, or the tile's own icon where it has one; the
+   * colour it is drawn in, which is what makes it a stencil rather than a
+   * picture; and whether deep lookup is on. Change any of those and the key no
+   * longer matches, so the icon is fetched again rather than the old one being
+   * shown for a site that no longer has anything to do with it.
+   *
+   * Only what is on screen, so nothing here survives the page. The picture
+   * itself is kept in storage - see favicons.js.
+   */
+  const shownIcons = new Map();
+
+  const iconKey = tile => [
+    tile.icon || tile.url,
+    tile.iconColor,
+    settings.deepIcons ? 'deep' : 'basic'
+  ].join('\n');
+
+  /** The element this tile is already showing, where it is still the right
+   *  one for it; null where there is nothing to reuse. */
+  function keptIcon(tile) {
+    const held = shownIcons.get(tile.id);
+    return held && held.key === iconKey(tile) ? held.node : null;
+  }
+
+  const originOf = url => {
+    try {
+      return new URL(url).origin;
+    } catch {
+      return null;
+    }
+  };
+
+  /**
+   * Forgets a tile's picture, both where it is held.
+   *
+   * Called when a tile is pointed somewhere else, given a picture of its own,
+   * or deleted - all three make what is held about it wrong rather than stale.
+   * The element goes at once. The site's entry in the lookup cache goes too,
+   * but only when no other tile still points at that site: the cache is keyed
+   * by origin and shared, and two tiles on the same site should not cost each
+   * other their icon.
+   *
+   * @param {{id:string,url:string}} was the tile as it was before the change
+   */
+  async function forgetTileIcon(was) {
+    shownIcons.delete(was.id);
+
+    const origin = originOf(was.url);
+    if (!origin) return;
+    if (tiles.some(other => other.id !== was.id && originOf(other.url) === origin)) return;
+
+    await Store.icons.drop(origin);
+  }
+
+  /**
    * Reveals a loaded icon and retires the letter that was standing in for it.
    *
    * The picture's own proportions go on with it. The box an icon is drawn in is
@@ -1014,7 +1121,7 @@
    * joins the page: a mask that fails leaves an empty box, and the letter
    * underneath is a better answer than that.
    */
-  function paintIcon(el, url, color) {
+  function paintIcon(el, url, color, keep) {
     const icon = document.createElement(color ? 'span' : 'img');
     icon.className = color ? 'tile__icon tile__icon--tint' : 'tile__icon';
     icon.hidden = true;
@@ -1028,8 +1135,17 @@
 
     const probe = color ? new Image() : icon;
     probe.referrerPolicy = 'no-referrer';
-    probe.addEventListener('load', () => iconArrived(el, icon, probe));
-    probe.addEventListener('error', () => icon.remove());
+    probe.addEventListener('load', () => {
+      iconArrived(el, icon, probe);
+      // Kept only once it has actually arrived: a redraw that moved a picture
+      // which never loaded would put an invisible box on the tile, with no
+      // letter underneath it to stand in.
+      if (keep) shownIcons.set(keep.id, { key: iconKey(keep), node: icon });
+    });
+    probe.addEventListener('error', () => {
+      icon.remove();
+      if (keep) shownIcons.delete(keep.id);
+    });
     probe.src = url;
 
     el.prepend(icon);
@@ -1045,7 +1161,7 @@
   async function attachIcon(el, tile, token) {
     const found = await Favicons.resolve(tile.url, { deep: settings.deepIcons });
     if (!found || token !== renderToken || !el.isConnected) return;
-    paintIcon(el, found.url, tile.iconColor);
+    paintIcon(el, found.url, tile.iconColor, tile);
   }
 
   function buildTile(tile, token) {
@@ -1070,7 +1186,11 @@
     text.className = 'tile__label';
     text.textContent = label;
 
-    el.append(buildFallback(label, tile.url), text);
+    // The picture this tile is already showing, where it is still the right
+    // one - moved across rather than made again, which is what keeps a group
+    // change from blinking every icon back to its letter.
+    const kept = keptIcon(tile);
+    el.append(kept || buildFallback(label, tile.url), text);
 
     if (settings.showVisits && tile.visits > 0) {
       const badge = document.createElement('span');
@@ -1087,8 +1207,10 @@
     // A tile that names its own picture uses it and asks the network nothing;
     // that is the point of setting one. It goes on now rather than later,
     // because there is nothing to wait for.
-    if (tile.icon) paintIcon(el, tile.icon, tile.iconColor);
-    else attachIcon(el, tile, token);
+    if (!kept) {
+      if (tile.icon) paintIcon(el, tile.icon, tile.iconColor, tile);
+      else attachIcon(el, tile, token);
+    }
 
     return el;
   }
@@ -2114,6 +2236,7 @@
 
   function openTileModal(id) {
     editingId = id;
+    iconKeepRefused = '';
     const tile = id ? tiles.find(t => t.id === id) : null;
 
     modalTitle.textContent = tile ? 'Edit tile' : 'Add tile';
@@ -2149,6 +2272,57 @@
     sizePreview();
   }
 
+  /**
+   * The address whose picture has already been asked for and refused.
+   *
+   * Kept so the second press of Save goes ahead with the address itself rather
+   * than asking the same host the same question again - which would leave the
+   * sheet with no way out but Cancel.
+   */
+  let iconKeepRefused = '';
+
+  /**
+   * A tile icon named by web address, turned into one the tile owns.
+   *
+   * Downloaded and stored inline, so the tile is not at the mercy of a link
+   * somebody else has to keep working, and is drawn the instant the page is.
+   * Where the host will not let its bytes be read there is nothing to store:
+   * the sheet says so and stays open, and pressing Save again keeps the
+   * address, which is what a tile has always done with one.
+   *
+   * @returns {Promise<?string>} what to store, or null to stay in the sheet
+   */
+  async function iconToKeep(icon) {
+    if (!/^https?:/i.test(icon) || icon === iconKeepRefused) return icon;
+
+    btnSave.disabled = true;
+    setIconStatus({ kind: 'loading', text: 'Fetching that picture, so the tile keeps it…' });
+
+    let kept = null;
+    try {
+      kept = await Favicons.fromUrl(icon);
+    } catch {
+      // Treated as a refusal - see below.
+    }
+    btnSave.disabled = false;
+
+    if (kept) {
+      // Written back into the field, so what the sheet shows is what is about
+      // to be stored - the same as choosing a file or pasting a picture.
+      fieldIcon.value = kept;
+      return kept;
+    }
+
+    iconKeepRefused = icon;
+    setIconStatus({
+      kind: 'error',
+      text: 'That address would not let its picture be downloaded, so the tile '
+          + 'cannot keep a copy. Save again to use the address itself — the '
+          + 'tile will fetch it on every new tab.'
+    });
+    return null;
+  }
+
   form.addEventListener('submit', async e => {
     e.preventDefault();
     const url = normalizeUrl(fieldUrl.value);
@@ -2160,9 +2334,11 @@
       return;
     }
 
+    const icon = await iconToKeep(fieldIcon.value.trim());
+    if (icon === null) return;
+
     const title = fieldTitle.value.trim();
     const groupId = fieldGroup.value || null;
-    const icon = fieldIcon.value.trim();
     const look = {
       icon,
       iconColor: previewIconColor,
@@ -2173,7 +2349,21 @@
 
     if (editingId) {
       const tile = tiles.find(t => t.id === editingId);
-      if (tile) Object.assign(tile, { url, title, groupId }, look);
+      if (tile) {
+        // What is held about this tile's picture belongs to the address it had
+        // and the picture it was given. Pointed somewhere else, or handed a
+        // different picture, it must not go on showing the old one - and the
+        // old site's entry in the lookup cache is dead weight the moment
+        // nothing points at it any more.
+        // The colour is deliberately not in this: it decides how the picture
+        // is drawn, not which picture it is, and the key kept beside the
+        // element already accounts for it.
+        const was = { id: tile.id, url: tile.url };
+        const changed = tile.url !== url || tile.icon !== icon;
+
+        Object.assign(tile, { url, title, groupId }, look);
+        if (changed) await forgetTileIcon(was);
+      }
     } else {
       tiles.push({ id: crypto.randomUUID(), url, title, groupId, ...look, visits: 0 });
     }
@@ -2207,6 +2397,9 @@
     }
 
     tiles = tiles.filter(t => t.id !== id);
+    // Nothing points at it any more, so nothing kept about its picture is
+    // worth the room - in memory or in the lookup cache.
+    await forgetTileIcon(tile);
     await persistTiles();
     render();
     return true;
@@ -2683,20 +2876,35 @@
       const swapped = !previous || previous.src !== background.src;
       if (swapped) await partWith(previous);
 
-      const moved = swapped && record.effects ? applyEffects(record.effects) : false;
+      // A wallpaper arriving brings its own pair or it brings none; what it
+      // must not do is go on wearing the last one's. One picked off the strip
+      // remembers what it was last looked at with. Anything newly chosen - a
+      // file, an address, or an entry old enough to have been remembered
+      // before the pair was kept with it - starts at the defaults, which is
+      // the only honest answer to "what were this one's settings": it has
+      // never had any.
+      const remembered = swapped && record.effects ? record.effects : null;
+      const moved = swapped ? applyEffects(remembered) : false;
 
       // Read after the restore, so the entry is stamped with what is actually
       // in force - the pair just put back, or the pair that was already there.
       recentBackgrounds = await remember(background, currentEffects());
 
+      // What the address did in the end: kept, or left as an address because
+      // the host would not give its bytes up - see Backgrounds.fromUrl.
+      const byAddress = payload.action === 'url' && !record.stored;
+
       const status = {
         kind: 'ok',
-        text: moved
-          ? 'Background set, with the Blur and Dim it was last seen with.'
-          : settings.bgDim >= 80
-            ? 'Set — turn Dim down to see more of it.'
-            : payload.action === 'url'
-              ? 'Background set. It is fetched from that address on every new tab.'
+        text: byAddress
+          ? 'Background set. That address would not let its picture be '
+            + 'downloaded, so it is fetched again on every new tab.'
+          : moved
+            ? (remembered
+                ? 'Background set, with the Blur and Dim it was last seen with.'
+                : 'Background set, with Blur and Dim back to their defaults.')
+            : settings.bgDim >= 80
+              ? 'Set — turn Dim down to see more of it.'
               : 'Background set.'
       };
 

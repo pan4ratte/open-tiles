@@ -531,6 +531,22 @@ const Store = (() => {
       async get(id) {
         return (await all())[id];
       },
+      /**
+       * Drops one entry.
+       *
+       * A cache normally has no need for this - it evicts by age, and a wrong
+       * answer is corrected by putting the right one over it. This is for the
+       * case where the question itself has gone: a tile pointed at another
+       * site, or deleted, leaves an entry nothing will ever ask for again.
+       */
+      async drop(id) {
+        const cache = await all();
+        if (!(id in cache)) return false;
+
+        delete cache[id];
+        scheduleWrite(cache);
+        return true;
+      },
       async put(id, entry) {
         const cache = await all();
         cache[id] = { ...entry, savedAt: Date.now() };

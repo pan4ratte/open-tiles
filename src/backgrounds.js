@@ -233,18 +233,60 @@ const Backgrounds = (() => {
     }
   }
 
+  /** Long enough for a wallpaper on a slow line, short enough that a host
+   *  which has simply stopped answering does not hold the sheet open. */
+  const DOWNLOAD_TIMEOUT = 20000;
+
   /**
-   * A background named by web address rather than stored.
+   * The bytes behind an address, encoded the way a chosen file would have been,
+   * or null where they cannot be had.
    *
-   * Nothing is downloaded into storage - only the address is kept, and the
-   * browser fetches it on every new tab. That is the trade: no size limit and
-   * no re-encoding, against a page that needs the network to look right and an
-   * address that can stop working without warning. For a video it is also the
-   * only way to have one longer than the storage ceiling allows.
+   * Never throws. Every way this can fail - a host that will not let its bytes
+   * be read, a file past the ceiling a chosen one would have been refused at, a
+   * line that gave out halfway - has the same answer: keep the address instead,
+   * which is what a background named by address has always been.
+   */
+  async function download(address, type) {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), DOWNLOAD_TIMEOUT);
+    try {
+      const res = await fetch(address, {
+        credentials: 'omit',
+        redirect: 'follow',
+        referrerPolicy: 'no-referrer',
+        signal: controller.signal
+      });
+      if (!res.ok) return null;
+
+      const blob = await res.blob();
+      if (!blob.size) return null;
+
+      return type === 'video' ? await encodeVideo(blob) : await encodeImage(blob);
+    } catch {
+      return null;
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+
+  /**
+   * A background named by web address.
    *
    * It is loaded once before being accepted, so a typo is caught here rather
    * than becoming a blank background nobody can explain - and what loads is
    * what says which of the two it is.
+   *
+   * Then it is downloaded and stored, exactly as a chosen file would have been.
+   * Only the address used to be kept, and the browser fetched it on every new
+   * tab: a page that needed the network to look right, and a wallpaper that
+   * disappeared the day somebody else moved the file. Stored, it is the page's
+   * own from then on.
+   *
+   * What cannot be stored still works the old way. A host that will not hand
+   * its bytes over, and a file past the ceiling a chosen one would have been
+   * refused at - a long video, most often - fall back to the address, and
+   * `stored` says which of the two happened so the caller can be honest
+   * about it.
    */
   async function fromUrl(raw) {
     const address = String(raw == null ? '' : raw).trim();
@@ -261,7 +303,9 @@ const Backgrounds = (() => {
       // Loaded, so it is usable; only the caption is the poorer for it.
     }
 
-    return { src: address, name: name.slice(0, 80), type };
+    const src = (await download(address, type)) || address;
+
+    return { src, name: name.slice(0, 80), type, stored: src !== address };
   }
 
   // -------------------------------------------------------------- painting
