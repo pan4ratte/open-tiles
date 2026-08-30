@@ -242,6 +242,23 @@ const SettingsUI = (() => {
   ];
 
   /**
+   * The row under them: five whites and five blacks, lightest to darkest.
+   *
+   * A colour picked here is nearly always a surface rather than an accent - a
+   * tile to stand a logo on, a header line over a photograph - and a surface
+   * wants a grey. Reaching one through the square meant dragging into a corner
+   * and hoping, because the last few percent of saturation are where a grey
+   * stops being one. These are Apple's own scale: systemGray6 up to white in
+   * the light theme, and the dark theme's back down to black.
+   */
+  const NEUTRALS = [
+    ['#ffffff', 'White'], ['#f2f2f7', 'Off white'], ['#e5e5ea', 'Pale grey'],
+    ['#d1d1d6', 'Light grey'], ['#c7c7cc', 'Silver'],
+    ['#48484a', 'Slate'], ['#3a3a3c', 'Charcoal'], ['#2c2c2e', 'Ink'],
+    ['#1c1c1e', 'Near black'], ['#000000', 'Black']
+  ];
+
+  /**
    * Drags a knob around a box: a pointer down anywhere in it jumps the knob
    * there and keeps following until the button is let go, which is how every
    * macOS slider and colour area behaves. The handler is given the position as
@@ -314,21 +331,33 @@ const SettingsUI = (() => {
     pop.setAttribute('role', 'dialog');
     pop.setAttribute('aria-label', field.label);
 
-    const presets = document.createElement('div');
-    presets.className = 'picker__presets';
+    /** One row of swatches. Both rows behave alike, so both are built here. */
+    function buildPresets(list, modifier) {
+      const row = document.createElement('div');
+      row.className = 'picker__presets' + (modifier ? ' ' + modifier : '');
 
-    const dots = ACCENTS.map(([hex, name]) => {
-      const dot = document.createElement('button');
-      dot.type = 'button';
-      dot.className = 'picker__preset';
-      dot.dataset.hex = hex;
-      dot.title = name;
-      dot.setAttribute('aria-label', name);
-      dot.style.setProperty('--preset', hex);
-      dot.addEventListener('click', () => set(hex));
-      presets.append(dot);
-      return dot;
-    });
+      const made = list.map(([hex, name]) => {
+        const dot = document.createElement('button');
+        dot.type = 'button';
+        dot.className = 'picker__preset';
+        dot.dataset.hex = hex;
+        dot.title = name;
+        dot.setAttribute('aria-label', name);
+        dot.style.setProperty('--preset', hex);
+        dot.addEventListener('click', () => set(hex));
+        row.append(dot);
+        return dot;
+      });
+
+      return { row, dots: made };
+    }
+
+    const accents = buildPresets(ACCENTS);
+    const neutrals = buildPresets(NEUTRALS, 'picker__presets--neutral');
+
+    // One list, so `paint` rings whichever of the twenty is in use without
+    // caring which row it came out of.
+    const dots = [...accents.dots, ...neutrals.dots];
 
     const area = document.createElement('div');
     area.className = 'picker__area';
@@ -364,7 +393,7 @@ const SettingsUI = (() => {
     hexInput.setAttribute('aria-label', 'Hex value');
 
     foot.append(hexInput);
-    pop.append(presets, area, hue, foot);
+    pop.append(accents.row, neutrals.row, area, hue, foot);
 
     // ------------------------------------------------------------- painting
 

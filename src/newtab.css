@@ -477,7 +477,7 @@ body {
 /* Over a picture the page chrome thins out and the type picks up a shadow, so
    both stay legible on a busy photograph. */
 body.has-bg .tile {
-  background: var(--tile-bg, var(--mat-over-picture));
+  background: var(--tile-bg, var(--tile-mat, var(--mat-over-picture)));
 }
 
 body.has-bg .toolbar .toolbtn:hover,
@@ -516,12 +516,18 @@ body.has-bg .empty { color: rgba(255, 255, 255, .62); }
 body.has-bg .tile__label { text-shadow: 0 1px 6px rgba(0, 0, 0, .3); }
 
 /* A tile standing on its own colour is not standing on the picture, and the
-   ink was already chosen to read against it. */
-body.has-bg .tile.has-own-bg .tile__label { text-shadow: none; }
+   ink was already chosen to read against it. A tile drawn in a set material
+   rather than the theme's is in exactly the same position - see the Background
+   setting under Tiles. */
+body.has-bg .tile.has-own-bg .tile__label,
+body.has-bg.has-tile-mat .tile__label { text-shadow: none; }
 
-/* How often a site has been opened from here, in the corner of its tile. Sized
-   off the tile the way the label is, so it stays in proportion at every size,
-   and floored so it never becomes unreadable on a small one. */
+/* How often a site has been opened from here, in the corner of its tile.
+
+   Set in the same type size as the site name under it - the two are the tile's
+   small print and reading one of them smaller than the other made the count
+   look like a footnote to a caption. --label-line carries its own floor, so a
+   badge on a very small tile stays readable the way the name does. */
 .tile__visits {
   position: absolute;
   top: var(--tile-inset);
@@ -531,12 +537,12 @@ body.has-bg .tile.has-own-bg .tile__label { text-shadow: none; }
   border-radius: 999px;
   /* The plate is the ink at its faintest, so the badge stays a badge on a
      coloured tile instead of a grey lozenge nobody chose. */
-  background: var(--tile-ink-plate, var(--fill-tertiary));
-  color: var(--tile-ink-dim, var(--label-secondary));
-  font-size: max(9px, calc(var(--tile-size) * .075));
+  background: var(--tile-ink-plate, var(--tile-mat-ink-plate, var(--fill-tertiary)));
+  color: var(--tile-ink-dim, var(--tile-mat-ink-dim, var(--label-secondary)));
+  font-size: var(--label-line);
   font-weight: 600;
   font-variant-numeric: tabular-nums;
-  line-height: 1.6;
+  line-height: 1.5;
   text-align: center;
   pointer-events: none;
 }
@@ -544,6 +550,14 @@ body.has-bg .tile.has-own-bg .tile__label { text-shadow: none; }
 body.has-bg .tile__visits {
   background: rgba(0, 0, 0, .35);
   color: #fff;
+}
+
+/* Unless the tiles were given a material of their own, which the picture is
+   not showing through - then the badge goes back to the ink worked out for
+   whatever the tile is actually drawn in. */
+body.has-bg.has-tile-mat .tile__visits {
+  background: var(--tile-ink-plate, var(--tile-mat-ink-plate));
+  color: var(--tile-ink-dim, var(--tile-mat-ink-dim));
 }
 
 
@@ -749,8 +763,13 @@ body.gb-hover.is-dragging .groupbar { opacity: 1; }
   font-weight: 500;
   white-space: nowrap;
   cursor: pointer;
+  /* Every state a chip takes during a drag is on this list: the fade as it is
+     picked up, and the ring and the lift it takes when a tile is over it. A
+     state that arrives without one is the one step of the gesture that snaps. */
   transition: background var(--t-fast) var(--ease),
               color var(--t-fast) var(--ease),
+              box-shadow var(--t-fast) var(--ease),
+              opacity var(--t-fast) var(--ease),
               transform var(--t-fast) var(--spring);
 }
 
@@ -781,15 +800,20 @@ body.gb-bar .chip { border-radius: var(--r-control); }
 }
 
 /* Groups are put in order by dragging their chips about. A chip on its way
-   somewhere fades, the way a tile being reordered does — the gap it leaves and
-   the space it opens are what show where it will land. */
-.chip.is-dragging { opacity: .4; }
+   somewhere fades and gives, exactly as a tile being reordered does — the gap
+   it leaves and the space it opens are what show where it will land. */
+.chip.is-dragging {
+  opacity: .4;
+  transform: scale(.94);
+}
 
-/* A tile is over this chip and will land in its group. */
+/* A tile is over this chip and will land in its group. It rises to meet it,
+   the way a drop target does on the Dock. */
 .chip.is-drop {
   background: var(--accent-wash);
   color: var(--accent-text);
   box-shadow: inset 0 0 0 1.5px var(--accent-text);
+  transform: scale(1.06);
 }
 
 
@@ -1074,7 +1098,7 @@ body.gb-bar .chip { border-radius: var(--r-control); }
      card, so a large tile is not a small tile with a tight corner. It follows
      the short side, so a wide tile does not end up a lozenge. */
   border-radius: clamp(10px, calc(var(--tile-short) * .18), 26px);
-  background: var(--tile-bg, var(--mat-thin));
+  background: var(--tile-bg, var(--tile-mat, var(--mat-thin)));
   -webkit-backdrop-filter: var(--mat-filter);
   backdrop-filter: var(--mat-filter);
   box-shadow: inset 0 0 0 .5px var(--stroke-inner), var(--shadow-control);
@@ -1085,11 +1109,12 @@ body.gb-bar .chip { border-radius: var(--r-control); }
   user-select: none;
   transition: transform var(--t-base) var(--spring),
               box-shadow var(--t-base) var(--ease),
-              background var(--t-base) var(--ease);
+              background var(--t-base) var(--ease),
+              opacity var(--t-fast) var(--ease);
 }
 
 .tile:hover {
-  background: var(--tile-bg, var(--mat-regular));
+  background: var(--tile-bg, var(--tile-mat, var(--mat-regular)));
   box-shadow: inset 0 0 0 .5px var(--stroke-inner), var(--shadow-raised);
   transform: translateY(-2px);
 }
@@ -1171,11 +1196,12 @@ body.gb-bar .chip { border-radius: var(--r-control); }
    does not have. Without the plate the letter carries the tile on its own, so
    it is set larger than a letter inside a badge would be.
 
-   The ink: --tile-ink on a tile with a background colour of its own, which was
-   already chosen to read against that colour; otherwise --mono-ink, the site's
-   own colour from the palette, which is an Apple system colour and so is light
-   in the dark theme and dark in the light one. --label is the floor, for a
-   monogram built before either was set. */
+   The ink: --tile-ink on a tile with a background colour of its own, then
+   --tile-mat-ink where every tile was given one material to stand in - both
+   were already chosen to read against what the tile is drawn in. Failing
+   those, --mono-ink: the site's own colour from the palette, which is an Apple
+   system colour and so is light in the dark theme and dark in the light one.
+   --label is the floor, for a monogram built before any of them was set. */
 .tile__fallback {
   display: grid;
   place-items: center;
@@ -1183,7 +1209,7 @@ body.gb-bar .chip { border-radius: var(--r-control); }
   font-size: calc(var(--logo-size) * .62);
   font-weight: 600;
   letter-spacing: -.02em;
-  color: var(--tile-ink, var(--mono-ink, var(--label)));
+  color: var(--tile-ink, var(--tile-mat-ink, var(--mono-ink, var(--label))));
 }
 
 /* The globe stands in for a monogram when a site's name starts with neither a
@@ -1203,7 +1229,7 @@ body.gb-bar .chip { border-radius: var(--r-control); }
      that colour - dimmed, the way --label-secondary is a dimmed --label. A
      grey chosen for the page material would be the one thing on the tile that
      had not been told what it is standing on. */
-  color: var(--tile-ink-dim, var(--label-secondary));
+  color: var(--tile-ink-dim, var(--tile-mat-ink-dim, var(--label-secondary)));
   text-align: center;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -1212,7 +1238,7 @@ body.gb-bar .chip { border-radius: var(--r-control); }
   transition: color var(--t-fast) var(--ease);
 }
 
-.tile:hover .tile__label { color: var(--tile-ink, var(--label)); }
+.tile:hover .tile__label { color: var(--tile-ink, var(--tile-mat-ink, var(--label))); }
 
 body.no-labels .tile__label { display: none; }
 body.no-labels .tile { --label-room: 0px; }
@@ -1233,7 +1259,7 @@ body.tile-round .tile {
 
 .grid.is-dragging .tile:hover {
   transform: none;
-  background: var(--tile-bg, var(--mat-thin));
+  background: var(--tile-bg, var(--tile-mat, var(--mat-thin)));
   box-shadow: inset 0 0 0 .5px var(--stroke-inner), var(--shadow-control);
 }
 
@@ -2027,11 +2053,23 @@ body.tile-round .tile {
   to   { opacity: 1; transform: none; }
 }
 
-/* The named accents, which is what all but a few people are after. */
+/* The named accents, which is what all but a few people are after, and under
+   them the neutrals - five whites and five blacks, off Apple's own grey scale.
+   Two rows rather than twenty in one: they are answers to different questions,
+   and a hue picked out of a run of greys is a hue picked by accident. */
 .picker__presets {
   display: grid;
   grid-template-columns: repeat(10, 1fr);
   gap: 5px;
+  margin-bottom: 5px;
+}
+
+/* The greys carry a stronger hairline: the .2 black that reads as an edge on a
+   saturated dot is nearly invisible under white, and a white dot on a light
+   picker with no edge is a hole in the row. */
+.picker__presets--neutral {
+  --preset-edge: rgba(128, 128, 130, .5);
+
   margin-bottom: 12px;
 }
 
@@ -2041,7 +2079,7 @@ body.tile-round .tile {
   border: 0;
   border-radius: var(--r-pill);
   background: var(--preset);
-  box-shadow: inset 0 0 0 .5px rgba(0, 0, 0, .2);
+  box-shadow: inset 0 0 0 .5px var(--preset-edge, rgba(0, 0, 0, .2));
   cursor: pointer;
   transition: transform var(--t-fast) var(--spring),
               box-shadow var(--t-fast) var(--ease);
@@ -2053,13 +2091,14 @@ body.tile-round .tile {
 /* The one in use is ringed in the window's own colour, not in its own - a ring
    of the same colour would vanish into the dot. */
 .picker__preset.is-on {
-  box-shadow: inset 0 0 0 .5px rgba(0, 0, 0, .2),
+  box-shadow: inset 0 0 0 .5px var(--preset-edge, rgba(0, 0, 0, .2)),
               0 0 0 1.5px var(--bg-window), 0 0 0 3px var(--label);
 }
 
 .picker__preset:focus-visible {
   outline: none;
-  box-shadow: inset 0 0 0 .5px rgba(0, 0, 0, .2), 0 0 0 3.5px var(--accent-ring);
+  box-shadow: inset 0 0 0 .5px var(--preset-edge, rgba(0, 0, 0, .2)),
+              0 0 0 3.5px var(--accent-ring);
 }
 
 /* Saturation left to right, brightness top to bottom, over the chosen hue. */

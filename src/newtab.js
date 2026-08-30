@@ -145,6 +145,7 @@
     root.style.setProperty('--tile-ratio', TILE_RATIOS[settings.tileShape] || 1);
     root.style.setProperty('--logo-pad', settings.logoPad / 100);
     document.body.classList.toggle('tile-round', settings.tileShape === 'circle');
+    applyTileMaterial(root);
     root.style.setProperty('--bg-blur', settings.bgBlur + 'px');
     root.style.setProperty('--bg-dim', settings.bgDim / 100);
 
@@ -189,6 +190,54 @@
 
     tick();
     scheduleTick();
+  }
+
+  /**
+   * What one theme's tiles actually come out as, written down as flat colour.
+   *
+   * A tile is a material: a translucent fill over whatever the page is showing
+   * through it. Handing the dark theme's fill to a light page would not give
+   * the dark theme's tile, it would give a mid grey - the fill is only half of
+   * the answer and the page behind it is the other half. So each of these is
+   * that theme's --mat-thin already composited over that theme's own desktop,
+   * which is the colour a reader asking for "the dark theme's" has in mind.
+   *
+   * Opaque, therefore, and deliberately: it is the same thing a tile given a
+   * colour in its own sheet has always been, and it holds whatever is behind
+   * it - a light page, a dark one, a photograph.
+   */
+  const TILE_MATERIALS = { dark: '#2f2f31', light: '#f2f2f4' };
+
+  /**
+   * The material every tile falls back to, and the ink that reads on it.
+   *
+   * Written as custom properties on the root rather than onto each tile,
+   * because it is the fallback rather than the answer: a tile with a colour of
+   * its own sets --tile-bg inline and wins the chain in the stylesheet without
+   * either side having to know about the other. `theme` writes nothing at all,
+   * which is what leaves the tiles as the frosted glass they have always been.
+   */
+  function applyTileMaterial(root) {
+    const hex = settings.tileBg === 'custom'
+      ? settings.tileBgColor
+      : TILE_MATERIALS[settings.tileBg];
+
+    // The class is for the two places over a picture where a tile standing in
+    // a material of its own is not standing on the photograph - the same
+    // exceptions has-own-bg already carries.
+    document.body.classList.toggle('has-tile-mat', Boolean(hex));
+
+    if (!hex) {
+      ['--tile-mat', '--tile-mat-ink', '--tile-mat-ink-dim', '--tile-mat-ink-plate']
+        .forEach(prop => root.style.removeProperty(prop));
+      return;
+    }
+
+    const { ink, dim, plate } = readableInk(hex);
+    root.style.setProperty('--tile-mat', hex);
+    root.style.setProperty('--tile-mat-ink', ink);
+    root.style.setProperty('--tile-mat-ink-dim', dim);
+    root.style.setProperty('--tile-mat-ink-plate', plate);
   }
 
   /** The three fields that name a family, and so need one downloading. */
@@ -856,11 +905,12 @@
     const before = e.clientX < rect.left + rect.width / 2;
 
     // Only ever moved among the other groups: "All" holds the front of the
-    // block and the + holds the back, and neither has a data-group-id.
+    // block and the + holds the back, and neither has a data-group-id. The
+    // chips slide past one another exactly as the tiles do.
     if (before && over.previousElementSibling !== dragChip) {
-      groupChips.insertBefore(dragChip, over);
+      slideMove(groupChips, () => groupChips.insertBefore(dragChip, over));
     } else if (!before && over.nextElementSibling !== dragChip) {
-      groupChips.insertBefore(dragChip, over.nextElementSibling);
+      slideMove(groupChips, () => groupChips.insertBefore(dragChip, over.nextElementSibling));
     }
   });
 
@@ -1320,6 +1370,103 @@
 
   // ---------------------------------------------------------------- drag & drop
 
+  /**
+   * Every step of a drag is meant to be watchable: the tile fades and shrinks
+   * as it is picked up, the ones it displaces slide aside, a chip it is held
+   * over lifts to meet it, and it settles when it is let go. The stylesheet
+   * carries the steps that are a class changing. The one it cannot carry is
+   * the sliding, because nothing about those tiles changes - they are simply
+   * somewhere else the moment insertBefore returns, and a transition has
+   * nothing to run from.
+   *
+   * So that one is run from the outside, the way a list reorder always is:
+   * measure, move, then put each element back where it was and let it travel
+   * forward. FLIP - first, last, invert, play.
+   */
+  const stillness = window.matchMedia('(prefers-reduced-motion: reduce)');
+
+  /** The slides in flight, so a second move can be measured against them. */
+  const sliding = new WeakMap();
+
+  /** The tile being carried is drawn smaller; the slide has to keep that. */
+  const DRAG_SCALE = ' scale(.94)';
+
+  /**
+   * Runs `mutate` - a move inside `container` - and slides everything it
+   * displaced from where it was to where it now is.
+   *
+   * A slide already running is cancelled between the two measurements rather
+   * than before the first: the element then reads at the place it is really
+   * going to, and the new slide starts from wherever the eye last saw it
+   * instead of from a position two moves out of date.
+   */
+  function slideMove(container, mutate) {
+    if (stillness.matches) return mutate();
+
+    const kids = [...container.children];
+    const before = kids.map(el => el.getBoundingClientRect());
+
+    kids.forEach(el => {
+      const run = sliding.get(el);
+      if (run) {
+        run.cancel();
+        sliding.delete(el);
+      }
+    });
+
+    mutate();
+
+    kids.forEach((el, at) => {
+      const now = el.getBoundingClientRect();
+      const dx = before[at].left - now.left;
+      const dy = before[at].top - now.top;
+      if (!dx && !dy) return;
+
+      // The scale is the stylesheet's, and an animation on transform replaces
+      // it outright - so the keyframes carry it, or the tile under the pointer
+      // would swell back to full size for as long as the slide lasted.
+      const held = el.classList.contains('is-dragging') ? DRAG_SCALE : '';
+      const run = el.animate([
+        { transform: 'translate(' + dx + 'px, ' + dy + 'px)' + held },
+        { transform: 'translate(0px, 0px)' + held }
+      ], { duration: 240, easing: 'cubic-bezier(.16, 1, .3, 1)' });
+
+      sliding.set(el, run);
+      run.addEventListener('finish', () => {
+        if (sliding.get(el) === run) sliding.delete(el);
+      });
+    });
+  }
+
+  /** Let go: the tile lands, gives a little under itself, and comes to rest. */
+  function settle(el) {
+    if (stillness.matches) return;
+    el.animate([
+      { transform: 'scale(.94)' },
+      { transform: 'scale(1.03)', offset: .5 },
+      { transform: 'scale(1)' }
+    ], { duration: 300, easing: 'cubic-bezier(.16, 1, .3, 1)' });
+  }
+
+  /**
+   * A tile dropped on a chip belongs to another group now, so it is about to
+   * be redrawn out of this view. It sees itself out first - a redraw that
+   * simply loses a tile reads as the drag having gone wrong.
+   */
+  function leaveView(el) {
+    if (stillness.matches || !el.isConnected) return Promise.resolve();
+    return el.animate([
+      { opacity: .4, transform: 'scale(.94)' },
+      { opacity: 0, transform: 'scale(.7)' }
+    ], {
+      duration: 200,
+      easing: 'cubic-bezier(.16, 1, .3, 1)',
+      // Held, or the tile would flash back at full size in the gap between the
+      // animation finishing and the redraw taking it away.
+      fill: 'forwards'
+    }).finished.catch(() => {});
+  }
+
   grid.addEventListener('dragstart', e => {
     const el = e.target.closest('.tile[data-id]');
     if (!el) return;
@@ -1342,8 +1489,12 @@
     if (!target || target === dragEl) return;
 
     if (target.id === 'addTile') {
-      // Dropping past the last tile parks the item at the end.
-      grid.insertBefore(dragEl, target);
+      // Dropping past the last tile parks the item at the end. Guarded, or
+      // every frame the pointer spends over the + would restart the slide of
+      // a move that has already happened.
+      if (dragEl.nextElementSibling !== target) {
+        slideMove(grid, () => grid.insertBefore(dragEl, target));
+      }
       return;
     }
 
@@ -1351,9 +1502,9 @@
     const before = e.clientX < rect.left + rect.width / 2;
 
     if (before && target.previousElementSibling !== dragEl) {
-      grid.insertBefore(dragEl, target);
+      slideMove(grid, () => grid.insertBefore(dragEl, target));
     } else if (!before && target.nextElementSibling !== dragEl) {
-      grid.insertBefore(dragEl, target.nextElementSibling);
+      slideMove(grid, () => grid.insertBefore(dragEl, target.nextElementSibling));
     }
   });
 
@@ -1363,19 +1514,26 @@
 
   grid.addEventListener('dragend', async () => {
     if (!dragEl) return;
-    dragEl.classList.remove('is-dragging');
+    const dropped = dragEl;
+    dropped.classList.remove('is-dragging');
     grid.classList.remove('is-dragging');
     document.body.classList.remove('is-dragging');
     dragEl = null;
 
     syncOrderFromDom();
-    await persistTiles();
 
-    // The drop landed on a group chip, so what is on screen has changed.
+    // The drop landed on a group chip, so what is on screen has changed. The
+    // tile leaves while the write goes on underneath it, so the redraw is the
+    // last thing that happens rather than a cut in the middle of the gesture.
     if (movedGroup) {
       movedGroup = false;
+      await Promise.all([persistTiles(), leaveView(dropped)]);
       render();
+      return;
     }
+
+    settle(dropped);
+    await persistTiles();
   });
 
   // ---------------------------------------------------------------- dialogs

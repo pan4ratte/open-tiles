@@ -183,6 +183,33 @@ const Schema = (() => {
                   + 'A wide tile is a short one, so it has less room for a site name.'
             },
             {
+              key: 'tileBg',
+              label: 'Background',
+              type: 'choice',
+              default: 'theme',
+              options: [
+                { value: 'theme', label: 'Follow the theme' },
+                { value: 'dark', label: "Dark theme's" },
+                { value: 'light', label: "Light theme's" },
+                { value: 'custom', label: 'Custom colour' }
+              ],
+              note: 'What a tile is drawn in when it has not been given a colour '
+                  + 'of its own. Follow the theme is the frosted glass it has '
+                  + 'always been, light on a light page and dark on a dark one. '
+                  + 'The other three hold one look whatever the theme and '
+                  + 'whatever is behind them, and the site names take the ink '
+                  + 'that reads against it.'
+            },
+            {
+              key: 'tileBgColor',
+              label: 'Colour',
+              type: 'color',
+              default: '#2f2f31',
+              when: { tileBg: 'custom' },
+              note: 'A tile given a colour in its own sheet keeps that one; this '
+                  + 'is only what the rest of them fall back to.'
+            },
+            {
               key: 'logoPad',
               label: 'Logo padding',
               type: 'range',
