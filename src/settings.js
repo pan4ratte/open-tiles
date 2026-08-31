@@ -1210,7 +1210,7 @@ const SettingsUI = (() => {
     exportBtn.className = 'btn btn--sm';
     exportBtn.append(
       Icons.create('download', { size: 15 }),
-      document.createTextNode('Export…')
+      document.createTextNode(t('btn_export'))
     );
 
     const importBtn = document.createElement('button');
@@ -1218,7 +1218,7 @@ const SettingsUI = (() => {
     importBtn.className = 'btn btn--sm';
     importBtn.append(
       Icons.create('upload', { size: 15 }),
-      document.createTextNode('Import…')
+      document.createTextNode(t('btn_import'))
     );
 
     exportBtn.addEventListener('click', () => commit({ action: 'export' }));
@@ -1335,10 +1335,6 @@ const SettingsUI = (() => {
     hint.textContent = t('font_previewsOffline');
     hint.hidden = true;
 
-    const preview = document.createElement('p');
-    preview.className = 'preview';
-    preview.textContent = t('font_pangram');
-
     /** The cards, in the order they sit in the grid. */
     const cards = [];
 
@@ -1408,8 +1404,6 @@ const SettingsUI = (() => {
       const visible = cards.filter(card => !card.hidden);
       const roving = visible.find(card => card.dataset.family === current) || visible[0];
       cards.forEach(card => { card.tabIndex = card === roving ? 0 : -1; });
-
-      preview.style.fontFamily = Fonts.stackFor(current || inherited());
     }
 
     async function choose(name) {
@@ -1573,7 +1567,7 @@ const SettingsUI = (() => {
       })
     );
 
-    wrap.append(filters, grid, empty, hint, other, preview);
+    wrap.append(filters, grid, empty, hint, other);
 
     // No `focusId`: the grid is the control, and a <label for> only reaches
     // one element - which would have to be the hidden "other family" field.

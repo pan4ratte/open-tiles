@@ -301,6 +301,13 @@
   "btn_use": {
     "message": "Use"
   },
+  "btn_export": {
+    "message": "Export…",
+    "description": "The pair on the Backup row: one writes the file, the other reads one back."
+  },
+  "btn_import": {
+    "message": "Import…"
+  },
   "busy_font": {
     "message": "Loading font…",
     "description": "What a control says while it is busy, in place of its status line."
@@ -994,10 +1001,6 @@
   },
   "font_previewsOffline": {
     "message": "The specimens need a connection the first time. Every family still works; they are just all drawn in Inter for now."
-  },
-  "font_pangram": {
-    "message": "The quick brown fox jumps over the lazy dog",
-    "description": "The line under the grid, drawn in whichever family is chosen. Any sentence that shows the alphabet off will do - it need not be this one."
   },
   "font_other": {
     "message": "Other family…"

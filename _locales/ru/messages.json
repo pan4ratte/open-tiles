@@ -301,6 +301,13 @@
   "btn_use": {
     "message": "Применить"
   },
+  "btn_export": {
+    "message": "Экспорт…",
+    "description": "The pair on the Backup row: one writes the file, the other reads one back."
+  },
+  "btn_import": {
+    "message": "Импорт…"
+  },
   "busy_font": {
     "message": "Загружаем шрифт…",
     "description": "What a control says while it is busy, in place of its status line."
@@ -965,13 +972,13 @@
     "message": "С засечками"
   },
   "font_styleMono": {
-    "message": "Моноширинные"
+    "message": "Моно"
   },
   "font_styleDisplay": {
     "message": "Декоративные"
   },
   "font_scriptLatinExt": {
-    "message": "Расш. латиница"
+    "message": "Латиница"
   },
   "font_scriptLatinExtTitle": {
     "message": "Расширенная латиница — диакритика и остальная Европа"
@@ -980,10 +987,10 @@
     "message": "Кириллица"
   },
   "font_scriptGreek": {
-    "message": "Греческая"
+    "message": "Греческий"
   },
   "font_scriptVietnamese": {
-    "message": "Вьетнамская"
+    "message": "Вьетнамский"
   },
   "font_system": {
     "message": "Системный шрифт",
@@ -994,10 +1001,6 @@
   },
   "font_previewsOffline": {
     "message": "Для образцов при первом показе нужно подключение к сети. Все шрифты работают — просто сейчас они все нарисованы шрифтом Inter."
-  },
-  "font_pangram": {
-    "message": "Съешь же ещё этих мягких французских булок, да выпей чаю",
-    "description": "The line under the grid, drawn in whichever family is chosen. Any sentence that shows the alphabet off will do - it need not be this one."
   },
   "font_other": {
     "message": "Другой шрифт…"

@@ -298,6 +298,19 @@ check('and the tiles are left out of it - they are content, not chrome',
   !body('.tile').includes('var(--rim)'),
   'putting glass on the content layer is the first thing Apple says not to do');
 
+/* Not a matter of taste, which is why it is guarded rather than left to read
+   as a stray line: fifty tiles asking the browser to blur the picture behind
+   them, over and over, is fifty blurs it redraws in pieces the size of the
+   screen rather than in whole tiles - and a tile with half of its blur redrawn
+   against the half that was kept has a straight edge across the middle of it.
+   The blur is made once instead, and painted. */
+const frosted = css.slice(css.indexOf('body.has-bg.has-frost .grid .tile {'));
+check('a tile over a picture paints its blur rather than filtering for it',
+  frosted.startsWith('body.has-bg.has-frost .grid .tile {')
+    && /backdrop-filter: none/.test(frosted.slice(0, frosted.indexOf('}')))
+    && /var\(--tile-frost/.test(frosted.slice(0, frosted.indexOf('}'))),
+  'hovering one tile used to leave seams across the tiles beside it');
+
 // ----------------------------------------------------- keyboard and focus
 
 check('a dialog going up makes every other layer inert',

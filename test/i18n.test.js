@@ -166,6 +166,23 @@ const attrs = [...html.matchAll(/\s(title|aria-label|placeholder)="([^"]*[A-Za-z
 check('no title, label or placeholder is written in the markup',
   attrs.length === 0, attrs.map(m => m[1] + '="' + m[2] + '"').join(', '));
 
+/* The other way a sentence reaches the screen untranslated, and the quieter
+   one: a module putting words on an element itself rather than asking for
+   them. It reads as ordinary code and stays English in every language - which
+   is how "Export…" and "Import…" sat on the Backup row through a whole
+   translation. Only the two ways text is set directly are looked at; a name
+   in an object literal is as likely to be a licence or a type family, which
+   are deliberately not translated. */
+const spelt = [];
+MODULES.forEach(file => {
+  if (file === 'i18n.js') return;
+  [...read(file).matchAll(
+    /(?:createTextNode\s*\(|textContent\s*=)\s*'([^'\\\n]*[A-Za-z]{3}[^'\\\n]*)'/g
+  )].forEach(m => spelt.push(m[1] + ' (' + file + ')'));
+});
+check('no module spells out a word of its own instead of asking for one',
+  spelt.length === 0, spelt.join(', '));
+
 // --------------------------------------------------------- the load order
 
 /* schema.js asks for every one of its labels as it is evaluated, so the table

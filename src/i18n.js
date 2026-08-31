@@ -188,6 +188,9 @@ const I18N = (() => {
     btn_delete: 'Delete',
     btn_close: 'Close',
     btn_use: 'Use',
+    // The pair on the Backup row: one writes the file, the other reads one back.
+    btn_export: 'Export…',
+    btn_import: 'Import…',
 
     // ------------------------------------------------------ settings: chrome
     // What a control says while it is busy, in place of its status line.
@@ -460,9 +463,6 @@ const I18N = (() => {
     font_noneMatch: 'No family in the list covers both of those.',
     font_previewsOffline: 'The specimens need a connection the first time. Every family '
       + 'still works; they are just all drawn in Inter for now.',
-    // The line under the grid, drawn in whichever family is chosen. Any
-    // sentence that shows the alphabet off will do - it need not be this one.
-    font_pangram: 'The quick brown fox jumps over the lazy dog',
     font_other: 'Other family…',
     font_otherPlaceholder: 'Any family on Google Fonts',
     font_otherLabel: 'Another font family',

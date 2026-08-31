@@ -254,8 +254,10 @@
   --r-pill: 999px;
 
   /* The padding a segmented control keeps around its segments, named because
-     both halves of the control read it. */
+     both halves of the control read it, and the height of a segment, named
+     because the radius of a trough that can fold is worked out from it. */
   --seg-pad: 2px;
+  --seg-h: 22px;
 
   /* -- type scale (macOS, set in Inter) --
      Apple's macOS text styles, and its tracking for each. Tracking does not run
@@ -675,7 +677,53 @@ body {
 /* Over a picture the page chrome thins out and the type picks up a shadow, so
    both stay legible on a busy photograph. */
 body.has-bg .tile {
-  background: var(--tile-bg, var(--tile-mat, var(--mat-over-picture)));
+  --tile-fill: var(--tile-bg, var(--tile-mat, var(--mat-over-picture)));
+}
+
+/* And the glass itself is painted rather than filtered.
+
+   `backdrop-filter` asks the browser to blur what is behind the tile as the
+   page runs, and a browser redraws a page in pieces the size of the screen
+   rather than in whole elements. A piece redrawn under a tile - because the
+   tile beside it lifted under the pointer, say - came back as a blur of what
+   was in that piece, while the rest of the tile kept the blur it already had.
+   The join between the two showed as a straight edge across a tile nothing
+   had happened to.
+
+   So backgrounds.js blurs the picture once, small, and each tile paints the
+   part of that copy which lines up with where the tile is standing: the crop
+   the picture behind is taking (--frost-w/h, --frost-x/y, worked out once per
+   window size) offset by the tile's own place in it (--tile-x/y, set as the
+   tiles are laid out). Three layers, top to bottom - the tile's own fill, the
+   dimming the page background carries, and the blurred picture under both.
+
+   It is the same glass. Nothing about it is worked out again while the page
+   runs, so there is nothing left for the compositor to get half right. */
+body.has-bg.has-frost .grid .tile {
+  background-image:
+    linear-gradient(var(--tile-fill), var(--tile-fill)),
+    linear-gradient(rgba(var(--veil), var(--bg-dim)), rgba(var(--veil), var(--bg-dim))),
+    var(--tile-frost, none);
+  background-repeat: no-repeat;
+  background-size: auto, auto, var(--frost-w) var(--frost-h);
+  background-position:
+    0 0,
+    0 0,
+    calc(var(--frost-x) - var(--tile-x, 0px)) calc(var(--frost-y) - var(--tile-y, 0px));
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+
+/* The + at the end of the grid is a dotted outline around nothing, not a tile
+   with a picture under it. */
+body.has-bg.has-frost .grid .tile--add { background-image: none; }
+
+/* "Reduce transparency" takes the materials away wherever they are drawn, and
+   a picture painted inside a tile is one of them. Said again down here because
+   this is where the tile's background is set from, and the rule that answers
+   the setting further up cannot reach past it. */
+@media (prefers-reduced-transparency: reduce) {
+  body.has-bg.has-frost .grid .tile { background-image: none; }
 }
 
 body.has-bg .toolbar .toolbtn:hover,
@@ -1414,7 +1462,10 @@ body.is-loading .toolbar {
      card, so a large tile is not a small tile with a tight corner. It follows
      the short side, so a wide tile does not end up a lozenge. */
   border-radius: clamp(10px, calc(var(--tile-short) * .18), 26px);
-  background: var(--tile-bg, var(--tile-mat, var(--mat-thin)));
+  /* Named, because over a picture the tile is a stack of backgrounds and this
+     is only the top one - see `body.has-bg.has-frost .grid .tile`. */
+  --tile-fill: var(--tile-bg, var(--tile-mat, var(--mat-thin)));
+  background: var(--tile-fill);
   -webkit-backdrop-filter: var(--mat-filter);
   backdrop-filter: var(--mat-filter);
   box-shadow: inset 0 0 0 .5px var(--stroke-inner), var(--shadow-control);
@@ -1430,7 +1481,7 @@ body.is-loading .toolbar {
 }
 
 .tile:hover {
-  background: var(--tile-bg, var(--tile-mat, var(--mat-regular)));
+  --tile-fill: var(--tile-bg, var(--tile-mat, var(--mat-regular)));
   box-shadow: inset 0 0 0 .5px var(--stroke-inner), var(--shadow-raised);
   transform: translateY(-2px);
 }
@@ -2257,7 +2308,7 @@ body.tile-round .tile {
   display: grid;
   place-items: center;
   min-width: 32px;
-  height: 22px;
+  height: var(--seg-h);
   padding: 0 6px;
   border: 0;
   border-radius: var(--r-pill);
@@ -2279,8 +2330,18 @@ body.tile-round .tile {
 
 /* The font filters carry more segments than a settings row is wide, so theirs
    is allowed to fold onto a second line inside the trough rather than push the
-   window out of shape. */
-.segmented--wrap { flex-wrap: wrap; }
+   window out of shape. Which is what a translation does to this control: the
+   English segments fit with room to spare and another language's need not.
+
+   A trough that can fold is rounded to half its own single-line height rather
+   than to a pill. At one line the two are the same capsule, and at two 999px
+   is no longer a capsule but a stadium: the ends swell to half of a much
+   taller box, and the curve cuts back across the segments sitting in the
+   corners. Half the height of one line holds the ends still. */
+.segmented--wrap {
+  flex-wrap: wrap;
+  border-radius: calc(var(--seg-h) / 2 + var(--seg-pad));
+}
 
 .segmented__item:hover { color: var(--label); }
 
@@ -3163,19 +3224,6 @@ body.tile-round .tile {
   }
 
   .fontfield__filter-label { width: auto; }
-}
-
-.preview {
-  margin: 0;
-  padding: 14px 12px;
-  border-radius: var(--r-box);
-  background: var(--fill-quaternary);
-  box-shadow: inset 0 0 0 .5px var(--separator);
-  font-size: var(--t-title2);
-  letter-spacing: var(--tr-title2);
-  line-height: 1.4;
-  text-align: center;
-  overflow-wrap: anywhere;
 }
 
 

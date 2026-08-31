@@ -322,12 +322,45 @@ const Store = (() => {
       ? raw.type
       : (LOOKS_MOVING.test(src) ? 'video' : 'image');
 
-    return {
+    const clean = {
       src,
       name: typeof raw.name === 'string' ? raw.name.slice(0, 80) : '',
       type,
       savedAt: Number(raw.savedAt) || Date.now()
     };
+
+    // The small blurred copy the tiles are drawn on, kept with the picture it
+    // was cut from so a new tab has it before it paints rather than a decode
+    // of the whole photograph later - see the frost in backgrounds.js. A
+    // record written before this existed simply has none, and one is made for
+    // it on the spot.
+    const frost = sanitizeFrost(raw.frost);
+    if (frost) clean.frost = frost;
+
+    return clean;
+  }
+
+  /**
+   * A frost as it is kept: a small picture and the shape of the one it came
+   * from, which is what the crop is worked out with.
+   *
+   * The ceiling is what makes it safe to read one out of a backup somebody
+   * has been editing: this is a 64 pixel wide PNG, and anything near that
+   * figure is not one.
+   */
+  const MAX_FROST = 64 * 1024;
+
+  function sanitizeFrost(raw) {
+    if (!raw || typeof raw !== 'object') return null;
+
+    const src = typeof raw.src === 'string' ? raw.src.trim() : '';
+    const width = Number(raw.width);
+    const height = Number(raw.height);
+
+    if (!/^data:image\//i.test(src) || src.length > MAX_FROST) return null;
+    if (!(width > 0) || !(height > 0)) return null;
+
+    return { src, width, height };
   }
 
   async function loadBackground() {

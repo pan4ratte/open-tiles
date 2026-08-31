@@ -155,6 +155,9 @@
     // the picture, the film and the preview in the settings dialog, so all
     // three are cut at the same place.
     root.style.setProperty('--bg-pos-y', settings.bgPosY + '%');
+    // Which is also the crop the tiles are drawn on, and the size and spacing
+    // above decide where each of them is standing in it.
+    placeFrostSoon();
 
     // Zero is the bottom of the Columns slider, where it reads "Auto" - see
     // the field in schema.js. Anything above it is a count.
@@ -1323,6 +1326,9 @@
     grid.textContent = '';
     shown.forEach(tile => grid.append(buildTile(tile, token)));
     if (settings.showAddButton) grid.append(buildAddButton());
+
+    // The tiles that were lined up on the picture are gone; these are new.
+    placeFrost();
 
     empty.hidden = shown.length > 0;
     if (!shown.length) {
@@ -3467,6 +3473,66 @@
     closeDialog(settingsModal);
   });
 
+  // ---------------------------------------------------------------- frost
+
+  /**
+   * Tells each tile where it is standing in the blurred copy of the picture
+   * it is drawn on - see the frost in backgrounds.js, and the tile background
+   * in newtab.css.
+   *
+   * The copy is already cut to the window the way the picture behind it is;
+   * all that is left is each tile's own place in that crop, which is read off
+   * the page rather than worked out again. The grid decides where a tile goes
+   * - from the column count, the size, the gap, how many tiles there are -
+   * and a second opinion here would be one more thing to keep in step with it.
+   */
+  function placeFrost() {
+    // Which answers whether there is one to place. Asked rather than read off
+    // the page: this runs before the class that puts the frost on the tiles,
+    // so that nothing is ever drawn with the crop half worked out.
+    if (!Backgrounds.placeFrost(settings.bgPosY)) return;
+
+    grid.querySelectorAll('.tile').forEach(el => {
+      const box = el.getBoundingClientRect();
+      el.style.setProperty('--tile-x', Math.round(box.left) + 'px');
+      el.style.setProperty('--tile-y', Math.round(box.top) + 'px');
+    });
+  }
+
+  /**
+   * A picture stored before there were frosts, whose frost has just been made
+   * here rather than read. It is put away with the picture, so this is the one
+   * new tab that has to wait for it - every one after it paints with the copy
+   * already in hand.
+   *
+   * Only the background the page is actually running on, and only once: the
+   * settings dialog paints trial backgrounds through the same door, and a
+   * picture being looked at is not one that has been chosen.
+   */
+  let frostToKeep = null;
+
+  function frostArrived(made) {
+    placeFrost();
+
+    if (!made || !frostToKeep || !background || background.src !== frostToKeep) return;
+    frostToKeep = null;
+    background = { ...background, frost: made };
+    // No room for it is no reason to say anything: the picture is what
+    // matters, and the copy is made again next time.
+    Store.saveBackground(background).catch(() => {});
+  }
+
+  /** The same, at most once a frame: resizing and scrolling both ask often. */
+  let frostQueued = false;
+  function placeFrostSoon() {
+    if (frostQueued) return;
+    frostQueued = true;
+    requestAnimationFrame(() => {
+      frostQueued = false;
+      placeFrost();
+    });
+  }
+
   // ------------------------------------------------------------ page shape
 
   /** Lets the settings preview crop the picture exactly as the page does. */
@@ -3479,6 +3545,13 @@
     };
     set();
     window.addEventListener('resize', set);
+
+    // A window that changed shape re-cuts the picture, and the tiles have
+    // moved with it; a page scrolled under a picture that does not scroll
+    // leaves every one of them somewhere else in it.
+    window.addEventListener('resize', placeFrostSoon);
+    window.addEventListener('scroll', placeFrostSoon, { passive: true });
+    Backgrounds.onFrost = frostArrived;
   }
 
   // ---------------------------------------------------------------- clock
@@ -3544,6 +3617,9 @@
 
     trackPageShape();
     applySettings();
+    // Noted before the picture goes up, because putting it up is what sets a
+    // frost being made for it going.
+    frostToKeep = background && !background.frost ? background.src : null;
     Backgrounds.apply(background);
     // The stacks are already written - applySettings does that - so a family
     // that will not come down still leaves the page on Inter behind it.

@@ -202,11 +202,58 @@ const Backgrounds = (() => {
     const type = kindOf(file);
     if (!type) throw new Error(t('bg_notMedia'));
 
-    return {
+    return withFrost({
       src: type === 'video' ? await encodeVideo(file) : await encodeImage(file),
       name: (file.name || t('bg_untitled')).slice(0, 80),
       type
-    };
+    });
+  }
+
+  /**
+   * The record with its frost cut, which is where the waiting for it belongs:
+   * choosing a background is already a moment with something to watch, and
+   * every new tab after this one has the small copy in hand before it paints.
+   *
+   * A picture that will not be read - another site's, sent without the header
+   * that would allow it - comes back without one, and the page makes what it
+   * can when it shows it.
+   */
+  async function withFrost(record) {
+    const made = await cutFrost(record);
+    return made ? { ...record, frost: made } : record;
+  }
+
+  /** The frost for a record, or null. A film is opened for its first frame. */
+  function cutFrost(record) {
+    return new Promise(resolve => {
+      if (!record || !record.src) return resolve(null);
+
+      const done = source => {
+        const width = source.naturalWidth || source.videoWidth || 0;
+        const height = source.naturalHeight || source.videoHeight || 0;
+        const src = frostFrom(source, width, height);
+        resolve(src ? { src, width, height } : null);
+      };
+
+      if (record.type === 'video') {
+        const film = document.createElement('video');
+        film.muted = true;
+        // A frame is what is wanted, and metadata alone is not one.
+        film.preload = 'auto';
+        film.crossOrigin = 'anonymous';
+        film.addEventListener('loadeddata', () => done(film), { once: true });
+        film.addEventListener('error', () => resolve(null), { once: true });
+        film.src = record.src;
+        return;
+      }
+
+      if (typeof Image !== 'function') return resolve(null);
+      const img = new Image();
+      img.crossOrigin = 'anonymous';
+      img.addEventListener('load', () => done(img), { once: true });
+      img.addEventListener('error', () => resolve(null), { once: true });
+      img.src = record.src;
+    });
   }
 
   /**
@@ -303,13 +350,159 @@ const Backgrounds = (() => {
 
     const src = (await download(address, type)) || address;
 
-    return { src, name: name.slice(0, 80), type, stored: src !== address };
+    return withFrost({ src, name: name.slice(0, 80), type, stored: src !== address });
   }
 
   // -------------------------------------------------------------- painting
 
   function cssUrl(src) {
     return `url("${src.replace(/[\\"]/g, '\$&')}")`;
+  }
+
+  /* ---------------------------------------------------------------- frost
+
+     The tiles stand on a photograph and are drawn as frosted glass over it.
+     They used to do that themselves, with a `backdrop-filter` each - fifty
+     blurs of the same picture, worked out again every time anything moved.
+
+     A browser redraws a page in pieces the size of the screen, not in whole
+     elements, and a blur is not a pixel-by-pixel thing: to know one pixel of
+     it you have to have read thirty pixels around it. So a piece redrawn
+     under a tile came out as a blur of what was in that piece, the rest of
+     the tile kept the blur it already had, and the join between the two was a
+     straight edge lying across a tile nothing had happened to. Lifting one
+     tile under the pointer left them on its neighbours.
+
+     So the blur is made once, here, as a small picture, and each tile paints
+     the part of it that lines up with where the tile is standing. Nothing is
+     filtered while the page runs, and there is nothing left for the
+     compositor to get half right.
+
+     Sixty-four pixels across is the whole picture. What a tile shows is a
+     hundred-odd pixels of a photograph stretched over the window and smoothed
+     until none of its detail is left - which is a handful of pixels this size,
+     with the browser smoothing between them on the way up. */
+
+  const FROST_WIDTH = 64;
+
+  /** The picture the frost was cut from, kept so a resize can re-place it. */
+  let frost = null;
+
+  /** Told when the frost changes, so whoever holds the tiles can re-place it. */
+  let onFrost = null;
+
+  /**
+   * `source` drawn small and soft: an `<img>` that has loaded, or a `<video>`
+   * that has a frame. Answers with a data URL, or '' where the browser will
+   * not do it - a canvas it will not hand over, or a picture from an address
+   * that will not let itself be read back out of one.
+   */
+  function frostFrom(source, width, height) {
+    if (!source || !width || !height) return '';
+
+    try {
+      const canvas = document.createElement('canvas');
+      if (!canvas || typeof canvas.getContext !== 'function') return '';
+
+      canvas.width = FROST_WIDTH;
+      canvas.height = Math.max(1, Math.round(FROST_WIDTH * height / width));
+
+      const ctx = canvas.getContext('2d');
+      if (!ctx) return '';
+
+      // The blur takes the corners off what the downscale left; the saturate
+      // is the one the material used to carry in CSS.
+      ctx.filter = 'saturate(180%) blur(1px)';
+      ctx.drawImage(source, 0, 0, canvas.width, canvas.height);
+      // PNG, small as this is: a JPEG's blocks are eight pixels of a picture
+      // that will be stretched across the whole window, and the smears they
+      // would come back as are the size of a tile.
+      return canvas.toDataURL();
+    } catch {
+      return '';
+    }
+  }
+
+  /**
+   * Hands the frost to the page, or takes it away - `has-frost` is what the
+   * stylesheet reads to know whether the tiles have a picture to paint or
+   * only a fill.
+   */
+  function setFrost(next) {
+    frost = next || null;
+
+    const root = document.documentElement;
+    if (root && root.style) {
+      root.style.setProperty('--tile-frost', frost ? cssUrl(frost.src) : 'none');
+    }
+
+    // The crop and the tiles' places in it, and only then the class that puts
+    // the picture on them. The other way round the rule turns on with nothing
+    // to size or place the picture by, and a browser reading a length it has
+    // no value for drops the whole declaration - which is one frame of the
+    // frost drawn at its own 64 pixels in the corner of every tile.
+    if (typeof onFrost === 'function') onFrost(frost);
+
+    if (document.body && document.body.classList) {
+      document.body.classList.toggle('has-frost', Boolean(frost));
+    }
+  }
+
+  /**
+   * The crop the frost is taking, in the window's own pixels - the same one
+   * `background-size: cover` is taking with the picture behind it, worked out
+   * once here so that every tile can offset itself against it rather than
+   * each working out the whole picture again.
+   */
+  function placeFrost(posY) {
+    const root = document.documentElement;
+    if (!root || !root.style || !frost) return false;
+
+    const vw = root.clientWidth || 0;
+    const vh = root.clientHeight || 0;
+    if (!vw || !vh) return false;
+
+    const scale = Math.max(vw / frost.width, vh / frost.height);
+    const width = frost.width * scale;
+    const height = frost.height * scale;
+
+    root.style.setProperty('--frost-w', width + 'px');
+    root.style.setProperty('--frost-h', height + 'px');
+    root.style.setProperty('--frost-x', (vw - width) / 2 + 'px');
+    root.style.setProperty('--frost-y', (vh - height) * (Number(posY) || 0) / 100 + 'px');
+    return true;
+  }
+
+  /** A picture: loaded again off the address it is already painted from. */
+  function frostPicture(src) {
+    if (typeof Image !== 'function') return;
+
+    const img = new Image();
+    // A picture kept as an address rather than downloaded is another site's,
+    // and a canvas that has drawn one will not be read back out unless that
+    // site allows it. Asking is what makes the difference between a frost and
+    // no frost there; a refusal arrives as an error, and the tiles keep the
+    // fill they have.
+    img.crossOrigin = 'anonymous';
+    img.addEventListener('load', () => {
+      const made = frostFrom(img, img.naturalWidth, img.naturalHeight);
+      setFrost(made ? { src: made, width: img.naturalWidth, height: img.naturalHeight } : null);
+    });
+    img.addEventListener('error', () => setFrost(null));
+    img.src = src;
+  }
+
+  /** A film: whatever frame it has when it has one. */
+  function frostFilm(video) {
+    if (!video || typeof video.addEventListener !== 'function') return;
+
+    const take = () => {
+      const made = frostFrom(video, video.videoWidth, video.videoHeight);
+      setFrost(made ? { src: made, width: video.videoWidth, height: video.videoHeight } : null);
+    };
+
+    if (video.readyState >= 2) take();
+    else video.addEventListener('loadeddata', take, { once: true });
   }
 
   /**
@@ -352,6 +545,13 @@ const Backgrounds = (() => {
 
     layer.hidden = !src;
     document.body.classList.toggle('has-bg', Boolean(src));
+
+    // And the copy of it the tiles are drawn on, which is made from the same
+    // picture rather than from the page it is painted on.
+    if (!src) setFrost(null);
+    else if (record.frost) setFrost(record.frost);
+    else if (moving) frostFilm(video);
+    else frostPicture(src);
   }
 
   // --------------------------------------------------------------- storage
@@ -383,6 +583,9 @@ const Backgrounds = (() => {
   return {
     MAX_FILE, MAX_VIDEO_FILE, formatSize,
     fromFile, fromUrl, apply,
+    withFrost, placeFrost,
+    /** Called when a frost arrives, so the tiles can be lined up on it. */
+    set onFrost(fn) { onFrost = fn; },
     load, save, clear,
     recent, remember, noteEffects, forgetOne, forget
   };
