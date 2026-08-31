@@ -621,16 +621,15 @@ body.gb-floating.gb-float-bottom .groupbar {
    the spacing having to be worked out again.
 
    Static: as a flex item it is centred by the column, and the offsets written
-   for a pill fixed to the window mean nothing to it. The transform, though, is
-   spoken for - it is what carries the block when a group with a different
-   number of rows moves the stack under it. See glideGroupBar. */
+   for a pill fixed to the window mean nothing to it - the transform among
+   them. Carrying the block when a group with a different number of rows moves
+   the stack is the column's job rather than the block's: it is in the column
+   here, and it travels with the clock above it. See glideHeader. */
 body.gb-inline .groupbar {
   position: static;
   margin-top: var(--groupbar-gap);
   max-width: 100%;
   transform: none;
-  transition: opacity var(--t-base) var(--ease),
-              transform var(--t-group-in) var(--ease-out);
 }
 
 /* The column's own margin now falls under the block rather than under the
@@ -917,6 +916,22 @@ body.no-toolbar.gb-bar .groupbar__inner { padding: 0 12px; }
   padding: var(--page-inset) 24px calc(var(--page-inset) + var(--optical-lift) * 2);
 }
 
+/* The column over the tiles: the date, the clock, and - where the setting puts
+   it there - the block of group chips, one under the other.
+
+   It hangs from the bottom of a flexible row, so a group with more or fewer
+   rows of tiles than the last one re-centres the page and moves the whole
+   column with it. The transition is what carries it: the page puts it back
+   where it was the instant the grid is rebuilt and lets go, so the clock, the
+   date and the block travel together while the tiles fade across rather than
+   jumping there ahead of them. See glideHeader.
+
+   `backwards` rather than `both` on the arrival: filled forwards, the
+   animation's own `transform: none` would go on outranking the inline
+   transform that glide is written with, and the column would never move. The
+   two say the same thing once it has played, so nothing is lost by letting go
+   of it - and the backwards half, which is what holds the column out of sight
+   until it starts, is kept. */
 .page__header {
   grid-row: 1;
   align-self: end;
@@ -924,7 +939,8 @@ body.no-toolbar.gb-bar .groupbar__inner { padding: 0 12px; }
   flex-direction: column;
   align-items: center;
   margin-bottom: 44px;
-  animation: rise var(--t-slow) var(--ease-out) both;
+  animation: rise var(--t-slow) var(--ease-out) backwards;
+  transition: transform var(--t-group-in) var(--ease-out);
 }
 
 .page__header[hidden] { display: none; }

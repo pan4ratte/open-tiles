@@ -467,49 +467,51 @@
   }
 
   /**
-   * Slides the block to wherever the redraw has left it.
+   * Slides the column over the tiles to wherever the redraw has left it.
    *
-   * Set in the page, the block sits in the gap above the tiles - and a group
+   * The date, the clock and - where the setting puts it there - the block of
+   * group chips hang from the bottom of the row above the grid, and a group
    * with more or fewer rows than the last one re-centres the page, which moves
-   * that gap. Left alone the block would jump there while the tiles it belongs
-   * to were still fading across, so it is put back where it was and let go: the
-   * stylesheet's transition carries it the rest of the way.
+   * that row. Left alone the three of them would jump to the new place while
+   * the tiles they sit over were still fading across, so the column is put
+   * back where it was and let go: the stylesheet's transition carries it the
+   * rest of the way.
    *
-   * Nowhere else does this move at all - a floating pill and a status bar are
-   * both pinned to the window - so nowhere else is anything measured.
+   * One transform for all three, because they are rigid against each other -
+   * a change of group alters what is under the column, never what is in it.
+   * The block only travels when it is in the column; a floating pill and a
+   * status bar are pinned to the window and are not here to be moved.
    *
-   * @param {number} from where the block was before the grid was rebuilt, as
-   *   groupBarAt measures it
+   * @param {number} from where the column was before the grid was rebuilt, as
+   *   headerAt measures it
    */
-  function glideGroupBar(from) {
-    if (!document.body.classList.contains('gb-inline')) return;
-
-    const shift = from - groupBarAt();
+  function glideHeader(from) {
+    const shift = from - headerAt();
     if (!shift) return;
 
     // The jump back has to be made with the transition off, or it is itself
-    // something to animate: the block would set off towards where it came
+    // something to animate: the column would set off towards where it came
     // from, and letting go a moment later would leave it where it already is.
-    groupBar.style.transition = 'none';
-    groupBar.style.transform = `translateY(${shift}px)`;
+    header.style.transition = 'none';
+    header.style.transform = `translateY(${shift}px)`;
     // Reading the layout is what makes the jump real. Without it both writes
     // land in the same style pass and there is nothing to travel from.
-    void groupBar.offsetWidth;
-    groupBar.style.transition = '';
-    groupBar.style.transform = '';
+    void header.offsetWidth;
+    header.style.transition = '';
+    header.style.transform = '';
   }
 
   /**
-   * Where the block sits on the page rather than in the window.
+   * Where the column sits on the page rather than in the window.
    *
    * A change of group can take the scroll with it - see startOfGroup - and
-   * that is a jump, not a move: the block has not gone anywhere on the page,
+   * that is a jump, not a move: the column has not gone anywhere on the page,
    * the page has gone somewhere under the window. Measured this way, the
    * glide is left with the layout change alone, which is the part worth
    * travelling.
    */
-  function groupBarAt() {
-    return groupBar.getBoundingClientRect().top + scroller().scrollTop;
+  function headerAt() {
+    return header.getBoundingClientRect().top + scroller().scrollTop;
   }
 
   /** Off when the setting says so, and off when the system does. */
@@ -637,10 +639,10 @@
         el.classList.remove('is-entering');
       });
 
-      const from = groupBarAt();
+      const from = headerAt();
       render();
       startOfGroup();
-      glideGroupBar(from);
+      glideHeader(from);
 
       stage.forEach(el => replay(el, 'is-entering'));
 

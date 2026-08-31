@@ -193,6 +193,7 @@ check('the two toggles are always on show',
    * there pushes the clock up and leaves the grid where it is.
    */
   const inlineRule = (css.match(/body\.gb-inline \.groupbar \{([^}]*)\}/) || [])[1] || '';
+  const headerRule = (css.match(/\n\.page__header \{([^}]*)\}/) || [])[1] || '';
 
   check('the page moves the block into the column the clock is in',
     /const home = inline \? header : document\.body;/.test(js));
@@ -226,20 +227,24 @@ check('the two toggles are always on show',
 
   /*
    * A group with a different number of rows re-centres the page, which moves
-   * the gap the block sits in. It travels there rather than jumping: the page
-   * measures where the block was, puts it back with a transform once the grid
-   * has been rebuilt, and lets go.
+   * the row the column over the tiles hangs from. It travels there rather than
+   * jumping: the page measures where the column was, puts it back with a
+   * transform once the grid has been rebuilt, and lets go.
+   *
+   * The column, not the block: the date, the clock and - where the setting
+   * puts it there - the block are rigid against each other, and gliding one of
+   * the three while the other two jumped was the thing that read as broken.
    */
-  check('the page measures the block before the redraw and puts it back after',
-    /const from = groupBarAt\(\);\s*render\(\);\s*startOfGroup\(\);\s*glideGroupBar\(from\);/.test(js));
+  check('the page measures the column before the redraw and puts it back after',
+    /const from = headerAt\(\);\s*render\(\);\s*startOfGroup\(\);\s*glideHeader\(from\);/.test(js));
 
   /*
    * The measurement is taken on the page rather than in the window, because
    * the change may take the scroll with it: that is a jump, not a move, and
-   * gliding the block across it would animate the wrong thing entirely.
+   * gliding the column across it would animate the wrong thing entirely.
    */
   check('and measures it on the page, so a scroll is not read as a move',
-    /function groupBarAt\(\) \{\s*return groupBar\.getBoundingClientRect\(\)\.top \+ scroller\(\)\.scrollTop;/.test(js));
+    /function headerAt\(\) \{\s*return header\.getBoundingClientRect\(\)\.top \+ scroller\(\)\.scrollTop;/.test(js));
 
   /*
    * A group is only left once it has been read to the end, so the next one
@@ -254,16 +259,32 @@ check('the two toggles are always on show',
     /render\(\);\s*startOfGroup\(\);\s*return;/.test(js));
 
   check('the jump back is made with the transition off, or it animates itself',
-    /style\.transition = 'none';\s*groupBar\.style\.transform = `translateY\(\$\{shift\}px\)`/.test(js));
+    /style\.transition = 'none';\s*header\.style\.transform = `translateY\(\$\{shift\}px\)`/.test(js));
 
   check('and the layout is read in between, or both writes land in one pass',
-    /void groupBar\.offsetWidth;\s*groupBar\.style\.transition = '';\s*groupBar\.style\.transform = '';/.test(js));
+    /void header\.offsetWidth;\s*header\.style\.transition = '';\s*header\.style\.transform = '';/.test(js));
 
   check('the stylesheet is what carries it the rest of the way',
-    /transition: opacity[^;]*,\s*transform var\(--t-group-in\)/.test(inlineRule));
+    /transition: transform var\(--t-group-in\)/.test(headerRule), headerRule);
 
-  check('nowhere else measures anything - a pill and a bar are both pinned',
-    /if \(!document\.body\.classList\.contains\('gb-inline'\)\) return;/.test(js));
+  /*
+   * An animation outranks the style attribute, so the arrival cannot be left
+   * filling forwards: its own `transform: none` would sit on top of the glide
+   * and the column would never move. The two agree once it has played, so
+   * dropping the forwards half costs nothing - and the backwards half, which
+   * holds the column out of sight until it starts, is still wanted.
+   */
+  check('and the arrival lets go of the transform when it is done',
+    /animation: rise var\(--t-slow\) var\(--ease-out\) backwards;/.test(headerRule), headerRule);
+
+  /*
+   * The block travels because it is in the column, not because anything moves
+   * it: a floating pill and a status bar are pinned to the window, and the one
+   * in the column has no transform of its own left to fight the column's.
+   */
+  check('the block is carried by the column rather than moved on its own',
+    !/transition:/.test(inlineRule) && !/glideGroupBar|groupBarAt/.test(js),
+    inlineRule.replace(/\s+/g, ' ').trim());
 
   check('and with the animation off the block simply moves, like the grid',
     /if \(!animatesGroups\(\)\) \{\s*render\(\);\s*startOfGroup\(\);\s*return;\s*\}/.test(js));
