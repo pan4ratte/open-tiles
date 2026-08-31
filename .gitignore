@@ -1,0 +1,5 @@
+# Built add-on packages - `npx web-ext build` writes these.
+web-ext-artifacts/
+
+# Nothing here is installed; web-ext is fetched with npx.
+node_modules/

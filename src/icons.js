@@ -82,6 +82,53 @@ const Icons = (() => {
   };
 
   /**
+   * The shapes a Lucide glyph is drawn from, and the attributes they carry.
+   *
+   * The table above is markup because markup is the form the icons are copied
+   * in - but markup is not how it reaches the page. `shapesFor` reads an entry
+   * with a matcher that knows only these names and builds the elements itself,
+   * so nothing outside the two lists can ever be drawn, and no string is
+   * handed to `innerHTML` - which an add-on review flags wherever it appears.
+   */
+  const SHAPES = ['path', 'circle', 'line', 'rect', 'polygon'];
+  const ATTRS = ['cx', 'cy', 'd', 'fill', 'height', 'points', 'r', 'rx', 'ry',
+                 'width', 'x', 'x1', 'x2', 'y', 'y1', 'y2'];
+
+  const SHAPE_RE = /<([a-z]+)\s([^>]*?)\s*\/>/g;
+  const ATTR_RE = /([a-zA-Z0-9]+)="([^"]*)"/g;
+
+  /** Each glyph parsed the first time it is asked for, then cloned. */
+  const built = new Map();
+
+  /**
+   * The elements one glyph is made of, read out of its entry in PATHS.
+   * @param {string} name key of PATHS
+   * @returns {SVGElement[]} shared - clone before putting one in a document
+   */
+  function shapesFor(name) {
+    const done = built.get(name);
+    if (done) return done;
+
+    const out = [];
+    const markup = PATHS[name] || '';
+    SHAPE_RE.lastIndex = 0;
+    let shape;
+    while ((shape = SHAPE_RE.exec(markup)) !== null) {
+      if (!SHAPES.includes(shape[1])) continue;
+      const el = document.createElementNS(NS, shape[1]);
+      ATTR_RE.lastIndex = 0;
+      let attr;
+      while ((attr = ATTR_RE.exec(shape[2])) !== null) {
+        if (ATTRS.includes(attr[1])) el.setAttribute(attr[1], attr[2]);
+      }
+      out.push(el);
+    }
+
+    built.set(name, out);
+    return out;
+  }
+
+  /**
    * Builds an <svg> element for a Lucide icon.
    * @param {string} name key of PATHS
    * @param {{size?:number, className?:string, strokeWidth?:number}} [opts]
@@ -100,7 +147,7 @@ const Icons = (() => {
     svg.setAttribute('stroke-linejoin', 'round');
     svg.setAttribute('aria-hidden', 'true');
     svg.setAttribute('class', 'icon' + (opts.className ? ' ' + opts.className : ''));
-    svg.innerHTML = PATHS[name] || '';
+    for (const shape of shapesFor(name)) svg.append(shape.cloneNode(true));
     return svg;
   }
 

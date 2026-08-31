@@ -179,14 +179,58 @@ const Fonts = (() => {
     return faces;
   }
 
-  /** Replaces the one gstatic URL in a @font-face block with a data: URI. */
+  /**
+   * The descriptors worth keeping out of a Google @font-face block, and the
+   * shape a value has to have to be kept.
+   *
+   * The block is text from a server, and text from a server is not pasted into
+   * a stylesheet on trust: `inlineBlock` reads these out of it and writes a
+   * fresh rule from them, so the only thing that can reach the page is a
+   * descriptor named here carrying a value that matches. `src` is absent
+   * because it is never taken from the reply at all - it is written from the
+   * bytes of the file that was downloaded.
+   */
+  const DESCRIPTORS = {
+    'font-family': /^(['"])[\w .+-]{1,64}\1$|^[\w .+-]{1,64}$/,
+    'font-style': /^(normal|italic|oblique(\s+-?\d{1,3}(\.\d+)?deg){0,2})$/,
+    'font-weight': /^\d{1,3}(\s+\d{1,3})?$/,
+    'font-stretch': /^(normal|(ultra-|extra-|semi-)?(condensed|expanded)|\d{1,3}(\.\d+)?%(\s+\d{1,3}(\.\d+)?%)?)$/,
+    'font-display': /^(auto|block|swap|fallback|optional)$/,
+    'unicode-range': /^[Uu]\+[0-9A-Fa-f?]{1,6}(-[0-9A-Fa-f]{1,6})?(\s*,\s*[Uu]\+[0-9A-Fa-f?]{1,6}(-[0-9A-Fa-f]{1,6})?)*$/
+  };
+
+  /**
+   * A @font-face block rewritten to stand on its own: the file it points at is
+   * downloaded and carried in the rule as a data: URI, and every other
+   * descriptor is copied across only where DESCRIPTORS both knows the name and
+   * recognises the value. Anything else in the block is dropped.
+   *
+   * @returns {Promise<?string>} the rule, or null where nothing usable came
+   */
   async function inlineBlock(block) {
     const match = block.match(/url\((https:\/\/[^)]+)\)/);
     if (!match) return null;
     const res = await fetch(match[1], { credentials: 'omit' });
     if (!res.ok) return null;
     const data = toBase64(await res.arrayBuffer());
-    return block.replace(match[1], `data:font/woff2;base64,${data}`);
+
+    const kept = [];
+    const body = block.slice(block.indexOf('{') + 1, block.lastIndexOf('}'));
+    for (const decl of body.split(';')) {
+      const at = decl.indexOf(':');
+      if (at < 0) continue;
+      const name = decl.slice(0, at).trim().toLowerCase();
+      const value = decl.slice(at + 1).trim();
+      if (!Object.prototype.hasOwnProperty.call(DESCRIPTORS, name)) continue;
+      if (DESCRIPTORS[name].test(value)) kept.push(`  ${name}: ${value};`);
+    }
+
+    // Without a family the rule names nothing and the browser would drop it,
+    // so it is dropped here instead, where the caller can count it as a miss.
+    if (!kept.some(line => line.startsWith('  font-family:'))) return null;
+
+    kept.push(`  src: url(data:font/woff2;base64,${data}) format('woff2');`);
+    return `@font-face {\n${kept.join('\n')}\n}`;
   }
 
   /**

@@ -83,9 +83,9 @@ const Schema = (() => {
   function manifestVersion() {
     try {
       const manifest = RUNTIME && RUNTIME.getManifest && RUNTIME.getManifest();
-      return (manifest && manifest.version) || '0.2.0';
+      return (manifest && manifest.version) || '1.0.0';
     } catch {
-      return '0.2.0';
+      return '1.0.0';
     }
   }
 
