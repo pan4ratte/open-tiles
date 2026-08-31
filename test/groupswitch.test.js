@@ -236,7 +236,7 @@ check('the two toggles are always on show',
    * the three while the other two jumped was the thing that read as broken.
    */
   check('the page measures the column before the redraw and puts it back after',
-    /const from = headerAt\(\);\s*render\(\);\s*startOfGroup\(\);\s*glideHeader\(from\);/.test(js));
+    /const from = headerAt\(\);\s*startOfGroup\(\);\s*render\(\);\s*glideHeader\(from\);/.test(js));
 
   /*
    * The measurement is taken on the page rather than in the window, because
@@ -256,7 +256,18 @@ check('the two toggles are always on show',
     /function startOfGroup\(\) \{\s*scroller\(\)\.scrollTop = 0;\s*\}/.test(js));
 
   check('and the page is put there as part of the change, not left to the browser',
-    /render\(\);\s*startOfGroup\(\);\s*return;/.test(js));
+    /startOfGroup\(\);\s*render\(\);\s*return;/.test(js));
+
+  /*
+   * And the scroll before the redraw, not after it. Each tile is told where it
+   * stands in the blurred copy of the picture as it is built - measured off
+   * the layout, which is measured against the scroll. A scroll thrown away
+   * afterwards leaves every one of those places a screenful out, and the frost
+   * is left waiting on the scroll event to put it right a frame later, which
+   * is a frame of the picture visibly in the wrong place.
+   */
+  check('the scroll is taken back before the tiles are placed on the picture',
+    !/render\(\);\s*startOfGroup\(\);/.test(js));
 
   check('the jump back is made with the transition off, or it animates itself',
     /style\.transition = 'none';\s*header\.style\.transform = `translateY\(\$\{shift\}px\)`/.test(js));
@@ -287,7 +298,7 @@ check('the two toggles are always on show',
     inlineRule.replace(/\s+/g, ' ').trim());
 
   check('and with the animation off the block simply moves, like the grid',
-    /if \(!animatesGroups\(\)\) \{\s*render\(\);\s*startOfGroup\(\);\s*return;\s*\}/.test(js));
+    /if \(!animatesGroups\(\)\) \{[\s\S]*?startOfGroup\(\);\s*render\(\);\s*return;\s*\}/.test(js));
 
   /*
    * On hover means on hover. The block used to let itself out whenever a group

@@ -1474,9 +1474,19 @@ body.is-loading .toolbar {
   text-decoration: none;
   cursor: pointer;
   user-select: none;
+  /* The fill and nothing else. `background` is a shorthand, and over a picture
+     this tile's background is also where its frost stands - the position that
+     lines the blurred copy up with the window. That position is set from the
+     script every time the tiles are laid out again, so a shorthand here put a
+     quarter of a second of travel on it: on every change of group the frost
+     slid in from the corner of each tile and settled, which read as the blur
+     arriving after the tiles rather than with them. The two longhands are what
+     a hover actually changes - a colour with no picture, the pair of fill
+     gradients with one. */
   transition: transform var(--t-base) var(--spring),
               box-shadow var(--t-base) var(--ease),
-              background var(--t-base) var(--ease),
+              background-color var(--t-base) var(--ease),
+              background-image var(--t-base) var(--ease),
               opacity var(--t-fast) var(--ease);
 }
 

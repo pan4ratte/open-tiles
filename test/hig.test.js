@@ -311,6 +311,26 @@ check('a tile over a picture paints its blur rather than filtering for it',
     && /var\(--tile-frost/.test(frosted.slice(0, frosted.indexOf('}'))),
   'hovering one tile used to leave seams across the tiles beside it');
 
+/* Painted, so the paint has a position - and that position is what lines the
+   blurred copy up with the window. It is written from the script every time
+   the tiles are laid out again, so a `background` shorthand in the transition
+   put a quarter of a second of travel on it: on every change of group the
+   frost slid in from the corner of each tile and settled, which read as the
+   blur arriving after the tiles rather than with them. */
+check('and the frost is in place the moment a tile is, not a fade later',
+  !/transition:[^;]*background\s/.test(body('.tile')),
+  'the fill is transitioned by longhand, so the frost position is left alone');
+
+/* And placed from where the tile *sits*, not from where it is being drawn. A
+   tile is very often drawn somewhere it does not sit - sliding in on a change
+   of group, lifted under the pointer, part way through the slide after a drag
+   - and a frost measured off that is lined up with the movement, so it comes
+   to rest out of register with the picture behind it. */
+check('and it is measured off the layout, which no transform touches',
+  /function tileAt\(el\)[\s\S]*?node\.offsetParent[\s\S]*?offsetLeft/.test(js)
+    && !/placeFrost[\s\S]{0,400}?getBoundingClientRect/.test(js),
+  'getBoundingClientRect answers with the transform, which is the animation');
+
 // ----------------------------------------------------- keyboard and focus
 
 check('a dialog going up makes every other layer inert',

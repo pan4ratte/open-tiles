@@ -622,8 +622,11 @@
     // page simply moves with it - gliding one while the other jumps would be
     // the animation the setting just turned off.
     if (!animatesGroups()) {
-      render();
+      // The scroll first: the tiles are told where they stand in the picture
+      // as they are built, and a scroll thrown away afterwards would leave
+      // every one of those places one screenful out.
       startOfGroup();
+      render();
       return;
     }
 
@@ -659,8 +662,8 @@
       });
 
       const from = headerAt();
-      render();
       startOfGroup();
+      render();
       glideHeader(from);
 
       stage.forEach(el => replay(el, 'is-entering'));
@@ -3492,11 +3495,40 @@
     // so that nothing is ever drawn with the crop half worked out.
     if (!Backgrounds.placeFrost(settings.bgPosY)) return;
 
-    grid.querySelectorAll('.tile').forEach(el => {
-      const box = el.getBoundingClientRect();
-      el.style.setProperty('--tile-x', Math.round(box.left) + 'px');
-      el.style.setProperty('--tile-y', Math.round(box.top) + 'px');
+    // Measured first, written after. A write invalidates the layout, so
+    // reading the next tile in the same turn makes the browser work the whole
+    // page out again - fifty times over, for a job the one layout answers.
+    const places = [...grid.querySelectorAll('.tile')].map(el => [el, tileAt(el)]);
+    places.forEach(([el, at]) => {
+      el.style.setProperty('--tile-x', Math.round(at.left) + 'px');
+      el.style.setProperty('--tile-y', Math.round(at.top) + 'px');
     });
+  }
+
+  /**
+   * Where a tile *sits* in the window, which is not always where it is drawn.
+   *
+   * A tile is very often drawn somewhere it does not sit: sliding in on a
+   * change of group, lifted a couple of pixels under the pointer, part way
+   * through the slide that follows a drag. getBoundingClientRect answers with
+   * the drawing, transform and all, and a frost placed from that is lined up
+   * with the movement - so it comes to rest out of register with the picture
+   * behind it and stays there until the next resize.
+   *
+   * offsetTop and offsetLeft are the layout's own answer and no transform
+   * touches them. Walked up to the page and with the scroll taken back off,
+   * they are the box the tile would have measured standing still.
+   */
+  function tileAt(el) {
+    let x = 0;
+    let y = 0;
+    for (let node = el; node; node = node.offsetParent) {
+      x += node.offsetLeft || 0;
+      y += node.offsetTop || 0;
+    }
+
+    const view = scroller();
+    return { left: x - (view.scrollLeft || 0), top: y - (view.scrollTop || 0) };
   }
 
   /**
