@@ -994,6 +994,82 @@ body.no-toolbar.gb-bar .groupbar__inner { padding: 0 12px; }
 
 
 /* ---------------------------------------------------------------------------
+   8b. The loading screen
+
+   Everything on this page comes out of extension storage, which is a wait -
+   short on a plain profile, longer on one carrying a wallpaper of several
+   megabytes. What stood here through that wait was a clock reading --:-- over
+   an empty window; what stands here now is the shape of the page that is
+   coming.
+
+   The blocks sit in the same grid rows the real thing does, so nothing moves
+   sideways when they are swapped for it: the clock's block is as tall as the
+   type it stands for, and each tile is a .tile with nothing inside it.
+   --------------------------------------------------------------------------- */
+
+/* No box of its own - the header and the grid inside it are what take the
+   page's rows, exactly as their counterparts do. */
+.skeleton { display: contents; }
+
+.skeleton__header {
+  grid-row: 1;
+  align-self: end;
+  display: flex;
+  justify-content: center;
+  /* The clock's own room below it, so the grid starts in the same place. */
+  margin-bottom: 44px;
+}
+
+/* The same clamp .page__clock sets its type from: the block is the size of
+   the line it is standing in for, not an approximation of it. */
+.skeleton__clock {
+  width: clamp(180px, 26vw, 268px);
+  height: clamp(56px, 8.5vw, 86px);
+  border-radius: var(--r-box);
+  background: var(--fill-quaternary);
+}
+
+/* An empty tile is already the outline of a tile - it keeps the size, the
+   corner and the material, and only has to stop behaving like one. */
+.tile--ghost {
+  pointer-events: none;
+  box-shadow: inset 0 0 0 .5px var(--stroke-inner);
+}
+
+/* Held back for a moment before it shows itself. A profile that answers in
+   ten milliseconds should go straight to its tiles; a flicker of grey on the
+   way there is worse than the wait it was meant to cover. `both` is what
+   holds it out of sight until the delay is up.
+
+   The breath afterwards carries no fill, so it says nothing about the page
+   before it starts - two animations on one property, and the later one wins
+   whenever it has an opinion. */
+.skeleton__header,
+.skeleton__grid {
+  animation: skeleton-in var(--t-base) var(--ease-out) 140ms both,
+             skeleton-breathe 1.8s var(--ease) 640ms infinite;
+}
+
+body.is-loading #header,
+body.is-loading #grid,
+body.is-loading #empty,
+body.is-loading .groupbar,
+body.is-loading .toolbar {
+  display: none;
+}
+
+@keyframes skeleton-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@keyframes skeleton-breathe {
+  0%, 100% { opacity: 1; }
+  50%      { opacity: .5; }
+}
+
+
+/* ---------------------------------------------------------------------------
    9. Tiles
 
    Each tile is a small widget: a material card with a corner that scales with

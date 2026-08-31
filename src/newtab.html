@@ -6,7 +6,7 @@
   <link rel="stylesheet" href="../fonts/inter.css">
   <link rel="stylesheet" href="newtab.css">
 </head>
-<body class="gb-floating">
+<body class="gb-floating is-loading">
   <!-- The background, behind everything; hidden until one is chosen. A still
        one is painted by the div, a moving one by the video - whichever is not
        in use is left empty, so nothing is decoded for a layer nobody sees.
@@ -30,6 +30,32 @@
   </div>
 
   <main class="page">
+    <!-- The outline of the page, standing in for it until there is something
+         to draw: a block where the clock goes, and a row of tiles' worth of
+         grid. Markup rather than something the script builds, because the
+         moment it is for is the one before any script has run - it is on
+         screen in the very first paint.
+
+         The blocks are real .tile elements with nothing in them, so the
+         outline is the shape the tiles will actually take rather than a
+         guess at it. Taken off the page for good once the real thing is up;
+         see boot in newtab.js. -->
+    <div class="skeleton" id="skeleton" aria-hidden="true">
+      <div class="skeleton__header">
+        <span class="skeleton__clock"></span>
+      </div>
+      <div class="grid skeleton__grid">
+        <span class="tile tile--ghost"></span>
+        <span class="tile tile--ghost"></span>
+        <span class="tile tile--ghost"></span>
+        <span class="tile tile--ghost"></span>
+        <span class="tile tile--ghost"></span>
+        <span class="tile tile--ghost"></span>
+        <span class="tile tile--ghost"></span>
+        <span class="tile tile--ghost"></span>
+      </div>
+    </div>
+
     <header class="page__header" id="header">
       <h1 class="page__clock" id="clock">--:--</h1>
       <p class="page__date" id="date" hidden></p>

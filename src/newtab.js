@@ -2807,8 +2807,32 @@
     ];
   }
 
+  /**
+   * Opens a tile in a tab of its own, whatever a click on it would have done.
+   *
+   * `noopener` for the reason the tiles themselves carry it: the page being
+   * opened has no business reaching back into this one. The visit is counted
+   * the same way a click's is - it is the same visit, asked for differently.
+   */
+  function openTileInNewTab(id) {
+    const tile = tiles.find(t => t.id === id);
+    if (!tile) return;
+
+    window.open(tile.url, '_blank', 'noopener,noreferrer');
+    countVisit(id);
+  }
+
+  /**
+   * What can be done to one tile, above what can be done to the page.
+   *
+   * Opening it heads the list because it is what the tile is for, and it is
+   * offered whether or not clicking already opens in a new tab: a menu that
+   * changed its mind about what it held depending on a setting would be the
+   * harder thing to learn - the same reason Settings is always at the foot.
+   */
   function tileItems(id) {
     return [
+      { icon: 'external-link', label: 'Open in new tab', run: () => openTileInNewTab(id) },
       { icon: 'pencil', label: 'Edit tile', run: () => openTileModal(id) },
       { icon: 'trash-2', label: 'Delete tile', danger: true, run: () => deleteTile(id) },
       SEPARATOR,
@@ -3494,6 +3518,13 @@
     loadFonts();
     renderGroups();
     render();
+
+    // The page is up, so the outline standing in for it goes - and goes for
+    // good rather than being hidden, because nothing here is ever loading
+    // again. See the loading screen in newtab.css.
+    document.body.classList.remove('is-loading');
+    const skeleton = document.getElementById('skeleton');
+    if (skeleton) skeleton.remove();
 
     syncSiteAccess();
     Favicons.onAccessChange(() => syncSiteAccess());
