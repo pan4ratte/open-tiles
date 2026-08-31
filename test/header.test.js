@@ -92,8 +92,22 @@ check('and nonsense falls back to the default',
 
 check('every other slider comes out exactly as it went in',
   [['tileSize', 116], ['tileSize', 200], ['gap', 18], ['bgDim', 35], ['bgBlur', 40],
-    ['logoPad', 20], ['headerShadow', 45]]
+    ['logoPad', 20], ['headerShadow', 45], ['clockSize', 145], ['dateSize', 60],
+    ['columns', 7]]
     .every(([key, value]) => Schema.coerce({ [key]: value })[key] === value));
+
+// The two lines are sized apart, the same way they are weighted apart, and
+// each starts at the size the stylesheet already draws it at.
+check('the clock and the date have a size each, starting at 100%',
+  Schema.DEFAULTS.clockSize === 100 && Schema.DEFAULTS.dateSize === 100);
+
+// Columns used to be a menu with 'auto' at the top of it. The slider reads
+// zero as Auto, and a settings file still holding the old string has to land
+// back on it rather than on some number of columns.
+check('Columns is a slider whose bottom stop is Auto',
+  Schema.coerce({ columns: 'auto' }).columns === 0
+    && Schema.coerce({ columns: 99 }).columns === 12
+    && Schema.FIELDS.find(f => f.key === 'columns').zeroLabel === 'Auto');
 
 // -------------------------------------------------------------- the weights
 

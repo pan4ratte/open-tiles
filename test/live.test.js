@@ -288,15 +288,23 @@ Store.onExternalChange((key, value) => heard.push({ key, value }));
      'openInNewTab', 'deepIcons'].every(key => layout.fields.some(f => f.key === key)),
     layout.fields.map(f => f.key).join(', '));
 
-  const appearance = Schema.SECTIONS.find(section => section.id === 'appearance');
+  const background = Schema.SECTIONS.find(section => section.id === 'background');
 
   check('a section written as a plain list still reports one group',
-    appearance.groups.length === 1 && appearance.groups[0].label === null,
-    appearance.groups.length + ' group(s)');
+    background.groups.length === 1 && background.groups[0].label === null,
+    background.groups.length + ' group(s)');
+
+  const general = Schema.SECTIONS.find(section => section.id === 'general');
+
+  check('General is one page, with Other folded into it',
+    Boolean(general) && !Schema.SECTIONS.some(s => s.id === 'other')
+      && ['theme', 'accent', 'font', 'showSettingsButton', 'backup', 'reset']
+        .every(key => general.fields.some(f => f.key === key)),
+    general ? general.fields.map(f => f.key).join(', ') : 'no General section');
 
   check('the flat field list still carries every default',
     Schema.FIELDS.length === Schema.SECTIONS.flatMap(s => s.fields).length
-      && Schema.DEFAULTS.tileShape === 'square' && Schema.DEFAULTS.columns === 'auto');
+      && Schema.DEFAULTS.tileShape === 'square' && Schema.DEFAULTS.columns === 0);
 
   // ------------------------------------------------------- the accent picker
 

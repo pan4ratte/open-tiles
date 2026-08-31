@@ -948,9 +948,9 @@ body.no-toolbar.gb-bar .groupbar__inner { padding: 0 12px; }
 /* The lock-screen arrangement: the date sits above the time, small and firm,
    and the time carries the weight of the page in a very light face.
 
-   Face, weight and tracking are set apart for the two lines - they are type at
-   two very different sizes, and a face that carries an 86px clock rarely
-   carries a 15px caption. Each is a custom property with the value above as
+   Face, weight, size and tracking are set apart for the two lines - they are
+   type at two very different sizes, and a face that carries an 86px clock
+   rarely carries a 15px caption. Each is a custom property with the value above as
    its fallback, so the defaults live here in the stylesheet rather than being
    written out by the page on every load. */
 .page__date {
@@ -958,7 +958,7 @@ body.no-toolbar.gb-bar .groupbar__inner { padding: 0 12px; }
   margin: 0 0 2px;
   color: var(--header-color, var(--label-secondary));
   font-family: var(--date-font, var(--font-family));
-  font-size: var(--t-title3);
+  font-size: calc(var(--t-title3) * var(--date-scale, 1));
   font-weight: var(--date-weight, 590);
   letter-spacing: var(--date-tracking, -.01em);
   text-shadow: var(--header-shadow, none);
@@ -970,7 +970,10 @@ body.no-toolbar.gb-bar .groupbar__inner { padding: 0 12px; }
   margin: 0;
   color: var(--header-color, var(--label));
   font-family: var(--clock-font, var(--font-family));
-  font-size: clamp(56px, 8.5vw, 86px);
+  /* The clamp is the size for the window; the scale is the Size slider on top
+     of it, so a clock set larger still gives way on a narrow window rather
+     than running off the side of it. */
+  font-size: calc(clamp(56px, 8.5vw, 86px) * var(--clock-scale, 1));
   font-weight: var(--clock-weight, 300);
   /* Apple tracks large type in, never out - which is what the slider defaults
      to, though it will let you track out if you want to. */

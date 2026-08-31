@@ -140,8 +140,17 @@ const SettingsUI = (() => {
    * A macOS slider: the part already travelled is filled with the accent. CSS
    * paints that as a gradient stop, so the fraction has to be handed to it -
    * there is no selector for "how far along a range input is".
+   *
+   * A field with a `zeroLabel` reads that word at the bottom of its travel
+   * instead of a number, which is how Columns says "Auto" - the one stop on
+   * that slider that is not a count.
    */
   function buildRange(field, value, commit) {
+    const label = current =>
+      field.zeroLabel && Number(current) === 0
+        ? field.zeroLabel
+        : current + (field.unit || '');
+
     const wrap = document.createElement('div');
     wrap.className = 'range';
 
@@ -155,7 +164,7 @@ const SettingsUI = (() => {
 
     const badge = document.createElement('span');
     badge.className = 'range__value';
-    badge.textContent = value + (field.unit || '');
+    badge.textContent = label(value);
 
     const paint = current => {
       const span = field.max - field.min;
@@ -165,7 +174,7 @@ const SettingsUI = (() => {
     paint(value);
 
     input.addEventListener('input', () => {
-      badge.textContent = input.value + (field.unit || '');
+      badge.textContent = label(input.value);
       paint(input.value);
       commit(Number(input.value));
     });

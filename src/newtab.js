@@ -149,7 +149,9 @@
     root.style.setProperty('--bg-blur', settings.bgBlur + 'px');
     root.style.setProperty('--bg-dim', settings.bgDim / 100);
 
-    const fixedColumns = settings.columns !== 'auto';
+    // Zero is the bottom of the Columns slider, where it reads "Auto" - see
+    // the field in schema.js. Anything above it is a count.
+    const fixedColumns = settings.columns > 0;
     grid.classList.toggle('is-fixed-columns', fixedColumns);
     if (fixedColumns) root.style.setProperty('--columns', settings.columns);
 
@@ -282,6 +284,11 @@
 
     root.style.setProperty('--clock-weight', settings.clockWeight);
     root.style.setProperty('--date-weight', settings.dateWeight);
+    // Size is a multiplier rather than a number of pixels: the stylesheet
+    // still picks the size for the window - the clock shrinks on a narrow one
+    // - and this scales whatever it arrives at.
+    root.style.setProperty('--clock-scale', settings.clockSize / 100);
+    root.style.setProperty('--date-scale', settings.dateSize / 100);
     // Tracking is set as a share of the type size, so it holds at every size
     // the clock is drawn at.
     root.style.setProperty('--clock-tracking', settings.clockTracking / 100 + 'em');

@@ -16,7 +16,8 @@
  *   segmented   one of `options`, rendered as a row of buttons
  *   choice      one of `options`, rendered as a macOS pop-up button. An
  *               option is a bare value, or { value, label } to name it
- *   range       number between min and max
+ *   range       number between min and max. A `zeroLabel` names the bottom
+ *               of the travel in a word - Columns reads "Auto" there, not 0
  *   toggle      boolean
  *   color       hex colour
  *   text        free text, trimmed and capped at `max` characters
@@ -37,8 +38,6 @@
  * using the floating group block.
  */
 const Schema = (() => {
-  const columnChoices = ['auto', 3, 4, 5, 6, 7, 8, 9, 10, 12];
-
   /**
    * Whether this is an Apple keyboard, which settles both what the shortcut
    * that opens this window is - Command rather than Control - and how it is
@@ -79,38 +78,86 @@ const Schema = (() => {
 
   const RAW_SECTIONS = [
     {
-      id: 'appearance',
-      label: 'Appearance',
-      icon: 'palette',
-      tint: 'var(--system-purple)',
-      fields: [
+      id: 'general',
+      label: 'General',
+      // The gear rather than a palette: this page is no longer only about how
+      // the page looks - it is also where the settings themselves are kept,
+      // backed up and put back. Which is the same page macOS calls General.
+      icon: 'settings',
+      tint: 'var(--system-gray)',
+      groups: [
         {
-          key: 'theme',
-          label: 'Theme',
-          type: 'segmented',
-          default: 'system',
-          options: [
-            { value: 'system', label: 'System', icon: 'monitor' },
-            { value: 'dark', label: 'Dark', icon: 'moon' },
-            { value: 'light', label: 'Light', icon: 'sun' }
+          label: 'Appearance',
+          fields: [
+            {
+              key: 'theme',
+              label: 'Theme',
+              type: 'segmented',
+              default: 'system',
+              options: [
+                { value: 'system', label: 'System', icon: 'monitor' },
+                { value: 'dark', label: 'Dark', icon: 'moon' },
+                { value: 'light', label: 'Light', icon: 'sun' }
+              ]
+            },
+            {
+              key: 'accent',
+              label: 'Accent colour',
+              type: 'color',
+              default: '#007aff'
+            },
+            {
+              key: 'font',
+              label: 'Font',
+              type: 'font',
+              default: 'Inter',
+              busyText: 'Loading font…',
+              note: 'Sets the tile names, and the clock and the date wherever they '
+                  + 'are not given a face of their own under Header. Filter the '
+                  + 'list, or name any other family on Google Fonts under "Other '
+                  + 'family". The dialogs and buttons always stay on Inter.'
+            },
+            {
+              key: 'showSettingsButton',
+              label: 'Show the settings button',
+              type: 'toggle',
+              default: true,
+              note: 'The gear in the corner of the page. With it off, two ways in '
+                  + 'are left and neither of them can be turned off: '
+                  + SETTINGS_SHORTCUT.label + ' from anywhere on the page, and '
+                  + 'right-clicking it, which offers Settings at the foot of its menu.'
+            }
           ]
         },
         {
-          key: 'accent',
-          label: 'Accent colour',
-          type: 'color',
-          default: '#007aff'
-        },
-        {
-          key: 'font',
-          label: 'Font',
-          type: 'font',
-          default: 'Inter',
-          busyText: 'Loading font…',
-          note: 'Sets the tile names, and the clock and the date wherever they '
-              + 'are not given a face of their own under Header. Filter the '
-              + 'list, or name any other family on Google Fonts under "Other '
-              + 'family". The dialogs and buttons always stay on Inter.'
+          label: 'Backup and reset',
+          fields: [
+            {
+              key: 'backup',
+              label: 'Backup',
+              // Reads and writes four storage keys, none of them its own - see
+              // `external`.
+              type: 'backup',
+              external: true,
+              busyText: 'Working on it…',
+              note: 'Saves your tiles, groups, settings and background picture to a '
+                  + 'file. Importing one puts back whatever that file holds, over '
+                  + 'what is here now.'
+            },
+            {
+              key: 'reset',
+              label: 'Reset all settings',
+              // Nothing to store: the button just does the deed - see `external`.
+              type: 'action',
+              external: true,
+              danger: true,
+              buttonLabel: 'Reset all',
+              buttonIcon: 'rotate-ccw',
+              busyText: 'Putting everything back…',
+              note: 'Puts every setting back to its default and takes the background '
+                  + 'away, recent ones included. Your tiles and groups are left alone.'
+            }
+          ]
         }
       ]
     },
@@ -162,10 +209,18 @@ const Schema = (() => {
             {
               key: 'columns',
               label: 'Columns',
-              type: 'choice',
-              default: 'auto',
-              options: columnChoices,
-              note: 'Auto fits as many tiles per row as the window allows.'
+              type: 'range',
+              // Zero is not a count, it is Auto - see `zeroLabel`. Which also
+              // means a settings file written when this was a menu, holding
+              // the string 'auto', reads back as the default: 0, the same
+              // answer it always gave.
+              default: 0,
+              min: 0,
+              max: 12,
+              step: 1,
+              zeroLabel: 'Auto',
+              note: 'At the far left, Auto fits as many tiles per row as the '
+                  + 'window allows.'
             },
             { key: 'tileSize', label: 'Tile size', type: 'range', default: 116, min: 72, max: 200, step: 4, unit: 'px' },
             { key: 'gap', label: 'Spacing', type: 'range', default: 18, min: 4, max: 48, step: 2, unit: 'px' },
@@ -322,9 +377,21 @@ const Schema = (() => {
               inherit: 'font',
               busyText: 'Loading font…',
               note: 'The clock on its own. Leave it on "Match page font" and it '
-                  + 'follows Appearance → Font with everything else.'
+                  + 'follows General → Font with everything else.'
             },
             { key: 'clockWeight', label: 'Weight', type: 'choice', default: 300, options: WEIGHTS },
+            {
+              key: 'clockSize',
+              label: 'Size',
+              type: 'range',
+              default: 100,
+              min: 50,
+              max: 200,
+              step: 5,
+              unit: '%',
+              note: 'A share of the size the page picks for the window it is '
+                  + 'in, so the clock still shrinks on a narrow one.'
+            },
             {
               key: 'clockTracking',
               label: 'Spacing',
@@ -370,6 +437,16 @@ const Schema = (() => {
               note: 'The date on its own, the same way.'
             },
             { key: 'dateWeight', label: 'Weight', type: 'choice', default: 600, options: WEIGHTS },
+            {
+              key: 'dateSize',
+              label: 'Size',
+              type: 'range',
+              default: 100,
+              min: 50,
+              max: 200,
+              step: 5,
+              unit: '%'
+            },
             {
               key: 'dateTracking',
               label: 'Spacing',
@@ -553,49 +630,6 @@ const Schema = (() => {
           ]
         }
       ]
-    },
-    {
-      id: 'other',
-      label: 'Other',
-      icon: 'settings',
-      tint: 'var(--system-gray)',
-      fields: [
-        {
-          key: 'showSettingsButton',
-          label: 'Show the settings button',
-          type: 'toggle',
-          default: true,
-          note: 'The gear in the corner of the page. With it off, two ways in '
-              + 'are left and neither of them can be turned off: '
-              + SETTINGS_SHORTCUT.label + ' from anywhere on the page, and '
-              + 'right-clicking it, which offers Settings at the foot of its menu.'
-        },
-        {
-          key: 'backup',
-          label: 'Backup',
-          // Reads and writes four storage keys, none of them its own - see
-          // `external`.
-          type: 'backup',
-          external: true,
-          busyText: 'Working on it…',
-          note: 'Saves your tiles, groups, settings and background picture to a '
-              + 'file. Importing one puts back whatever that file holds, over '
-              + 'what is here now.'
-        },
-        {
-          key: 'reset',
-          label: 'Reset all settings',
-          // Nothing to store: the button just does the deed - see `external`.
-          type: 'action',
-          external: true,
-          danger: true,
-          buttonLabel: 'Reset all',
-          buttonIcon: 'rotate-ccw',
-          busyText: 'Putting everything back…',
-          note: 'Puts every setting back to its default and takes the background '
-              + 'away, recent ones included. Your tiles and groups are left alone.'
-        }
-      ]
     }
   ];
 
@@ -621,8 +655,8 @@ const Schema = (() => {
 
   const DEFAULTS = Object.fromEntries(STORED.map(f => [f.key, f.default]));
 
-/**
-   * A `choice` option is either the value itself - `6`, `'auto'` - or a
+  /**
+   * A `choice` option is either the value itself - `600` - or a
    * `{ value, label }` pair, for when the stored value is not what should be
    * read off the menu.
    */
@@ -631,8 +665,7 @@ const Schema = (() => {
   }
 
   function optionLabel(option) {
-    if (option && typeof option === 'object') return option.label;
-    return option === 'auto' ? 'Auto' : String(option);
+    return option && typeof option === 'object' ? option.label : String(option);
   }
 
   function coerceField(field, value) {
