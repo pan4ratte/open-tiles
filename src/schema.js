@@ -40,6 +40,26 @@ const Schema = (() => {
   const columnChoices = ['auto', 3, 4, 5, 6, 7, 8, 9, 10, 12];
 
   /**
+   * Whether this is an Apple keyboard, which settles both what the shortcut
+   * that opens this window is - Command rather than Control - and how it is
+   * written down. Read once: the platform does not change under a page.
+   *
+   * `navigator` is absent under the test harness, which runs this file in
+   * `node`; the answer there is the one every other platform gives.
+   */
+  const APPLE = typeof navigator !== 'undefined' && /mac|iphone|ipad|ipod/i.test(
+    (navigator.userAgentData && navigator.userAgentData.platform)
+    || navigator.platform || ''
+  );
+
+  /**
+   * The shortcut that opens the settings window, in one place: `apple` is what
+   * the page tests the modifier against, `label` is how the note below names
+   * it. Two readers of one fact, rather than each making its own guess.
+   */
+  const SETTINGS_SHORTCUT = { apple: APPLE, label: APPLE ? '⌘ ,' : 'Ctrl + ,' };
+
+  /**
    * The nine CSS weights under the names the type world gives them. A family
    * that does not carry one of these is drawn in its nearest neighbour, or
    * thickened by the browser - which is why the list is the same everywhere
@@ -541,6 +561,16 @@ const Schema = (() => {
       tint: 'var(--system-gray)',
       fields: [
         {
+          key: 'showSettingsButton',
+          label: 'Show the settings button',
+          type: 'toggle',
+          default: true,
+          note: 'The gear in the corner of the page. With it off, two ways in '
+              + 'are left and neither of them can be turned off: '
+              + SETTINGS_SHORTCUT.label + ' from anywhere on the page, and '
+              + 'right-clicking it, which offers Settings at the foot of its menu.'
+        },
+        {
           key: 'backup',
           label: 'Backup',
           // Reads and writes four storage keys, none of them its own - see
@@ -696,7 +726,7 @@ const Schema = (() => {
   }
 
   return {
-    SECTIONS, FIELDS, STORED, DEFAULTS, EFFECT_KEYS,
+    SECTIONS, FIELDS, STORED, DEFAULTS, EFFECT_KEYS, SETTINGS_SHORTCUT,
     coerce, coerceEffects, optionValue, optionLabel
   };
 })();

@@ -876,6 +876,18 @@ body.gb-bar .chip { border-radius: var(--r-control); }
   box-shadow: inset 0 0 0 .5px var(--stroke-inner), var(--shadow-raised);
 }
 
+/* The gear can be taken off the page altogether — see Show the settings button
+   under Other. Hidden rather than removed: the group block is placed against
+   this element when it floats, so the page still needs it to be there.
+
+   Right-clicking the page and the keyboard shortcut are the two ways in that
+   are left, and neither of them can be turned off. */
+body.no-toolbar .toolbar { display: none; }
+
+/* With no button to keep clear of, the bar's chips take a menu bar's own inset
+   rather than the wide margin that was holding a place for one. */
+body.no-toolbar.gb-bar .groupbar__inner { padding: 0 12px; }
+
 
 /* ---------------------------------------------------------------------------
    8. The page

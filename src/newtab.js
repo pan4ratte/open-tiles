@@ -154,6 +154,7 @@
     if (fixedColumns) root.style.setProperty('--columns', settings.columns);
 
     document.body.classList.toggle('no-labels', !settings.showLabels);
+    document.body.classList.toggle('no-toolbar', !settings.showSettingsButton);
 
     const bar = settings.groupStyle === 'bar';
     document.body.classList.toggle('gb-bar', bar);
@@ -1569,6 +1570,49 @@
     else if (!modal.hidden) closeDialog(modal);
   });
 
+  /**
+   * Command-comma on a Mac, Control-comma everywhere else: the shortcut every
+   * desktop opens its preferences with, and the way in that is left when the
+   * gear has been taken off the page. Which modifier belongs to this platform
+   * is settled once, in the schema, because the note under that setting has to
+   * name the same chord this reads - see SETTINGS_SHORTCUT.
+   *
+   * The comma is looked for twice over, because a keyboard laid out for
+   * another language may not have one where this one does. `key` is the
+   * character the layout actually produces, which finds the comma wherever it
+   * has been moved to; `code` is the physical key in the comma's usual place,
+   * which finds it on the layouts that print something else there - Cyrillic
+   * and Greek among them. Shift is allowed only where it is what makes the
+   * comma, since several layouts put one on a shifted key.
+   */
+  function isSettingsShortcut(e) {
+    if (e.altKey || e.repeat) return false;
+    if (e.shiftKey && e.key !== ',') return false;
+
+    const held = Schema.SETTINGS_SHORTCUT.apple
+      ? e.metaKey && !e.ctrlKey
+      : e.ctrlKey && !e.metaKey;
+
+    return held && (e.key === ',' || e.code === 'Comma');
+  }
+
+  document.addEventListener('keydown', e => {
+    if (!isSettingsShortcut(e)) return;
+    // Taken whether or not it opens anything, so the browser underneath never
+    // gets a second go at it.
+    e.preventDefault();
+
+    // A dialog on screen is a conversation of its own and the shortcut waits
+    // for it. The settings window being the one that is up means there is
+    // nothing to do, which is what a second press does everywhere else too.
+    if (settleAlert || !settingsModal.hidden || !modal.hidden || !groupModal.hidden) return;
+
+    // A menu is not a conversation - it is a list of ways on, and this is one
+    // of them, so it gets out of the way rather than swallowing the press.
+    if (dismissMenu) dismissMenu();
+    openSettings();
+  });
+
   // ----------------------------------------------------------------- alerts
 
   /**
@@ -2733,11 +2777,20 @@
     menu.focus({ preventScroll: true });
   }
 
-  /** What can be done to the page, whatever was right-clicked to get here. */
+  /**
+   * What can be done to the page, whatever was right-clicked to get here.
+   *
+   * Settings sits at the foot behind a rule, where every desktop menu keeps
+   * it, and is offered whether or not the gear is on the page: a menu that
+   * changed its mind about what it held depending on a setting would be the
+   * harder thing to learn.
+   */
   function pageItems() {
     return [
       { icon: 'plus', label: 'Add tile', run: () => openTileModal(null) },
-      { icon: 'tag', label: 'New group', run: () => openGroupModal(null) }
+      { icon: 'tag', label: 'New group', run: () => openGroupModal(null) },
+      SEPARATOR,
+      { icon: 'settings', label: 'Settings', run: openSettings }
     ];
   }
 
@@ -3315,11 +3368,19 @@
     if (!settingsModal.hidden) mountSettings();
   }
 
-  btnSettings.addEventListener('click', () => {
+  /**
+   * Raises the settings window, wherever the ask came from - the gear on the
+   * page, the right-click menu, or the keyboard. Three doors, one room: the
+   * gear is the only one of them that can be turned off, so the other two are
+   * what the setting to hide it leans on.
+   */
+  function openSettings() {
     mountSettings();
     openDialog(settingsModal);
     syncSiteAccess();
-  });
+  }
+
+  btnSettings.addEventListener('click', openSettings);
 
   btnSettingsClose.addEventListener('click', () => closeDialog(settingsModal));
 
