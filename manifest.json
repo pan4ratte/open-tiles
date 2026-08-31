@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "Tiles",
-  "version": "0.2.0",
-  "description": "Replaces the new tab page with a grid of draggable tiles for quick access to your favourite sites.",
+  "name": "OpenTiles",
+  "version": "1.0.0",
+  "description": "A free, modern, open-source and highly customizable visual bookmark manager and a start page plugin for your browser.",
   "browser_specific_settings": {
     "gecko": {
       "id": "tiles@local.extension",

@@ -1743,6 +1743,10 @@ body.tile-round .tile {
 /* Two boxes with no heading between them still need parting. */
 .box + .box { margin-top: 18px; }
 
+/* A group written `bare` is drawn without a box - the About masthead is the
+   one - and the box under it needs parting from it just the same. */
+.stack + .box { margin-top: 18px; }
+
 /* Too narrow for a sidebar: it lies down across the top instead. */
 @media (max-width: 620px) {
   .window__body { flex-direction: column; }
@@ -1826,6 +1830,16 @@ body.tile-round .tile {
   color: var(--label-secondary);
   font-size: var(--t-subhead);
   line-height: 1.36;
+}
+
+/* The right-hand side of a row that states something rather than setting it:
+   quieter than a control, because there is nothing here to touch. */
+.row__value {
+  font-size: var(--t-body);
+  letter-spacing: -.004em;
+  color: var(--label-secondary);
+  text-align: right;
+  overflow-wrap: anywhere;
 }
 
 .row .status {
@@ -2286,6 +2300,9 @@ body.tile-round .tile {
   font: inherit;
   font-size: var(--t-body);
   letter-spacing: -.004em;
+  /* The class is worn by an <a> as well as a <button> - the link to the
+     repository - and a link brings an underline with it. */
+  text-decoration: none;
   cursor: pointer;
   transition: background var(--t-fast) var(--ease),
               transform var(--t-fast) var(--spring),
@@ -2886,6 +2903,54 @@ body.tile-round .tile {
   line-height: 1.4;
   text-align: center;
   overflow-wrap: anywhere;
+}
+
+
+/* -- the About masthead --
+   What macOS puts at the top of an About window: the mark, the name, the
+   version, and a line saying what the thing is. Centred, because there is no
+   list here for a label column to line up against. */
+.about {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 2px 0 0;
+  text-align: center;
+}
+
+/* The add-on's own icon, at the size the Finder shows an application at. Its
+   corner is the one drawn into the file - 22 of its 96 units - kept in
+   proportion here so the two read as the same mark. */
+.about__logo {
+  width: 64px;
+  height: 64px;
+  border-radius: 15px;
+  box-shadow: var(--shadow-control);
+}
+
+.about__name {
+  margin: 12px 0 0;
+  font-size: var(--t-title1);
+  font-weight: 640;
+  letter-spacing: -.02em;
+  color: var(--label);
+}
+
+.about__version {
+  margin: 3px 0 0;
+  font-size: var(--t-callout);
+  font-variant-numeric: tabular-nums;
+  color: var(--label-secondary);
+}
+
+/* Capped by the measure rather than by the panel: a line of prose this quiet
+   is unreadable run the full width of the window. */
+.about__blurb {
+  max-width: 44ch;
+  margin: 10px 0 0;
+  font-size: var(--t-subhead);
+  line-height: 1.45;
+  color: var(--label-secondary);
 }
 
 

@@ -577,6 +577,69 @@ const SettingsUI = (() => {
     return { control: button };
   }
 
+  /** A button that goes somewhere: the repository, in a tab of its own. */
+  function buildLink(field) {
+    const link = document.createElement('a');
+    link.className = 'btn btn--sm';
+    link.id = 'set-' + field.key;
+    link.href = field.href;
+    link.target = '_blank';
+    link.rel = 'noopener noreferrer';
+    if (field.buttonIcon) link.append(Icons.create(field.buttonIcon, { size: 15 }));
+    link.append(document.createTextNode(field.buttonLabel || field.label));
+
+    // No `focusId`, for the reason a button has none: a <label for> only
+    // reaches a control that holds a value.
+    return { control: link };
+  }
+
+  /** A fact rather than a setting - the About page's rows are all of these. */
+  function buildInfo(field) {
+    const value = document.createElement('span');
+    value.className = 'row__value';
+    value.textContent = field.value;
+    return { control: value };
+  }
+
+  /**
+   * The masthead of the About page: the mark, the name, the version, and one
+   * line saying what this is.
+   *
+   * `bare` because it is not a row - it sets nothing, so it has no label
+   * column and no control column to line up with. buildField hands the block
+   * straight to the panel instead of dressing it as a setting.
+   */
+  function buildAbout(field) {
+    const wrap = document.createElement('div');
+    wrap.className = 'about';
+
+    const logo = document.createElement('img');
+    logo.className = 'about__logo';
+    logo.src = field.logo;
+    logo.alt = '';
+    logo.width = 64;
+    logo.height = 64;
+
+    const name = document.createElement('h4');
+    name.className = 'about__name';
+    name.textContent = field.label;
+
+    const version = document.createElement('p');
+    version.className = 'about__version';
+    version.textContent = 'Version ' + field.version;
+
+    wrap.append(logo, name, version);
+
+    if (field.note) {
+      const blurb = document.createElement('p');
+      blurb.className = 'about__blurb';
+      blurb.textContent = field.note;
+      wrap.append(blurb);
+    }
+
+    return { control: wrap, bare: true };
+  }
+
   function buildText(field, value, commit) {
     const input = document.createElement('input');
     input.type = 'text';
@@ -1477,7 +1540,10 @@ const SettingsUI = (() => {
     font: buildFont,
     background: buildBackground,
     backup: buildBackup,
-    action: buildAction
+    action: buildAction,
+    link: buildLink,
+    info: buildInfo,
+    about: buildAbout
   };
 
   // ---------------------------------------------------------------- layout
@@ -1514,6 +1580,12 @@ const SettingsUI = (() => {
     };
 
     const built = (BUILDERS[field.type] || buildToggle)(field, value, commit, ctx);
+
+    // A `bare` field is a block of its own rather than a setting in a list:
+    // it takes the row's place, label, note and all. The About masthead is
+    // the one - see buildAbout.
+    if (built.bare) return { row: built.control, status };
+
     if (built.focusId) label.setAttribute('for', built.focusId);
 
     row.classList.toggle('row--wide', Boolean(built.wide));
@@ -1640,8 +1712,11 @@ const SettingsUI = (() => {
           panel.append(subtitle);
         }
 
+        // A `bare` group has no box drawn round it: what is in it is not a
+        // list of settings, so there is nothing for one to gather. The About
+        // masthead is the one - see schema.js.
         const box = document.createElement('div');
-        box.className = 'box';
+        box.className = group.bare ? 'stack' : 'box';
 
         group.fields.forEach(field => {
           // A `hidden` field is stored and validated like any other, it simply

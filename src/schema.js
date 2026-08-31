@@ -26,6 +26,13 @@
  *               this computer or from a web address, and the last few of them
  *   backup      export and import, as a pair of buttons
  *   action      a button that does something once, storing nothing
+ *   info        a fact rather than a setting: `value` read off to the right
+ *   link        a button that opens `href` in a tab of its own
+ *   about       the About page's masthead - mark, name, version, blurb
+ *
+ * A group written `bare: true` is drawn without the box around it, for fields
+ * that are blocks in their own right rather than rows in a list. The About
+ * masthead is the one of these.
  *
  * A field marked `hidden: true` is the other way about: an ordinary stored
  * setting, with a default and a type that validates it, that draws no row of
@@ -62,6 +69,36 @@ const Schema = (() => {
    * it. Two readers of one fact, rather than each making its own guess.
    */
   const SETTINGS_SHORTCUT = { apple: APPLE, label: APPLE ? '⌘ ,' : 'Ctrl + ,' };
+
+  /**
+   * What the About page says this is. The version is read off the manifest, so
+   * there is one number to bump when a release goes out; the fallback beside
+   * it is only for the page opened straight off disk, where there is no
+   * add-on to ask - keep it in step with manifest.json.
+   */
+  const RUNTIME = (typeof browser !== 'undefined' && browser.runtime)
+    || (typeof chrome !== 'undefined' && chrome.runtime)
+    || null;
+
+  function manifestVersion() {
+    try {
+      const manifest = RUNTIME && RUNTIME.getManifest && RUNTIME.getManifest();
+      return (manifest && manifest.version) || '0.2.0';
+    } catch {
+      return '0.2.0';
+    }
+  }
+
+  const APP = {
+    name: 'OpenTiles',
+    version: manifestVersion(),
+    author: 'Mark (pan4ratte)',
+    licence: 'GNU AGPL v3',
+    repo: 'https://github.com/pan4ratte/open-tiles',
+    blurb: 'Replaces the new tab page with a grid of draggable tiles for the '
+         + 'sites you use most - with groups, a clock, and a background of '
+         + 'your own.'
+  };
 
   /**
    * The nine CSS weights under the names the type world gives them. A family
@@ -650,6 +687,80 @@ const Schema = (() => {
           ]
         }
       ]
+    },
+    {
+      id: 'about',
+      label: 'About',
+      icon: 'info',
+      tint: 'var(--system-blue)',
+      groups: [
+        {
+          // No box: the masthead is not a list of anything, so there is
+          // nothing for one to gather. See `bare` at the top of this file.
+          bare: true,
+          fields: [
+            {
+              key: 'about',
+              type: 'about',
+              external: true,
+              label: APP.name,
+              logo: '../icons/icon.svg',
+              version: APP.version,
+              note: APP.blurb
+            }
+          ]
+        },
+        {
+          fields: [
+            {
+              key: 'aboutAuthor',
+              label: 'Author',
+              type: 'info',
+              external: true,
+              value: APP.author
+            },
+            {
+              key: 'aboutLicence',
+              label: 'Licence',
+              type: 'info',
+              external: true,
+              value: APP.licence,
+              note: 'Free software: use it, read it, change it, pass it on. '
+                  + 'The full text is in LICENSE, beside the add-on.'
+            },
+            {
+              key: 'source',
+              label: 'Source code',
+              type: 'link',
+              external: true,
+              href: APP.repo,
+              buttonLabel: 'GitHub',
+              buttonIcon: 'github',
+              note: 'The code, the releases, and where to report anything '
+                  + 'that is not working.'
+            }
+          ]
+        },
+        {
+          label: 'Bundled work',
+          fields: [
+            {
+              key: 'aboutLucide',
+              label: 'Lucide icons',
+              type: 'info',
+              external: true,
+              value: 'ISC'
+            },
+            {
+              key: 'aboutInter',
+              label: 'Inter',
+              type: 'info',
+              external: true,
+              value: 'SIL Open Font License 1.1'
+            }
+          ]
+        }
+      ]
     }
   ];
 
@@ -661,7 +772,11 @@ const Schema = (() => {
    */
   function normalize(section) {
     const groups = (section.groups || [{ label: null, fields: section.fields }])
-      .map(group => ({ label: group.label || null, fields: group.fields }));
+      .map(group => ({
+        label: group.label || null,
+        bare: Boolean(group.bare),
+        fields: group.fields
+      }));
 
     return { ...section, groups, fields: groups.flatMap(group => group.fields) };
   }

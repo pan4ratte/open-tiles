@@ -368,6 +368,56 @@ Store.onExternalChange((key, value) => heard.push({ key, value }));
   check('a hex it does not understand is refused rather than stored',
     Schema.coerce({ accent: 'nonsense' }).accent === '#007aff');
 
+  // ----------------------------------------------------------------- about
+
+  const about = Schema.SECTIONS.find(section => section.id === 'about');
+  const aboutPanel = container.find(el => el.id === 'panel-about');
+
+  check('the About page holds no setting of its own',
+    about.fields.every(field => field.external)
+      && !about.fields.some(field => field.key in Schema.DEFAULTS),
+    about.fields.map(f => f.key).join(', '));
+
+  const masthead = aboutPanel.find(el => el.className === 'about');
+
+  check('it opens with the mark, the name and the version',
+    Boolean(masthead)
+      && masthead.find(el => el.className === 'about__logo').src.endsWith('icon.svg')
+      && masthead.find(el => el.className === 'about__name').textContent === 'OpenTiles'
+      && /^Version \d/.test(masthead.find(el => el.className === 'about__version').textContent),
+    masthead ? masthead.textContent : 'no masthead');
+
+  check('the masthead is not dressed as a setting - no box, no label column',
+    aboutPanel.findAll(el => el.className === 'row')
+      .every(row => row.find(el => el.className === 'about') === null)
+      && masthead.parent.className === 'stack',
+    masthead.parent.className);
+
+  check('the version is the one the manifest gives, not a second copy of it',
+    read('schema.js').includes('RUNTIME.getManifest'));
+
+  const values = aboutPanel.findAll(el => el.className === 'row__value')
+    .map(el => el.textContent);
+
+  check('the author and the licences are read off as facts',
+    values.length === 4 && values[1] === 'GNU AGPL v3'
+      && values.includes('ISC')
+      && values.some(text => text.startsWith('SIL Open Font License')),
+    values.join(' | '));
+
+  const source = container.find(el => el.id === 'set-source');
+
+  check('the repository is a link rather than a button, and opens in its own tab',
+    Boolean(source) && source.tagName === 'a'
+      && source.href === 'https://github.com/pan4ratte/open-tiles'
+      && source.target === '_blank'
+      && source.rel.includes('noopener'),
+    source ? source.tagName + ' ' + source.href : 'no link');
+
+  check('it wears the GitHub mark, which the icon set actually carries',
+    read('icons.js').includes("'github':") && source.textContent.includes('GitHub'),
+    source.textContent);
+
   // ---------------------------------------------------------------- report
 
   let failed = 0;
