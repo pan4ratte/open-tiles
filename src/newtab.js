@@ -1,6 +1,8 @@
 (() => {
   'use strict';
 
+  const t = I18N.t;
+
   const grid = document.getElementById('grid');
   const empty = document.getElementById('empty');
   // Where the group block goes when it is not floating over the page: into the
@@ -385,8 +387,8 @@
     chip.append(name);
 
     chip.title = group.id
-      ? group.name + '\nDrag to reorder, right-click to rename or delete'
-      : 'Every tile';
+      ? t('group_chipTitle', group.name)
+      : t('group_allTitle');
 
     const on = activeGroup === group.id;
     chip.classList.toggle('is-on', on);
@@ -418,10 +420,10 @@
     const chip = document.createElement('button');
     chip.type = 'button';
     chip.className = 'chip chip--add';
-    chip.title = 'New group';
-    chip.setAttribute('aria-label', 'New group');
+    chip.title = t('group_new');
+    chip.setAttribute('aria-label', t('group_new'));
     chip.append(Icons.create('plus', { size: 15 }));
-    if (!compact) chip.append(document.createTextNode('New group'));
+    if (!compact) chip.append(document.createTextNode(t('group_new')));
     chip.addEventListener('click', () => openGroupModal(null));
     return chip;
   }
@@ -446,7 +448,9 @@
     groupChips.textContent = '';
 
     const any = groups.length > 0;
-    if (any && settings.showAllGroup) groupChips.append(buildChip({ id: null, name: 'All' }));
+    if (any && settings.showAllGroup) {
+      groupChips.append(buildChip({ id: null, name: t('group_all') }));
+    }
     groups.forEach(group => groupChips.append(buildChip(group)));
     if (settings.showGroupAdd) groupChips.append(buildAddChip(any));
 
@@ -1265,7 +1269,7 @@
       badge.textContent = tile.visits > 999
         ? Math.round(tile.visits / 100) / 10 + 'k'
         : String(tile.visits);
-      badge.title = tile.visits + ' visits from here';
+      badge.title = t('tile_visits', tile.visits);
       el.append(badge);
     }
 
@@ -1305,8 +1309,8 @@
     el.className = 'tile tile--add';
     el.id = 'addTile';
     el.type = 'button';
-    el.title = 'Add a tile';
-    el.setAttribute('aria-label', 'Add a tile');
+    el.title = t('tile_add');
+    el.setAttribute('aria-label', t('tile_add'));
     el.append(Icons.create('plus', { size: 28 }));
     el.addEventListener('click', () => openTileModal(null));
     return el;
@@ -1324,11 +1328,9 @@
     if (!shown.length) {
       // With the + turned off there is no + to hit, and the only way in is
       // the one the menu offers.
-      empty.textContent = activeGroup
-        ? 'Nothing in this group yet - drag a tile onto its name to put it here.'
-        : settings.showAddButton
-          ? 'No tiles yet. Hit + to add your first site.'
-          : 'No tiles yet. Right-click anywhere to add your first site.';
+      empty.textContent = t(activeGroup
+        ? 'empty_inGroup'
+        : settings.showAddButton ? 'empty_noTiles' : 'empty_noTilesNoAdd');
     }
   }
 
@@ -1820,7 +1822,7 @@
       // address typed so far is not a site that publishes no icon, and a
       // report saying so would be wrong on the way to every real one.
       lookup: valid,
-      label: fieldTitle.value.trim() || (url ? defaultTitle(url) : 'Example'),
+      label: fieldTitle.value.trim() || (url ? defaultTitle(url) : t('tile_sampleName')),
       icon: fieldIcon.value.trim()
     };
   }
@@ -1886,7 +1888,7 @@
    * sheet open to do something about it.
    */
   async function lookupPreviewIcon(url, token, opts) {
-    setIconStatus({ kind: 'loading', text: 'Looking for the sharpest icon this site has…' });
+    setIconStatus({ kind: 'loading', text: t('icon_looking') });
 
     let found = null;
     try {
@@ -1916,7 +1918,7 @@
    */
   function relabelPreview() {
     const label = fieldTitle.value.trim()
-      || (previewUrl ? defaultTitle(previewUrl) : 'Example');
+      || (previewUrl ? defaultTitle(previewUrl) : t('tile_sampleName'));
 
     const text = tilePreview.querySelector('.tile__label');
     if (text) text.textContent = label;
@@ -1954,27 +1956,23 @@
     if (!found) {
       return {
         kind: 'error',
-        text: settings.deepIcons
-          ? 'This site offers no icon of its own — choose or paste a picture instead.'
-          : 'Nothing at the usual addresses. Deep icon lookup, in Settings, reads '
-            + 'the page itself and usually finds one.'
+        text: t(settings.deepIcons ? 'icon_noneDeep' : 'icon_noneShallow')
       };
     }
 
     if (found.vector) {
-      return { kind: 'ok', text: 'Found a vector icon — sharp at any size.' };
+      return { kind: 'ok', text: t('icon_vector') };
     }
 
     if (found.size >= GOOD_ICON) {
-      return { kind: 'ok', text: `Found a ${found.size}px icon.` };
+      return { kind: 'ok', text: t('icon_found', found.size) };
     }
 
+    // Two whole sentences rather than one with a tail glued on: what follows
+    // the size is a clause a translation may want in front of it.
     return {
       kind: 'ok',
-      text: `Found a ${found.size}px icon`
-        + (settings.deepIcons
-          ? ', which is the largest this site publishes.'
-          : '. Deep icon lookup, in Settings, often finds a larger one.')
+      text: t(settings.deepIcons ? 'icon_foundLargest' : 'icon_foundSmall', found.size)
     };
   }
 
@@ -1989,8 +1987,7 @@
    */
   btnIconReload.addEventListener('click', async () => {
     if (!normalizeUrl(fieldUrl.value)) {
-      setIconStatus(
-        { kind: 'error', text: 'Fill in the address first — that is what is looked up.' });
+      setIconStatus({ kind: 'error', text: t('icon_needAddress') });
       return;
     }
 
@@ -2004,7 +2001,7 @@
       // racing it.
       await paintPreview({
         force: true,
-        extra: had ? ' The picture that was set has been cleared.' : ''
+        extra: had ? ' ' + t('icon_cleared') : ''
       });
     } finally {
       btnIconReload.disabled = false;
@@ -2074,7 +2071,7 @@
 
       const picture = files.find(file => /^image\//.test(file.type || ''));
       if (!picture) {
-        setIconStatus({ kind: 'error', text: 'That is not a picture.' });
+        setIconStatus({ kind: 'error', text: t('icon_notAPicture') });
         return;
       }
 
@@ -2107,7 +2104,7 @@
     if (bgWell) bgWell.remove();
 
     const built = SettingsUI.colorControl(
-      { key: 'tileBg', label: 'Tile background', default: '#0088ff' },
+      { key: 'tileBg', label: t('tile_bgTitle'), default: '#0088ff' },
       // With no colour set the picker still has to open on something, and the
       // tile's own monogram colour is the one already on screen.
       value || colorFor(previewFields().url || 'tile'),
@@ -2145,7 +2142,7 @@
     if (iconWell) iconWell.remove();
 
     const built = SettingsUI.colorControl(
-      { key: 'tileIconColor', label: 'Icon colour', default: '#ffffff' },
+      { key: 'tileIconColor', label: t('tile_iconColor'), default: '#ffffff' },
       value || '#ffffff',
       hex => { setPreviewIconColor(hex); return hex; }
     );
@@ -2193,7 +2190,7 @@
     if (padRange) padRange.remove();
 
     const built = SettingsUI.rangeControl(
-      { key: 'tilePad', label: 'Padding', min: 0, max: 40, step: 5, unit: '%' },
+      { key: 'tilePad', label: t('tile_pad'), min: 0, max: 40, step: 5, unit: '%' },
       value === null ? settings.logoPad : value,
       n => { setPreviewPad(n); return n; }
     );
@@ -2235,7 +2232,7 @@
     if (roundRange) roundRange.remove();
 
     const built = SettingsUI.rangeControl(
-      { key: 'tileRound', label: 'Icon rounding', min: 0, max: 50, step: 5, unit: '%' },
+      { key: 'tileRound', label: t('tile_round'), min: 0, max: 50, step: 5, unit: '%' },
       value,
       n => { setPreviewRound(n); return n; }
     );
@@ -2464,7 +2461,7 @@
   async function armPipette(target) {
     if (target && target !== pipetteFor
         && !tintedIcon() && iconEl() && !(await prepareSampler())) {
-      hint('That icon will not let itself be read — try one from a file.');
+      hint(t('icon_unreadable'));
       return;
     }
 
@@ -2477,7 +2474,7 @@
       PIPETTES[key].setAttribute('aria-pressed', String(on));
     });
 
-    hint(target ? 'Click the icon to take its colour.' : '');
+    hint(target ? t('icon_clickToTake') : '');
   }
 
   /** Pressing an armed pipette puts it away; pressing the other one takes it. */
@@ -2489,7 +2486,7 @@
   tilePreview.addEventListener('pointermove', e => {
     if (!pipetteFor) return;
     const hex = sampleAt(e);
-    hint(hex ? hex.toUpperCase() : 'Point at the icon.');
+    hint(hex ? hex.toUpperCase() : t('icon_pointAt'));
   });
 
   tilePreview.addEventListener('click', e => {
@@ -2513,7 +2510,7 @@
     iconKeepRefused = '';
     const tile = id ? tiles.find(t => t.id === id) : null;
 
-    modalTitle.textContent = tile ? 'Edit tile' : 'Add tile';
+    modalTitle.textContent = t(tile ? 'tile_editTitle' : 'tile_addTitle');
     fieldUrl.value = tile ? tile.url : '';
     fieldTitle.value = tile ? tile.title : '';
     fieldIcon.value = tile ? tile.icon : '';
@@ -2570,7 +2567,7 @@
     if (!/^https?:/i.test(icon) || icon === iconKeepRefused) return icon;
 
     btnSave.disabled = true;
-    setIconStatus({ kind: 'loading', text: 'Fetching that picture, so the tile keeps it…' });
+    setIconStatus({ kind: 'loading', text: t('icon_fetching') });
 
     let kept = null;
     try {
@@ -2588,12 +2585,7 @@
     }
 
     iconKeepRefused = icon;
-    setIconStatus({
-      kind: 'error',
-      text: 'That address would not let its picture be downloaded, so the tile '
-          + 'cannot keep a copy. Save again to use the address itself — the '
-          + 'tile will fetch it on every new tab.'
-    });
+    setIconStatus({ kind: 'error', text: t('icon_cannotKeep') });
     return null;
   }
 
@@ -2601,10 +2593,7 @@
     e.preventDefault();
     const url = normalizeUrl(fieldUrl.value);
     if (!url) {
-      SettingsUI.setStatus(modalError, {
-        kind: 'error',
-        text: 'That does not look like a web address.'
-      });
+      SettingsUI.setStatus(modalError, { kind: 'error', text: t('tile_badUrl') });
       return;
     }
 
@@ -2667,7 +2656,7 @@
 
     if (settings.confirmDelete) {
       const name = tile.title || defaultTitle(tile.url);
-      if (!(await askAlert('“' + name + '” will be taken off the page.'))) return false;
+      if (!(await askAlert(t('confirm_deleteText', name)))) return false;
     }
 
     tiles = tiles.filter(t => t.id !== id);
@@ -2859,10 +2848,10 @@
    */
   function pageItems() {
     return [
-      { icon: 'plus', label: 'Add tile', run: () => openTileModal(null) },
-      { icon: 'tag', label: 'New group', run: () => openGroupModal(null) },
+      { icon: 'plus', label: t('menu_addTile'), run: () => openTileModal(null) },
+      { icon: 'tag', label: t('menu_newGroup'), run: () => openGroupModal(null) },
       SEPARATOR,
-      { icon: 'settings', label: 'Settings', run: openSettings }
+      { icon: 'settings', label: t('menu_settings'), run: openSettings }
     ];
   }
 
@@ -2891,9 +2880,9 @@
    */
   function tileItems(id) {
     return [
-      { icon: 'external-link', label: 'Open in new tab', run: () => openTileInNewTab(id) },
-      { icon: 'pencil', label: 'Edit tile', run: () => openTileModal(id) },
-      { icon: 'trash-2', label: 'Delete tile', danger: true, run: () => deleteTile(id) },
+      { icon: 'external-link', label: t('menu_openInNewTab'), run: () => openTileInNewTab(id) },
+      { icon: 'pencil', label: t('menu_editTile'), run: () => openTileModal(id) },
+      { icon: 'trash-2', label: t('menu_deleteTile'), danger: true, run: () => deleteTile(id) },
       SEPARATOR,
       ...pageItems()
     ];
@@ -2924,7 +2913,7 @@
     editingGroupId = id;
     const group = id ? groups.find(g => g.id === id) : null;
 
-    groupModalTitle.textContent = group ? 'Edit group' : 'New group';
+    groupModalTitle.textContent = t(group ? 'group_edit' : 'group_new');
     fieldGroupName.value = group ? group.name : '';
     btnGroupDelete.hidden = !group;
     groupError.hidden = true;
@@ -2937,13 +2926,13 @@
 
     const name = fieldGroupName.value.trim();
     if (!name) {
-      SettingsUI.setStatus(groupError, { kind: 'error', text: 'Give the group a name.' });
+      SettingsUI.setStatus(groupError, { kind: 'error', text: t('group_needName') });
       return;
     }
     if (!editingGroupId && groups.length >= Store.MAX_GROUPS) {
       SettingsUI.setStatus(groupError, {
         kind: 'error',
-        text: `That is as many groups as there is room for (${Store.MAX_GROUPS}).`
+        text: t('group_full', Store.MAX_GROUPS)
       });
       return;
     }
@@ -2982,10 +2971,10 @@
   // ---------------------------------------------------------------- settings
 
   const FONT_SOURCE = {
-    bundled: 'bundled with the extension',
-    system: 'using the system font',
-    cache: 'loaded from cache',
-    network: 'downloaded and cached'
+    bundled: 'font_fromBundle',
+    system: 'font_fromSystem',
+    cache: 'font_fromCache',
+    network: 'font_fromNetwork'
   };
 
   async function changeFont(key, value) {
@@ -3009,8 +2998,11 @@
       return {
         value: name,
         status: source
-          ? { kind: 'ok', text: `${name || 'System font'} — ${FONT_SOURCE[source]}` }
-          : { kind: 'ok', text: 'Following the page font.' }
+          ? {
+            kind: 'ok',
+            text: t('font_loaded', name || t('font_system'), t(FONT_SOURCE[source]))
+          }
+          : { kind: 'ok', text: t('font_following') }
       };
     } catch (err) {
       // Keep the last family that worked on screen.
@@ -3019,8 +3011,7 @@
     }
   }
 
-  const PERMISSION_HINT = 'You can also switch on "Access your data for all '
-    + 'websites" under about:addons → Tiles → Permissions.';
+  const PERMISSION_HINT = t('perm_hint');
 
   async function changeDeepIcons(on) {
     if (on) {
@@ -3029,7 +3020,7 @@
           value: false,
           status: {
             kind: 'error',
-            text: 'Only available once the add-on is installed in Firefox.'
+            text: t('perm_notInstalled')
           }
         };
       }
@@ -3047,8 +3038,8 @@
             status: {
               kind: 'error',
               text: error
-                ? `Firefox turned the request down (${error}). ${PERMISSION_HINT}`
-                : `Permission declined. ${PERMISSION_HINT}`
+                ? t('perm_refused', error, PERMISSION_HINT)
+                : t('perm_declined', PERMISSION_HINT)
             }
           };
         }
@@ -3066,9 +3057,7 @@
       value: on,
       status: {
         kind: 'ok',
-        text: on
-          ? 'Re-reading every site for its sharpest icon.'
-          : 'Back to the conventional icon paths.'
+        text: t(on ? 'perm_deepOn' : 'perm_deepOff')
       }
     };
   }
@@ -3079,7 +3068,7 @@
       const found = recentBackgrounds.find(item => item.src === payload.src);
       // Another new-tab page can have pushed it off the end between the strip
       // being drawn and the chip being clicked.
-      if (!found) throw new Error('That one has dropped off the list.');
+      if (!found) throw new Error(t('bg_droppedOff'));
       return found;
     }
 
@@ -3203,17 +3192,11 @@
 
       const status = {
         kind: 'ok',
-        text: byAddress
-          ? 'Background set. That address would not let its picture be '
-            + 'downloaded, so it is fetched again on every new tab.'
+        text: t(byAddress
+          ? 'bg_setByAddress'
           : moved
-            ? (remembered
-                ? 'Background set, the way it was last looked at.'
-                : 'Background set, with blur, dim and position back to their '
-                  + 'defaults.')
-            : settings.bgDim >= 80
-              ? 'Set — turn Dim down to see more of it.'
-              : 'Background set.'
+            ? (remembered ? 'bg_setRemembered' : 'bg_setDefaults')
+            : settings.bgDim >= 80 ? 'bg_setDimmed' : 'bg_set')
       };
 
       // The effects just changed under their own controls, so the whole dialog
@@ -3259,7 +3242,7 @@
     if (payload.action === 'export') {
       try {
         const name = Transfer.save({ settings, tiles, groups, background });
-        return { value: null, status: { kind: 'ok', text: `Saved as ${name}.` } };
+        return { value: null, status: { kind: 'ok', text: t('backup_saved', name) } };
       } catch (err) {
         return { value: null, status: { kind: 'error', text: err.message } };
       }
@@ -3281,7 +3264,7 @@
       mountSettings({
         backup: {
           kind: 'error',
-          text: `The restore stopped part way through: ${err.message}`
+          text: t('backup_stopped', err.message)
         }
       });
       return { value: null };
@@ -3297,20 +3280,12 @@
     if (!dropped) return '';
 
     const lost = [];
-    if (dropped.stats) lost.push('the time-of-day split behind the visit counts');
-    if (dropped.colours) lost.push('group colours');
+    if (dropped.stats) lost.push(t('restore_lostStats'));
+    if (dropped.colours) lost.push(t('restore_lostColours'));
     if (!lost.length) return '';
 
-    return ` It also held ${summarize(lost)}, which this add-on has nowhere to keep.`;
+    return ' ' + t('restore_lost', I18N.list(lost));
   }
-
-  /** "3 groups, 12 tiles and your settings" - what an import actually did. */
-  function summarize(parts) {
-    if (parts.length < 2) return parts[0] || 'nothing';
-    return parts.slice(0, -1).join(', ') + ' and ' + parts[parts.length - 1];
-  }
-
-  const plural = (n, word) => `${n} ${word}${n === 1 ? '' : 's'}`;
 
   async function applyImport(doc) {
     const sections = doc.sections;
@@ -3323,12 +3298,12 @@
     if ('groups' in sections) {
       groups = await Store.saveGroups(sections.groups);
       if (activeGroup && !groups.some(g => g.id === activeGroup)) activeGroup = null;
-      done.push(plural(groups.length, 'group'));
+      done.push(I18N.plural(groups.length, 'restore_group', 'restore_groups'));
     }
 
     if ('tiles' in sections) {
       tiles = await Store.save(sections.tiles);
-      done.push(plural(tiles.length, 'tile'));
+      done.push(I18N.plural(tiles.length, 'restore_tile', 'restore_tiles'));
     }
 
     if ('settings' in sections) {
@@ -3342,7 +3317,7 @@
       settings = await Store.saveSettings(doc.partialSettings
         ? sections.settings
         : Schema.coerce(sections.settings));
-      done.push(doc.partialSettings ? 'some settings' : 'your settings');
+      done.push(t(doc.partialSettings ? 'restore_someSettings' : 'restore_allSettings'));
     }
 
     if ('background' in sections) {
@@ -3351,7 +3326,7 @@
           ? await Backgrounds.save(sections.background)
           : await Backgrounds.clear();
         if (background) recentBackgrounds = await remember(background);
-        done.push('the background');
+        done.push(t('restore_background'));
       } catch {
         pictureFailed = true;
       }
@@ -3363,12 +3338,13 @@
     renderGroups();
     render();
 
-    const refused = 'The background picture would not fit, so it was left as it is.';
-    const from = doc.source ? ` from a ${doc.source} backup` : '';
+    const refused = t('restore_pictureRefused');
     // A backup of nothing but a picture that was then refused restored nothing
     // at all, so there is only the refusal to report.
     const text = done.length
-      ? `Restored ${summarize(done)}${from}.`
+      ? (doc.source
+        ? t('restore_doneFrom', I18N.list(done), doc.source)
+        : t('restore_done', I18N.list(done)))
         + (pictureFailed ? ' ' + refused : '')
         + leftBehind(doc.dropped)
       : refused;
@@ -3447,7 +3423,7 @@
       status,
       onChange: onSettingChange,
       // macOS titles a settings window with the pane it is showing.
-      onSection: label => { settingsTitle.textContent = label || 'Settings'; },
+      onSection: label => { settingsTitle.textContent = label || t('settings_title'); },
       // The scroll edge effect: the hairline under the toolbar arrives with
       // the content that passes beneath it. See .window__box.is-scrolled.
       onScroll: top => settingsForm.classList.toggle('is-scrolled', top > 0)
@@ -3513,20 +3489,8 @@
    * the browser's language to decide - "29/08" and "08/29" are the same choice
    * made in two places.
    */
-  const TIME_FORMATS = {
-    '24':  { hour: '2-digit', minute: '2-digit', hour12: false },
-    '24s': { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false },
-    '12':  { hour: 'numeric', minute: '2-digit', hour12: true },
-    '12s': { hour: 'numeric', minute: '2-digit', second: '2-digit', hour12: true }
-  };
-
-  const DATE_FORMATS = {
-    full:    { weekday: 'long', day: 'numeric', month: 'long' },
-    weekday: { weekday: 'long' },
-    medium:  { weekday: 'short', day: 'numeric', month: 'short' },
-    long:    { day: 'numeric', month: 'long', year: 'numeric' },
-    short:   { day: '2-digit', month: '2-digit', year: 'numeric' }
-  };
+  const TIME_FORMATS = Schema.TIME_FORMATS;
+  const DATE_FORMATS = Schema.DATE_FORMATS;
 
   function tick() {
     const now = new Date();
@@ -3560,6 +3524,10 @@
   // ---------------------------------------------------------------- boot
 
   (async function init() {
+    // Words first, then the glyphs that stand among them: I18N.apply keeps
+    // the icon in the paste hint but moves it, so hydrating before it would
+    // be drawing into an element about to be picked up and put down again.
+    I18N.apply();
     Icons.hydrate();
 
     let remembered;

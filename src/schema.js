@@ -50,6 +50,8 @@
  * using the floating group block.
  */
 const Schema = (() => {
+  const t = I18N.t;
+
   /**
    * Whether this is an Apple keyboard, which settles both what the shortcut
    * that opens this window is - Command rather than Control - and how it is
@@ -68,7 +70,7 @@ const Schema = (() => {
    * the page tests the modifier against, `label` is how the note below names
    * it. Two readers of one fact, rather than each making its own guess.
    */
-  const SETTINGS_SHORTCUT = { apple: APPLE, label: APPLE ? '⌘ ,' : 'Ctrl + ,' };
+  const SETTINGS_SHORTCUT = { apple: APPLE, label: APPLE ? t('shortcut_command') : t('shortcut_control') };
 
   /**
    * What the About page says this is. The version is read off the manifest, so
@@ -90,14 +92,14 @@ const Schema = (() => {
   }
 
   const APP = {
+    // Not translated: a name, a person and a licence are the same in every
+    // language, and the blurb under them is the one line of prose here.
     name: 'OpenTiles',
     version: manifestVersion(),
     author: 'Mark (pan4ratte)',
     licence: 'GNU AGPL v3',
     repo: 'https://github.com/pan4ratte/open-tiles',
-    blurb: 'Replaces the new tab page with a grid of draggable tiles for the '
-         + 'sites you use most - with groups, a clock, and a background of '
-         + 'your own.'
+    blurb: t('about_blurb')
   };
 
   /**
@@ -106,22 +108,62 @@ const Schema = (() => {
    * thickened by the browser - which is why the list is the same everywhere
    * rather than cut down per family.
    */
-  const WEIGHTS = [
-    { value: 100, label: 'Thin' },
-    { value: 200, label: 'Extra light' },
-    { value: 300, label: 'Light' },
-    { value: 400, label: 'Regular' },
-    { value: 500, label: 'Medium' },
-    { value: 600, label: 'Semibold' },
-    { value: 700, label: 'Bold' },
-    { value: 800, label: 'Extra bold' },
-    { value: 900, label: 'Black' }
-  ];
+  const WEIGHTS = [100, 200, 300, 400, 500, 600, 700, 800, 900]
+    .map(value => ({ value, label: t('weight_' + value) }));
+
+  /**
+   * What each clock and date format asks `Intl` for. They live here rather
+   * than beside the clock because this is where the settings that name them
+   * are: the menu below is built by handing each bag to the browser and
+   * showing what comes back, so an option can never promise a shape the page
+   * does not actually draw.
+   *
+   * They are option bags, never patterns. Where the separators go, whether the
+   * day comes before the month and where an AM/PM suffix lands are the
+   * browser's to decide from the reader's own language - which is why none of
+   * this needs translating.
+   */
+  const TIME_FORMATS = {
+    '24':  { hour: '2-digit', minute: '2-digit', hour12: false },
+    '24s': { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false },
+    '12':  { hour: 'numeric', minute: '2-digit', hour12: true },
+    '12s': { hour: 'numeric', minute: '2-digit', second: '2-digit', hour12: true }
+  };
+
+  const DATE_FORMATS = {
+    full:    { weekday: 'long', day: 'numeric', month: 'long' },
+    weekday: { weekday: 'long' },
+    medium:  { weekday: 'short', day: 'numeric', month: 'short' },
+    long:    { day: 'numeric', month: 'long', year: 'numeric' },
+    short:   { day: '2-digit', month: '2-digit', year: 'numeric' }
+  };
+
+  /**
+   * The moment every example in those two menus is written for: a Wednesday
+   * afternoon, on a day past the twelfth so it cannot be misread as a month,
+   * at a second that is not zero so the formats carrying seconds show one.
+   */
+  const SAMPLE = new Date(2026, 7, 26, 13, 45, 30);
+
+  /**
+   * The order the two menus read in, written out rather than taken off the
+   * tables above: '24' and '12' are keys a JavaScript object sorts as numbers
+   * and puts in front of '24s' and '12s', which is not the order anybody would
+   * choose to read four clocks in.
+   */
+  const TIME_ORDER = ['24', '24s', '12', '12s'];
+  const DATE_ORDER = ['full', 'weekday', 'medium', 'long', 'short'];
+
+  const examples = (order, table, write) => order
+    .map(value => ({ value, label: write.call(SAMPLE, [], table[value]) }));
+
+  const TIME_OPTIONS = examples(TIME_ORDER, TIME_FORMATS, Date.prototype.toLocaleTimeString);
+  const DATE_OPTIONS = examples(DATE_ORDER, DATE_FORMATS, Date.prototype.toLocaleDateString);
 
   const RAW_SECTIONS = [
     {
       id: 'general',
-      label: 'General',
+      label: t('section_general'),
       // The gear rather than a palette: this page is no longer only about how
       // the page looks - it is also where the settings themselves are kept,
       // backed up and put back. Which is the same page macOS calls General.
@@ -129,67 +171,66 @@ const Schema = (() => {
       tint: 'var(--system-gray)',
       groups: [
         {
-          label: 'Appearance',
+          label: t('group_appearance'),
           fields: [
             {
               key: 'theme',
-              label: 'Theme',
+              label: t('set_theme'),
               type: 'segmented',
               default: 'system',
               options: [
-                { value: 'system', label: 'System', icon: 'monitor' },
-                { value: 'dark', label: 'Dark', icon: 'moon' },
-                { value: 'light', label: 'Light', icon: 'sun' }
+                { value: 'system', label: t('set_themeSystem'), icon: 'monitor' },
+                { value: 'dark', label: t('set_themeDark'), icon: 'moon' },
+                { value: 'light', label: t('set_themeLight'), icon: 'sun' }
               ]
             },
             {
               key: 'accent',
-              label: 'Accent colour',
+              label: t('set_accent'),
               type: 'color',
               default: '#0088ff'
             },
             {
               key: 'font',
-              label: 'Font',
+              label: t('set_font'),
               type: 'font',
               default: 'Inter',
-              busyText: 'Loading font…',
-              note: 'Sets the tile names, the clock and the date. The dialogs always stay on Inter.'
+              busyText: t('busy_font'),
+              note: t('set_fontNote')
             },
             {
               key: 'showSettingsButton',
-              label: 'Show the settings button',
+              label: t('set_settingsButton'),
               type: 'toggle',
               default: true,
-              note: 'With it off, ' + SETTINGS_SHORTCUT.label
-                  + ' and the right-click menu are the ways in.'
+              note: t('set_settingsButtonNote', SETTINGS_SHORTCUT.label)
             }
           ]
         },
         {
-          label: 'Backup and reset',
+          label: t('group_backupReset'),
           fields: [
             {
               key: 'backup',
-              label: 'Backup',
+              label: t('set_backup'),
               // Reads and writes four storage keys, none of them its own - see
               // `external`.
               type: 'backup',
               external: true,
-              busyText: 'Working on it…',
-              note: 'Saves tiles, groups, settings and background to a file, and puts one back.'
+              busyText: t('busy_working'),
+              note: t('set_backupNote')
             },
             {
               key: 'reset',
-              label: 'Reset all settings',
+              label: t('set_reset'),
               // Nothing to store: the button just does the deed - see `external`.
               type: 'action',
               external: true,
               danger: true,
-              buttonLabel: 'Reset all',
+              buttonLabel: t('set_resetButton'),
               buttonIcon: 'rotate-ccw',
-              busyText: 'Putting everything back…',
-              note: 'Every setting back to its default, and the background away. Tiles are left alone.'
+              busyText: t('busy_resetting'),
+              note: t('set_resetNote')
             }
           ]
         }
@@ -197,34 +238,34 @@ const Schema = (() => {
     },
     {
       id: 'background',
-      label: 'Background',
+      label: t('section_background'),
       icon: 'image',
       tint: 'var(--system-teal)',
       fields: [
         {
           key: 'background',
-          label: 'Picture or video',
+          label: t('set_background'),
           type: 'background',
           // Stored under its own key, not in settings - see the header above.
           external: true,
-          busyText: 'Working on it…',
-          note: 'From this computer, or a web address fetched fresh each time.'
+          busyText: t('busy_working'),
+          note: t('set_backgroundNote')
         },
-        { key: 'bgBlur', label: 'Blur', type: 'range', default: 0, min: 0, max: 40, step: 2, unit: 'px' },
+        { key: 'bgBlur', label: t('set_blur'), type: 'range', default: 0, min: 0, max: 40, step: 2, unit: 'px' },
         {
           key: 'bgDim',
-          label: 'Dim',
+          label: t('set_dim'),
           type: 'range',
           default: 35,
           min: 0,
           max: 90,
           step: 5,
           unit: '%',
-          note: 'Darkens it so the tiles stay readable.'
+          note: t('set_dimNote')
         },
         {
           key: 'bgPosY',
-          label: 'Vertical position',
+          label: t('set_bgPosY'),
           type: 'range',
           default: 50,
           min: 0,
@@ -241,18 +282,18 @@ const Schema = (() => {
     },
     {
       id: 'layout',
-      label: 'Layout',
+      label: t('section_layout'),
       icon: 'layout-grid',
       tint: 'var(--system-indigo)',
       // How the tiles are arranged and how each one is drawn are the same
       // decision made twice, so they share a page - two boxes, one panel.
       groups: [
         {
-          label: 'Grid',
+          label: t('group_grid'),
           fields: [
             {
               key: 'columns',
-              label: 'Columns',
+              label: t('set_columns'),
               type: 'range',
               // Zero is not a count, it is Auto - see `zeroLabel`. Which also
               // means a settings file written when this was a menu, holding
@@ -262,106 +303,107 @@ const Schema = (() => {
               min: 0,
               max: 12,
               step: 1,
-              zeroLabel: 'Auto',
-              note: 'Auto fits as many per row as the window allows.'
+              zeroLabel: t('set_columnsAuto'),
+              note: t('set_columnsNote')
             },
-            { key: 'tileSize', label: 'Tile size', type: 'range', default: 116, min: 72, max: 200, step: 4, unit: 'px' },
-            { key: 'gap', label: 'Spacing', type: 'range', default: 18, min: 4, max: 48, step: 2, unit: 'px' },
+            { key: 'tileSize', label: t('set_tileSize'), type: 'range', default: 116, min: 72, max: 200, step: 4, unit: 'px' },
+            { key: 'gap', label: t('set_gap'), type: 'range', default: 18, min: 4, max: 48, step: 2, unit: 'px' },
             {
               key: 'tileOrder',
-              label: 'Order',
+              label: t('set_order'),
               type: 'segmented',
               default: 'manual',
               options: [
-                { value: 'manual', label: 'Manual' },
-                { value: 'visits', label: 'Most visited' }
+                { value: 'manual', label: t('set_orderManual') },
+                { value: 'visits', label: t('set_orderVisits') }
               ],
-              note: 'Most visited counts how often you open each one.'
+              note: t('set_orderNote')
             }
           ]
         },
         {
-          label: 'Tiles',
+          label: t('group_tiles'),
           fields: [
             {
               key: 'tileShape',
-              label: 'Shape',
+              label: t('set_shape'),
               type: 'choice',
               default: 'square',
               options: [
-                { value: 'square', label: 'Square' },
-                { value: 'circle', label: 'Circular' },
+                { value: 'square', label: t('set_shapeSquare') },
+                { value: 'circle', label: t('set_shapeCircle') },
+                // The three ratios are figures, and read the same everywhere.
                 { value: '3:2', label: '3:2' },
                 { value: '16:10', label: '16:10' },
                 { value: '16:9', label: '16:9' }
               ],
-              note: 'Tile size sets the width; the shape sets the height to match.'
+              note: t('set_shapeNote')
             },
             {
               key: 'tileBg',
-              label: 'Background',
+              label: t('set_tileBg'),
               type: 'choice',
               default: 'theme',
               options: [
-                { value: 'theme', label: 'Follow the theme' },
-                { value: 'dark', label: "Dark theme's" },
-                { value: 'light', label: "Light theme's" },
-                { value: 'custom', label: 'Custom colour' }
+                { value: 'theme', label: t('set_tileBgTheme') },
+                { value: 'dark', label: t('set_tileBgDark') },
+                { value: 'light', label: t('set_tileBgLight') },
+                { value: 'custom', label: t('set_tileBgCustom') }
               ],
-              note: 'What a tile without a colour of its own is drawn in.'
+              note: t('set_tileBgNote')
             },
             {
               key: 'tileBgColor',
-              label: 'Colour',
+              label: t('set_tileBgColor'),
               type: 'color',
               default: '#2f2f31',
               when: { tileBg: 'custom' },
-              note: 'Only what tiles with no colour of their own fall back to.'
+              note: t('set_tileBgColorNote')
             },
             {
               key: 'logoPad',
-              label: 'Logo padding',
+              label: t('set_logoPad'),
               type: 'range',
               default: 20,
               min: 0,
               max: 40,
               step: 5,
               unit: '%',
-              note: 'The room left clear around a tile\'s icon.'
+              note: t('set_logoPadNote')
             },
-            { key: 'showLabels', label: 'Show site names', type: 'toggle', default: true },
+            { key: 'showLabels', label: t('set_showLabels'), type: 'toggle', default: true },
             {
               key: 'showVisits',
-              label: 'Show visit counts',
+              label: t('set_showVisits'),
               type: 'toggle',
               default: false,
-              note: 'Puts the number of times you have opened a site in the corner of its tile.'
+              note: t('set_showVisitsNote')
             },
             {
               key: 'showAddButton',
-              label: 'Show the add button',
+              label: t('set_showAddButton'),
               type: 'toggle',
               default: true,
-              note: 'The dotted + at the end of the grid. Right-clicking the page also adds one.'
+              note: t('set_showAddButtonNote')
             },
-            { key: 'openInNewTab', label: 'Open sites in a new tab', type: 'toggle', default: false },
+            { key: 'openInNewTab', label: t('set_openInNewTab'), type: 'toggle', default: false },
             {
               key: 'confirmDelete',
-              label: 'Confirm before deleting a tile',
+              label: t('set_confirmDelete'),
               type: 'toggle',
               default: false,
-              note: 'Asks first, wherever the tile is being deleted from.'
+              note: t('set_confirmDeleteNote')
             },
             {
               key: 'deepIcons',
-              label: 'Deep icon lookup',
+              label: t('set_deepIcons'),
               type: 'toggle',
               default: false,
-              busyText: 'Asking Firefox for access…',
+              busyText: t('busy_permission'),
               // Firefox only grants permissions.request() while it is handling
               // user input, so this toggle has to act on the click itself.
               gesture: true,
-              note: 'Reads each site\'s markup for its sharpest logo. Firefox will ask for access.'
+              note: t('set_deepIconsNote')
             }
           ]
         }
@@ -369,7 +411,7 @@ const Schema = (() => {
     },
     {
       id: 'header',
-      label: 'Header',
+      label: t('section_header'),
       icon: 'clock',
       tint: 'var(--system-orange)',
       // The time and the date are set separately - they are two lines of very
@@ -378,89 +420,78 @@ const Schema = (() => {
       // one shadow, because they read as a single block over the page.
       groups: [
         {
-          label: 'Time',
+          label: t('group_time'),
           fields: [
-            { key: 'showClock', label: 'Show the clock', type: 'toggle', default: true },
+            { key: 'showClock', label: t('set_showClock'), type: 'toggle', default: true },
             {
               key: 'timeFormat',
-              label: 'Format',
+              label: t('set_format'),
               type: 'choice',
               default: '24',
-              options: [
-                { value: '24', label: '13:45' },
-                { value: '24s', label: '13:45:30' },
-                { value: '12', label: '1:45 PM' },
-                { value: '12s', label: '1:45:30 PM' }
-              ],
-              note: 'The exact shape follows your browser\'s language.'
+              options: TIME_OPTIONS,
+              note: t('set_timeNote')
             },
             {
               key: 'clockFont',
-              label: 'Font',
+              label: t('set_clockFont'),
               type: 'font',
               default: '',
-              emptyLabel: 'Match page font',
+              emptyLabel: t('set_matchPageFont'),
               inherit: 'font',
-              busyText: 'Loading font…',
-              note: 'The clock on its own. Match page font follows General → Font.'
+              busyText: t('busy_font'),
+              note: t('set_clockFontNote')
             },
-            { key: 'clockWeight', label: 'Weight', type: 'choice', default: 400, options: WEIGHTS },
+            { key: 'clockWeight', label: t('set_weight'), type: 'choice', default: 400, options: WEIGHTS },
             {
               key: 'clockSize',
-              label: 'Size',
+              label: t('set_size'),
               type: 'range',
               default: 100,
               min: 50,
               max: 200,
               step: 5,
               unit: '%',
-              note: 'A share of the size the page picks for the window.'
+              note: t('set_clockSizeNote')
             },
             {
               key: 'clockTracking',
-              label: 'Spacing',
+              label: t('set_tracking'),
               type: 'range',
               default: -2.5,
               min: -6,
               max: 20,
               step: .5,
               unit: '%',
-              note: 'Apple tracks large type in, never out.'
+              note: t('set_clockTrackingNote')
             }
           ]
         },
         {
-          label: 'Date',
+          label: t('group_date'),
           fields: [
-            { key: 'showDate', label: 'Show the date', type: 'toggle', default: false },
+            { key: 'showDate', label: t('set_showDate'), type: 'toggle', default: false },
             {
               key: 'dateFormat',
-              label: 'Format',
+              label: t('set_format'),
               type: 'choice',
               default: 'full',
-              options: [
-                { value: 'full', label: 'Wednesday, 29 August' },
-                { value: 'weekday', label: 'Wednesday' },
-                { value: 'medium', label: 'Wed, 29 Aug' },
-                { value: 'long', label: '29 August 2026' },
-                { value: 'short', label: '29/08/2026' }
-              ],
-              note: 'The order follows your browser\'s language.'
+              options: DATE_OPTIONS,
+              note: t('set_dateNote')
             },
             {
               key: 'dateFont',
-              label: 'Font',
+              label: t('set_clockFont'),
               type: 'font',
               default: '',
-              emptyLabel: 'Match page font',
+              emptyLabel: t('set_matchPageFont'),
               inherit: 'font',
-              busyText: 'Loading font…',
-              note: 'The date on its own, the same way.'
+              busyText: t('busy_font'),
+              note: t('set_dateFontNote')
             },
-            { key: 'dateWeight', label: 'Weight', type: 'choice', default: 600, options: WEIGHTS },
+            { key: 'dateWeight', label: t('set_weight'), type: 'choice', default: 600, options: WEIGHTS },
             {
               key: 'dateSize',
-              label: 'Size',
+              label: t('set_size'),
               type: 'range',
               default: 100,
               min: 50,
@@ -470,7 +501,7 @@ const Schema = (() => {
             },
             {
               key: 'dateTracking',
-              label: 'Spacing',
+              label: t('set_tracking'),
               type: 'range',
               default: -1,
               min: -6,
@@ -481,18 +512,18 @@ const Schema = (() => {
           ]
         },
         {
-          label: 'Both lines',
+          label: t('group_bothLines'),
           fields: [
             {
               key: 'headerTint',
-              label: 'Custom colour',
+              label: t('set_headerTint'),
               type: 'toggle',
               default: false,
-              note: 'Off, they follow the theme, and go white over a picture.'
+              note: t('set_headerTintNote')
             },
             {
               key: 'headerColor',
-              label: 'Colour',
+              label: t('set_headerColor'),
               type: 'color',
               // A neutral grey rather than white: this is the colour the two
               // lines take the instant the toggle above is flipped, and white
@@ -503,14 +534,14 @@ const Schema = (() => {
             },
             {
               key: 'headerShadow',
-              label: 'Shadow',
+              label: t('set_headerShadow'),
               type: 'range',
               default: 0,
               min: 0,
               max: 100,
               step: 5,
               unit: '%',
-              note: 'At 0 they take the page\'s own.'
+              note: t('set_headerShadowNote')
             }
           ]
         }
@@ -518,121 +549,121 @@ const Schema = (() => {
     },
     {
       id: 'groups',
-      label: 'Groups',
+      label: t('section_groups'),
       icon: 'tag',
       tint: 'var(--system-green)',
       fields: [
         {
           key: 'groupStyle',
-          label: 'Appearance',
+          label: t('set_groupStyle'),
           type: 'segmented',
           default: 'floating',
           options: [
-            { value: 'floating', label: 'Floating' },
-            { value: 'bar', label: 'Status bar' }
+            { value: 'floating', label: t('set_groupFloating') },
+            { value: 'bar', label: t('set_groupBar') }
           ],
-          note: 'A pill over the page, or a bar across it.'
+          note: t('set_groupStyleNote')
         },
         {
           key: 'groupShow',
-          label: 'Display',
+          label: t('set_groupShow'),
           type: 'segmented',
           default: 'always',
           options: [
-            { value: 'always', label: 'Always' },
-            { value: 'hover', label: 'On hover' }
+            { value: 'always', label: t('set_groupAlways') },
+            { value: 'hover', label: t('set_groupHover') }
           ],
-          note: 'On hover hides it until the pointer arrives.'
+          note: t('set_groupShowNote')
         },
         {
           key: 'showAllGroup',
-          label: 'Show the All category',
+          label: t('set_showAllGroup'),
           type: 'toggle',
           default: true,
-          note: 'The chip that clears the filter. With it off the page always sits in a group.'
+          note: t('set_showAllGroupNote')
         },
         {
           key: 'showGroupAdd',
-          label: 'Show the new group button',
+          label: t('set_showGroupAdd'),
           type: 'toggle',
           default: true,
-          note: 'The + at the end of the block. Right-clicking the page also makes one.'
+          note: t('set_showGroupAddNote')
         },
         {
           key: 'keepGroup',
-          label: 'Remember the open group',
+          label: t('set_keepGroup'),
           type: 'toggle',
           default: true,
-          note: 'Opens a new tab on the group you were last looking at.'
+          note: t('set_keepGroupNote')
         },
         {
           key: 'groupAnimate',
-          label: 'Animate group changes',
+          label: t('set_groupAnimate'),
           type: 'toggle',
           default: true,
-          note: 'Slides the old tiles aside and brings the new ones in behind them.'
+          note: t('set_groupAnimateNote')
         },
         {
           key: 'groupScroll',
-          label: 'Switch groups by scrolling',
+          label: t('set_groupScroll'),
           type: 'toggle',
           default: false,
-          note: 'A roll of the wheel or a swipe turns to the next group. It stops at each end.'
+          note: t('set_groupScrollNote')
         },
         {
           key: 'groupScrollAxis',
-          label: 'Gesture direction',
+          label: t('set_groupAxis'),
           type: 'segmented',
           default: 'vertical',
           when: { groupScroll: true },
           options: [
-            { value: 'vertical', label: 'Up and down' },
-            { value: 'horizontal', label: 'Left and right' },
-            { value: 'either', label: 'Either' }
+            { value: 'vertical', label: t('set_groupAxisVertical') },
+            { value: 'horizontal', label: t('set_groupAxisHorizontal') },
+            { value: 'either', label: t('set_groupAxisEither') }
           ],
-          note: 'Down and right go on; up and left go back.'
+          note: t('set_groupAxisNote')
         },
         {
           key: 'groupFloat',
-          label: 'Position',
+          label: t('set_groupPosition'),
           type: 'segmented',
           default: 'top',
           when: { groupStyle: 'floating' },
           options: [
-            { value: 'top', label: 'Top' },
-            { value: 'tiles', label: 'Above the tiles' },
-            { value: 'bottom', label: 'Bottom' }
+            { value: 'top', label: t('set_groupTop') },
+            { value: 'tiles', label: t('set_groupAboveTiles') },
+            { value: 'bottom', label: t('set_groupBottom') }
           ],
-          note: 'Above the tiles puts it under the clock.'
+          note: t('set_groupFloatNote')
         },
         {
           key: 'groupAlign',
-          label: 'Alignment',
+          label: t('set_groupAlign'),
           type: 'segmented',
           default: 'center',
           when: { groupStyle: 'bar' },
           options: [
-            { value: 'start', label: 'Left' },
-            { value: 'center', label: 'Centre' },
-            { value: 'end', label: 'Right' }
+            { value: 'start', label: t('set_groupLeft') },
+            { value: 'center', label: t('set_groupCentre') },
+            { value: 'end', label: t('set_groupRight') }
           ]
         },
         {
           key: 'groupEdge',
-          label: 'Position',
+          label: t('set_groupPosition'),
           type: 'segmented',
           default: 'top',
           when: { groupStyle: 'bar' },
           options: [
-            { value: 'top', label: 'Top' },
-            { value: 'bottom', label: 'Bottom' }
+            { value: 'top', label: t('set_groupTop') },
+            { value: 'bottom', label: t('set_groupBottom') }
           ]
         }
       ]
     },
     {
       id: 'about',
-      label: 'About',
+      label: t('section_about'),
       icon: 'info',
       tint: 'var(--system-blue)',
       groups: [
@@ -656,33 +687,34 @@ const Schema = (() => {
           fields: [
             {
               key: 'aboutAuthor',
-              label: 'Author',
+              label: t('about_author'),
               type: 'info',
               external: true,
               value: APP.author
             },
             {
               key: 'aboutLicence',
-              label: 'Licence',
+              label: t('about_licence'),
               type: 'info',
               external: true,
               value: APP.licence,
-              note: 'Use it, read it, change it, pass it on.'
+              note: t('about_licenceNote')
             },
             {
               key: 'source',
-              label: 'Source code',
+              label: t('about_source'),
               type: 'link',
               external: true,
               href: APP.repo,
+              // GitHub is a place, not a word.
               buttonLabel: 'GitHub',
               buttonIcon: 'github',
-              note: 'The code, the releases, and where to report anything that is not working.'
+              note: t('about_sourceNote')
             }
           ]
         },
         {
-          label: 'Bundled work',
+          label: t('group_bundled'),
           fields: [
             {
               key: 'aboutLucide',
@@ -838,6 +870,7 @@ const Schema = (() => {
 
   return {
     SECTIONS, FIELDS, STORED, DEFAULTS, EFFECT_KEYS, SETTINGS_SHORTCUT,
+    TIME_FORMATS, DATE_FORMATS,
     coerce, coerceEffects, optionValue, optionLabel
   };
 })();

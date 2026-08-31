@@ -33,6 +33,8 @@
  *                when it was tried and could not be
  */
 const Store = (() => {
+  const t = I18N.t;
+
   const TILES = 'tiles';
   const GROUPS = 'groups';
   const ACTIVE_GROUP = 'activeGroup';
@@ -246,7 +248,7 @@ const Store = (() => {
       .slice(0, MAX_GROUPS)
       .map(g => ({
         id: String(g.id || crypto.randomUUID()),
-        name: g.name.trim().slice(0, 32) || 'Group'
+        name: g.name.trim().slice(0, 32) || t('group_untitled')
       }));
   }
 
@@ -335,7 +337,7 @@ const Store = (() => {
   /** @throws when the picture does not fit in the storage area */
   async function saveBackground(record) {
     const clean = sanitizeBackground(record);
-    if (!clean) throw new Error('Unusable image.');
+    if (!clean) throw new Error(t('bg_unusable'));
     await set(BACKGROUND, clean);
     return clean;
   }

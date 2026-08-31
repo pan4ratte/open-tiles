@@ -49,6 +49,7 @@ node test/groupswitch.test.js  # the group transition and the scroll gesture
 node test/paste.test.js        # pasted SVG code and pasted pictures
 node test/favicon.test.js      # icon resolution: probing, keeping, the cache
 node test/fonts.test.js        # Google Fonts CSS becoming CSS on the page
+node test/i18n.test.js         # the message table, the markup keys, _locales
 node test/live.test.js         # the change feed, subsections, the accent picker
 node test/transfer.test.js     # the backup envelope, its refusals, the buttons
 node test/importers.test.js    # reading a Speed Dial 2 backup
@@ -71,6 +72,9 @@ Please add a guard with any change that could go wrong without saying so.
 | `src/newtab.html` | Page markup, squircle clip path, sheets, settings window |
 | `src/newtab.css` | The design system: tokens, materials, controls, motion |
 | `src/newtab.js` | Rendering, drag & drop reordering, wiring |
+| `src/i18n.js` | `I18N` — every word the add-on says, and `t()` to ask for one |
+| `_locales/` | One `messages.json` per language, read by Firefox |
+| `tools/build-locales.js` | Writes `_locales/en` from `src/i18n.js` |
 | `src/schema.js` | `Schema` — settings definitions, defaults, validation |
 | `src/settings.js` | `SettingsUI` — renders the settings window from the schema |
 | `src/storage.js` | `Store` — `browser.storage.local` with a localStorage fallback |
@@ -100,6 +104,55 @@ Open new tab pages stay in sync through `storage.onChanged`. That feed reports a
 page's *own* writes back to it, so `storage.js` leaves a signature behind on each
 write and drops the event carrying it back — without that, dragging a slider
 rebuilds the dialog under the pointer after a single step.
+
+## Translating
+
+Every word the add-on says lives in [`src/i18n.js`](src/i18n.js) — nothing else
+in `src/` holds a sentence. The code asks for one by key, `t('tile_addTitle')`,
+and the markup asks by attribute, `data-i18n="tile_addTitle"`.
+
+### Adding a language
+
+1. Copy `_locales/en/messages.json` to `_locales/<code>/messages.json`, where
+   `<code>` is the language tag Firefox uses — `de`, `fr`, `pt_BR`.
+2. Translate every `"message"`. Leave the keys, the `"description"` lines and
+   the `$1` placeholders alone; a `$1` is a value the add-on fills in, and the
+   description says what it will be.
+3. Load the add-on and switch Firefox's language to test it.
+
+Nothing else has to change: Firefox picks the folder matching the browser's
+language on its own, and any message a translation has not reached yet falls
+back to English rather than going blank.
+
+Two things are worth knowing. The clock and date menus are **not** translated —
+they are written out by the browser in the reader's own language from the
+format tables in `schema.js`, so there is nothing there to keep in step. And a
+handful of entries are deliberately not for translating: the add-on's name,
+the author, the licence, the type family names, and `13:45`-style figures.
+
+### Adding or changing a message
+
+1. Add the key to `MESSAGES` in `src/i18n.js`, with a `//` comment above it if
+   a translator would need to know what `$1` is or where the words appear —
+   that comment is carried into `messages.json` as the message's description.
+2. Ask for it with `t('key')`, or `data-i18n="key"` in the markup.
+3. Run `node tools/build-locales.js` to rewrite `_locales/en/messages.json`.
+4. Run `node test/i18n.test.js`.
+
+Write **whole sentences**. Word order is the first thing a translation changes,
+so a message built as `'Found a ' + n + 'px icon'` cannot be put into a language
+that wants the number last. Where English joins two clauses, that is two
+messages here, one per case. Counting goes through `I18N.plural(n, one, other)`
+and lists through `I18N.list(parts)` for the same reason.
+
+`test/i18n.test.js` guards all of it: a key nothing has, a key nothing asks for,
+a sentence left loose in the markup, a message filled in with nothing, and
+`_locales/en` drifting from the table it was generated from.
+
+### Right-to-left
+
+Not done. `newtab.css` is written in `left`/`right` rather than in logical
+properties, so an RTL language would need that pass first.
 
 ## Making changes
 

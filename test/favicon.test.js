@@ -150,6 +150,8 @@ const sandbox = {
   }
 };
 vm.createContext(sandbox);
+// Every message favicons.js can put on screen comes from here.
+vm.runInContext(read('i18n.js'), sandbox, { filename: 'i18n.js' });
 vm.runInContext(source, sandbox, { filename: 'favicons.js' });
 
 const Favicons = vm.runInContext('Favicons', sandbox);

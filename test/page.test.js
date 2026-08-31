@@ -105,7 +105,7 @@ const TILES = [
 
 const build = new Function(
   'tiles', 'window', 'countVisit', 'openTileModal', 'openGroupModal',
-  'openSettings', 'deleteTile', 'SEPARATOR',
+  'openSettings', 'deleteTile', 'SEPARATOR', 't',
   block + '\n; return { pageItems, tileItems, openTileInNewTab };');
 
 const { pageItems, tileItems, openTileInNewTab } = build(
@@ -113,7 +113,10 @@ const { pageItems, tileItems, openTileInNewTab } = build(
   { open: (url, target, features) => opened.push({ url, target, features }) },
   id => counted.push(id),
   () => {}, () => {}, () => {}, () => {},
-  SEPARATOR
+  SEPARATOR,
+  // The menu's labels come out of the message table, so the real one answers
+  // here: a stub would let a label be renamed in one place and not the other.
+  require(path.join(SRC, 'i18n.js')).t
 );
 
 const items = tileItems('a');

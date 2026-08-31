@@ -84,6 +84,12 @@ readable `.json` file, and **Import** reads one back. Import also understands
 backups written by **Speed Dial 2**, so you can bring your dials, groups, visit
 counts and preferences across.
 
+### Translations
+
+The interface ships in English and is ready to be translated: every word lives
+in one file, and Firefox picks the language from the browser. See
+[CONTRIBUTING.md](CONTRIBUTING.md) if you would like to add one.
+
 ### Privacy
 
 `storage` is the only permission granted at install. Nothing is sent anywhere,

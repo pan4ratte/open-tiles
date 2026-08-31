@@ -1,10 +1,11 @@
 {
   "manifest_version": 3,
-  "name": "OpenTiles",
+  "name": "__MSG_extName__",
   "version": "1.0.0",
   "author": "pan4ratte",
   "homepage_url": "https://github.com/pan4ratte/open-tiles",
-  "description": "A free, modern, open-source and highly customizable visual bookmark manager and a start page plugin for your browser.",
+  "description": "__MSG_extDescription__",
+  "default_locale": "en",
   "browser_specific_settings": {
     "gecko": {
       "id": "open-tiles@pan4ratte.github.io",

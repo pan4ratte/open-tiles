@@ -75,7 +75,7 @@ const sandbox = {
 };
 vm.createContext(sandbox);
 
-for (const file of ['schema.js', 'settings.js']) {
+for (const file of ['i18n.js', 'schema.js', 'settings.js']) {
   vm.runInContext(read(file), sandbox, { filename: file });
 }
 

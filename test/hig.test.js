@@ -39,6 +39,10 @@ const SRC = process.argv[2] || path.join(__dirname, '..', 'src');
    first and last lines, and those markers are written with plain newlines. */
 const read = file => fs.readFileSync(path.join(SRC, file), 'utf8').replace(/\r\n/g, '\n');
 
+/* The message table, read the same way everything else here is: the checks
+   below pair a colour with the name shown for it, and the name lives there. */
+const I18N = require(path.join(SRC, 'i18n.js'));
+
 const css = read('newtab.css');
 const js = read('newtab.js');
 
@@ -121,7 +125,8 @@ check('systemBlue is the current one, light and dark',
 
 check('the accent a fresh profile gets is that same blue',
   read('schema.js').includes("default: '#0088ff'")
-    && read('settings.js').includes("['#0088ff', 'Blue']"));
+    && read('settings.js').includes("['#0088ff', 'blue']")
+    && I18N.MESSAGES.color_blue === 'Blue');
 
 check('the dark tokens are the same in the media query and the explicit theme',
   (css.match(/--system-blue: #0091ff;/g) || []).length === 2,
@@ -339,7 +344,7 @@ const sandbox = {
   }
 };
 vm.createContext(sandbox);
-for (const file of ['schema.js', 'settings.js']) {
+for (const file of ['i18n.js', 'schema.js', 'settings.js']) {
   vm.runInContext(read(file), sandbox, { filename: file });
 }
 const Schema = vm.runInContext('Schema', sandbox);

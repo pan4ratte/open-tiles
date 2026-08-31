@@ -32,7 +32,46 @@ const read = file => fs.readFileSync(path.join(SRC, file), 'utf8').replace(/\r\n
 const results = [];
 const check = (name, pass, detail = '') => results.push({ name, pass, detail });
 
-const Schema = new Function(read('schema.js') + '\nreturn Schema;')();
+const Schema = new Function(
+  read('i18n.js') + read('schema.js') + '\nreturn Schema;')();
+
+// ------------------------------------------------------------- the menus
+
+/*
+ * Both format menus are written by handing each option bag to Intl and showing
+ * what comes back, so an example is always in the reader's own language and
+ * there is nothing there to translate by hand. Two things can go quietly wrong
+ * with that: an example that is not really an example, and an order that is
+ * not the order the tables were written in - '24' and '12' are keys a
+ * JavaScript object sorts as numbers and puts in front of '24s' and '12s'.
+ */
+const options = key => Schema.FIELDS.find(field => field.key === key).options;
+
+check('the clock menu reads plain, then with seconds, in both conventions',
+  options('timeFormat').map(o => o.value).join() === '24,24s,12,12s',
+  options('timeFormat').map(o => o.value).join());
+
+check('the date menu keeps the order it was written in',
+  options('dateFormat').map(o => o.value).join() === 'full,weekday,medium,long,short',
+  options('dateFormat').map(o => o.value).join());
+
+check('every clock example is a time rather than a name for one',
+  options('timeFormat').every(o => /\d/.test(o.label)),
+  options('timeFormat').map(o => o.label).join(' | '));
+
+check('the ones carrying seconds show a third part the plain ones do not',
+  options('timeFormat').filter(o => o.value.endsWith('s'))
+    .every(o => o.label.length > options('timeFormat')
+      .find(plain => plain.value === o.value.slice(0, -1)).label.length),
+  options('timeFormat').map(o => o.label).join(' | '));
+
+check('every date example is written out rather than left as a key',
+  options('dateFormat').every(o => o.label && o.label !== o.value && /\d|\p{L}/u.test(o.label)),
+  options('dateFormat').map(o => o.label).join(' | '));
+
+check('the two menus offer exactly what the clock knows how to draw',
+  options('timeFormat').every(o => Schema.TIME_FORMATS[o.value])
+    && options('dateFormat').every(o => Schema.DATE_FORMATS[o.value]));
 
 // ------------------------------------------------------------- the migration
 
@@ -254,7 +293,7 @@ check('and a stronger setting is a darker one',
  * The two format tables and `tick`, lifted the same way and run against stubs
  * for the two elements they write.
  */
-const tickFrom = '  const TIME_FORMATS = {';
+const tickFrom = '  const TIME_FORMATS = Schema.TIME_FORMATS;';
 const tickTo = `    dateLine.textContent = now.toLocaleDateString(
       [], DATE_FORMATS[settings.dateFormat] || DATE_FORMATS.full);
   }`;
@@ -274,10 +313,10 @@ const Frozen = new Proxy(RealDate, {
   construct: (target, args) => (args.length ? new target(...args) : new target(at))
 });
 
-const tick = new Function('clock', 'dateLine', 'settings', 'Date', `
+const tick = new Function('clock', 'dateLine', 'settings', 'Date', 'Schema', `
   ${js.slice(tickStart, tickEnd + tickTo.length)}
   return tick;
-`)(clock, dateLine, settings, Frozen);
+`)(clock, dateLine, settings, Frozen, Schema);
 
 /** What the header reads with `changes` set. */
 function shown(changes) {
@@ -412,6 +451,7 @@ const uiSandbox = {
   }
 };
 vm.createContext(uiSandbox);
+vm.runInContext(read('i18n.js'), uiSandbox, { filename: 'i18n.js' });
 vm.runInContext(read('settings.js'), uiSandbox, { filename: 'settings.js' });
 const SettingsUI = vm.runInContext('SettingsUI', uiSandbox);
 
@@ -511,6 +551,7 @@ const fontSandbox = {
   }
 };
 vm.createContext(fontSandbox);
+vm.runInContext(read('i18n.js'), fontSandbox, { filename: 'i18n.js' });
 vm.runInContext(read('fonts.js'), fontSandbox, { filename: 'fonts.js' });
 const Fonts = vm.runInContext('Fonts', fontSandbox);
 
@@ -559,6 +600,7 @@ function loaderOver(server) {
     Store: { getFontCss: async () => undefined, putFontCss: async () => {} }
   };
   vm.createContext(box);
+  vm.runInContext(read('i18n.js'), box, { filename: 'i18n.js' });
   vm.runInContext(read('fonts.js'), box, { filename: 'fonts.js' });
   return vm.runInContext('Fonts', box);
 }

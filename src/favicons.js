@@ -25,6 +25,8 @@
  * Probing images needs no permissions at all - only the deep lookup does.
  */
 const Favicons = (() => {
+  const t = I18N.t;
+
   /** An SVG beats any bitmap: it is sharp at every size. */
   const SVG_SCORE = 1024;
   /** Below this it is a tracking pixel or a broken placeholder, not a logo. */
@@ -279,7 +281,7 @@ const Favicons = (() => {
    * @returns {Promise<{granted: boolean, error?: string}>}
    */
   async function requestSiteAccess() {
-    if (!perms) return { granted: false, error: 'Permissions API unavailable.' };
+    if (!perms) return { granted: false, error: t('perm_unavailable') };
     try {
       return { granted: await perms.request(ALL_SITES) };
     } catch (err) {
@@ -530,7 +532,7 @@ const Favicons = (() => {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
       reader.onload = () => resolve(String(reader.result));
-      reader.onerror = () => reject(new Error('That file could not be read.'));
+      reader.onerror = () => reject(new Error(t('icon_fileUnreadable')));
       reader.readAsDataURL(blob);
     });
   }
@@ -548,10 +550,10 @@ const Favicons = (() => {
    */
   async function fromFile(blob) {
     if (!blob || !/^image\//.test(blob.type || '')) {
-      throw new Error('That is not an image file.');
+      throw new Error(t('icon_notImageFile'));
     }
     if (blob.size > OWN_ICON_MAX) {
-      throw new Error('That picture is too large for an icon — pick a smaller one.');
+      throw new Error(t('icon_fileTooLarge'));
     }
     if (blob.size <= OWN_ICON_DIRECT) return readAsDataUrl(blob);
 
@@ -698,10 +700,10 @@ const Favicons = (() => {
    */
   function fromSvg(source) {
     const text = String(source || '').trim();
-    if (!looksLikeSvg(text)) throw new Error('That does not look like SVG code.');
+    if (!looksLikeSvg(text)) throw new Error(t('icon_svgNotCode'));
 
     const svg = parseSvg(text);
-    if (!svg) throw new Error('That SVG could not be read — it may be incomplete.');
+    if (!svg) throw new Error(t('icon_svgUnreadable'));
 
     scrubSvg(svg);
 
@@ -719,7 +721,7 @@ const Favicons = (() => {
       + encodeURIComponent(new XMLSerializer().serializeToString(svg));
 
     if (uri.length > OWN_SVG_MAX) {
-      throw new Error('That SVG is too long to keep on a tile — try a simpler one.');
+      throw new Error(t('icon_svgTooLong'));
     }
 
     return uri;

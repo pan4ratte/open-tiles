@@ -66,6 +66,8 @@ if (!source.includes('return {')) {
   throw new Error('fonts.js no longer ends in a returned object - update this test');
 }
 vm.runInContext(
+  fs.readFileSync(path.join(SRC, 'i18n.js'), 'utf8'), sandbox, { filename: 'i18n.js' });
+vm.runInContext(
   source.replace('return {', 'return { __test: { parseFaces, inlineBlock },'),
   sandbox,
   { filename: 'fonts.js' }

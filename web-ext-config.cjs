@@ -14,6 +14,9 @@
 module.exports = {
   ignoreFiles: [
     'test',
+    // Regenerates _locales/en from src/i18n.js; the add-on only ships the
+    // result.
+    'tools',
     'web-ext-config.cjs',
     'web-ext-artifacts',
     'README.md',

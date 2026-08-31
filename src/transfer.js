@@ -26,6 +26,8 @@
  * one per add-on somebody might be coming from.
  */
 const Transfer = (() => {
+  const t = I18N.t;
+
   const FORMAT = 'tiles-backup';
   const VERSION = 1;
 
@@ -104,7 +106,7 @@ const Transfer = (() => {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
       reader.onload = () => resolve(String(reader.result));
-      reader.onerror = () => reject(new Error('That file could not be read.'));
+      reader.onerror = () => reject(new Error(t('backup_fileUnreadable')));
       reader.readAsText(file);
     });
   }
@@ -122,8 +124,8 @@ const Transfer = (() => {
    * @throws {Error} with a message fit to show the user
    */
   async function read(file) {
-    if (!file) throw new Error('No file to read.');
-    if (file.size > MAX_FILE) throw new Error('That file is too large to be a backup.');
+    if (!file) throw new Error(t('backup_noFile'));
+    if (file.size > MAX_FILE) throw new Error(t('backup_tooLarge'));
 
     let doc;
     try {
@@ -131,11 +133,11 @@ const Transfer = (() => {
     } catch (err) {
       // A read that failed already carries a sensible message; a parse that
       // failed carries SyntaxError noise nobody wants to see.
-      throw err instanceof SyntaxError ? new Error('That file is not valid JSON.') : err;
+      throw err instanceof SyntaxError ? new Error(t('backup_notJson')) : err;
     }
 
     if (!doc || typeof doc !== 'object') {
-      throw new Error('That is not a backup file this add-on can read.');
+      throw new Error(t('backup_notABackup'));
     }
 
     // Ours by its envelope; otherwise, one somebody else wrote that the
@@ -143,7 +145,7 @@ const Transfer = (() => {
     if (doc.format !== FORMAT) {
       const foreign = Importers.read(doc);
       if (!foreign) {
-        throw new Error('That is not a backup file this add-on can read.');
+        throw new Error(t('backup_notABackup'));
       }
       return {
         version: 0,
@@ -161,7 +163,7 @@ const Transfer = (() => {
     });
 
     if (!Object.keys(sections).length) {
-      throw new Error('That backup is empty — there is nothing in it to restore.');
+      throw new Error(t('backup_empty'));
     }
 
     return {

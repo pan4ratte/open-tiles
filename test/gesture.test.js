@@ -44,7 +44,7 @@ const sandbox = {
 };
 vm.createContext(sandbox);
 
-for (const file of ['schema.js', 'settings.js']) {
+for (const file of ['i18n.js', 'schema.js', 'settings.js']) {
   vm.runInContext(fs.readFileSync(path.join(SRC, file), 'utf8').replace(/\r\n/g, '\n'), sandbox, { filename: file });
 }
 

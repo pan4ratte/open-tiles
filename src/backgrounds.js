@@ -19,6 +19,8 @@
  * on screen by different elements - see `apply`.
  */
 const Backgrounds = (() => {
+  const t = I18N.t;
+
   /** Longest edge kept when a picture is re-encoded. */
   const MAX_DIM = 2560;
   /** Files at or under this are stored byte for byte (keeps SVG and GIF whole). */
@@ -52,7 +54,7 @@ const Backgrounds = (() => {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
       reader.onload = () => resolve(String(reader.result));
-      reader.onerror = () => reject(new Error('That file could not be read.'));
+      reader.onerror = () => reject(new Error(t('bg_fileUnreadable')));
       reader.readAsDataURL(blob);
     });
   }
@@ -83,9 +85,7 @@ const Backgrounds = (() => {
   async function encodeImage(blob) {
     if (blob.size > MAX_FILE) {
       throw new Error(
-        `That picture is ${formatSize(blob.size)} — the limit is `
-        + `${formatSize(MAX_FILE)}. Pick a smaller one.`
-      );
+        t('bg_pictureTooBig', formatSize(blob.size), formatSize(MAX_FILE)));
     }
     if (blob.size <= DIRECT_LIMIT) return readAsDataUrl(blob);
 
@@ -98,7 +98,7 @@ const Backgrounds = (() => {
     if (!src) src = await readAsDataUrl(blob);
 
     if (src.length > MAX_STORED) {
-      throw new Error('That image is too large to store, even shrunk down.');
+      throw new Error(t('bg_pictureNoRoom'));
     }
     return src;
   }
@@ -113,16 +113,14 @@ const Backgrounds = (() => {
   async function encodeVideo(blob) {
     if (blob.size > MAX_VIDEO_FILE) {
       throw new Error(
-        `That video is ${formatSize(blob.size)} — the limit is `
-        + `${formatSize(MAX_VIDEO_FILE)}. Pick a shorter or smaller one.`
-      );
+        t('bg_videoTooBig', formatSize(blob.size), formatSize(MAX_VIDEO_FILE)));
     }
 
     const url = URL.createObjectURL(blob);
     try {
       await probeVideo(url);
     } catch {
-      throw new Error('This browser cannot play that video.');
+      throw new Error(t('bg_videoUnplayable'));
     } finally {
       URL.revokeObjectURL(url);
     }
@@ -137,7 +135,7 @@ const Backgrounds = (() => {
 
   /** Marked, so a refusal can tell "no answer" from "answered with rubbish". */
   function timeout() {
-    const err = new Error('That address took too long to answer.');
+    const err = new Error(t('bg_slowAddress'));
     err.timeout = true;
     return err;
   }
@@ -154,7 +152,7 @@ const Backgrounds = (() => {
       probe.onload = () => { clearTimeout(timer); resolve(); };
       probe.onerror = () => {
         clearTimeout(timer);
-        reject(new Error('That is not a picture.'));
+        reject(new Error(t('bg_notAPicture')));
       };
       probe.referrerPolicy = 'no-referrer';
       probe.src = src;
@@ -185,7 +183,7 @@ const Backgrounds = (() => {
       probe.preload = 'metadata';
       probe.muted = true;
       probe.onloadedmetadata = () => finish(null);
-      probe.onerror = () => finish(new Error('That is not a video.'));
+      probe.onerror = () => finish(new Error(t('bg_notAVideo')));
       probe.src = src;
     });
   }
@@ -202,11 +200,11 @@ const Backgrounds = (() => {
 
   async function fromFile(file) {
     const type = kindOf(file);
-    if (!type) throw new Error('That is not an image or a video file.');
+    if (!type) throw new Error(t('bg_notMedia'));
 
     return {
       src: type === 'video' ? await encodeVideo(file) : await encodeImage(file),
-      name: (file.name || 'Image').slice(0, 80),
+      name: (file.name || t('bg_untitled')).slice(0, 80),
       type
     };
   }
@@ -228,8 +226,8 @@ const Backgrounds = (() => {
     } catch (err) {
       const tried = (err && err.errors) || [];
       throw new Error(tried.length && tried.every(one => one && one.timeout)
-        ? 'That address took too long to answer.'
-        : 'Nothing loaded from that address — is it a picture or a video?');
+        ? t('bg_slowAddress')
+        : t('bg_nothingThere'));
     }
   }
 
@@ -291,7 +289,7 @@ const Backgrounds = (() => {
   async function fromUrl(raw) {
     const address = String(raw == null ? '' : raw).trim();
     if (!/^https?:\/\//i.test(address)) {
-      throw new Error('That needs to be a web address starting http:// or https://.');
+      throw new Error(t('bg_needsHttp'));
     }
 
     const type = await sniff(address);
@@ -364,7 +362,7 @@ const Backgrounds = (() => {
     try {
       return await Store.saveBackground(record);
     } catch {
-      throw new Error('There was no room left to store that background.');
+      throw new Error(t('bg_noRoom'));
     }
   }
 

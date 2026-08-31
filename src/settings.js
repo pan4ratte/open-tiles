@@ -8,6 +8,8 @@
  * optional status line to show under the field.
  */
 const SettingsUI = (() => {
+  const t = I18N.t;
+
   /** @typedef {{kind:'ok'|'error'|'loading', text:string}} Status */
 
   const STATUS_ICONS = {
@@ -293,10 +295,10 @@ const SettingsUI = (() => {
    * the one person in ten who wants a colour that is not on the list.
    */
   const ACCENTS = [
-    ['#0088ff', 'Blue'], ['#6155f5', 'Indigo'], ['#cb30e0', 'Purple'],
-    ['#ff2d55', 'Pink'], ['#ff383c', 'Red'], ['#ff8d28', 'Orange'],
-    ['#ffcc00', 'Yellow'], ['#34c759', 'Green'], ['#00c3d0', 'Teal'],
-    ['#8e8e93', 'Graphite']
+    ['#0088ff', 'blue'], ['#6155f5', 'indigo'], ['#cb30e0', 'purple'],
+    ['#ff2d55', 'pink'], ['#ff383c', 'red'], ['#ff8d28', 'orange'],
+    ['#ffcc00', 'yellow'], ['#34c759', 'green'], ['#00c3d0', 'teal'],
+    ['#8e8e93', 'graphite']
   ];
 
   /**
@@ -310,10 +312,10 @@ const SettingsUI = (() => {
    * the light theme, and the dark theme's back down to black.
    */
   const NEUTRALS = [
-    ['#ffffff', 'White'], ['#f2f2f7', 'Off white'], ['#e5e5ea', 'Pale grey'],
-    ['#d1d1d6', 'Light grey'], ['#c7c7cc', 'Silver'],
-    ['#48484a', 'Slate'], ['#3a3a3c', 'Charcoal'], ['#2c2c2e', 'Ink'],
-    ['#1c1c1e', 'Near black'], ['#000000', 'Black']
+    ['#ffffff', 'white'], ['#f2f2f7', 'offWhite'], ['#e5e5ea', 'paleGrey'],
+    ['#d1d1d6', 'lightGrey'], ['#c7c7cc', 'silver'],
+    ['#48484a', 'slate'], ['#3a3a3c', 'charcoal'], ['#2c2c2e', 'ink'],
+    ['#1c1c1e', 'nearBlack'], ['#000000', 'black']
   ];
 
   /**
@@ -394,7 +396,8 @@ const SettingsUI = (() => {
       const row = document.createElement('div');
       row.className = 'picker__presets' + (modifier ? ' ' + modifier : '');
 
-      const made = list.map(([hex, name]) => {
+      const made = list.map(([hex, key]) => {
+        const name = t('color_' + key);
         const dot = document.createElement('button');
         dot.type = 'button';
         dot.className = 'picker__preset';
@@ -421,7 +424,7 @@ const SettingsUI = (() => {
     area.className = 'picker__area';
     area.tabIndex = 0;
     area.setAttribute('role', 'application');
-    area.setAttribute('aria-label', 'Saturation and brightness');
+    area.setAttribute('aria-label', t('picker_area'));
 
     const areaKnob = document.createElement('span');
     areaKnob.className = 'picker__knob';
@@ -431,7 +434,7 @@ const SettingsUI = (() => {
     hue.className = 'picker__hue';
     hue.tabIndex = 0;
     hue.setAttribute('role', 'slider');
-    hue.setAttribute('aria-label', 'Hue');
+    hue.setAttribute('aria-label', t('picker_hue'));
     hue.setAttribute('aria-valuemin', '0');
     hue.setAttribute('aria-valuemax', '359');
 
@@ -448,7 +451,7 @@ const SettingsUI = (() => {
     hexInput.spellcheck = false;
     hexInput.autocomplete = 'off';
     hexInput.maxLength = 7;
-    hexInput.setAttribute('aria-label', 'Hex value');
+    hexInput.setAttribute('aria-label', t('picker_hex'));
 
     foot.append(hexInput);
     pop.append(accents.row, neutrals.row, area, hue, foot);
@@ -675,7 +678,7 @@ const SettingsUI = (() => {
 
     const version = document.createElement('p');
     version.className = 'about__version';
-    version.textContent = 'Version ' + field.version;
+    version.textContent = t('settings_version', field.version);
 
     wrap.append(logo, name, version);
 
@@ -809,12 +812,14 @@ const SettingsUI = (() => {
     const choose = document.createElement('button');
     choose.type = 'button';
     choose.className = 'btn btn--sm';
-    choose.append(Icons.create('upload', { size: 15 }), document.createTextNode('Choose file'));
+    choose.append(Icons.create('upload', { size: 15 }),
+      document.createTextNode(t('bg_chooseFile')));
 
     const remove = document.createElement('button');
     remove.type = 'button';
     remove.className = 'btn btn--sm btn--danger';
-    remove.append(Icons.create('trash-2', { size: 15 }), document.createTextNode('Remove'));
+    remove.append(Icons.create('trash-2', { size: 15 }),
+      document.createTextNode(t('bg_remove')));
 
     // Turns the preview into something to drag rather than something to look
     // at. A mode rather than a permanent grab handle, because the preview is
@@ -918,16 +923,13 @@ const SettingsUI = (() => {
 
     function showCaption() {
       if (!shown || !shown.src) {
-        caption.textContent =
-          'Nothing yet — drop a picture or video here, or choose a file.';
+        caption.textContent = t('bg_empty');
       } else if (!moving) {
-        caption.textContent = shown.name || 'Local file';
+        caption.textContent = shown.name || t('bg_localFile');
       } else if (slack() === 0) {
-        caption.textContent =
-          'This one is wider than the window, so it is cut at the sides — '
-          + 'there is nothing to move up or down.';
+        caption.textContent = t('bg_tooWide');
       } else {
-        caption.textContent = 'Drag the picture, or use the arrow keys.';
+        caption.textContent = t('bg_dragIt');
       }
     }
 
@@ -946,7 +948,7 @@ const SettingsUI = (() => {
       if (moving) {
         preview.tabIndex = 0;
         preview.setAttribute('role', 'slider');
-        preview.setAttribute('aria-label', 'Vertical position of the background');
+        preview.setAttribute('aria-label', t('bg_position'));
         preview.setAttribute('aria-valuemin', '0');
         preview.setAttribute('aria-valuemax', '100');
         preview.setAttribute('aria-orientation', 'vertical');
@@ -959,7 +961,7 @@ const SettingsUI = (() => {
       move.textContent = '';
       move.append(
         Icons.create(moving ? 'check' : 'move-vertical', { size: 15 }),
-        document.createTextNode(moving ? 'Done' : 'Reposition'));
+        document.createTextNode(t(moving ? 'bg_done' : 'bg_reposition')));
 
       if (moving) sayPosition();
       showCaption();
@@ -982,7 +984,7 @@ const SettingsUI = (() => {
       strip.hidden = list.length === 0;
 
       list.forEach(record => {
-        const named = record.name || 'this background';
+        const named = record.name || t('bg_thisOne');
 
         // The thumbnail and its delete button are siblings inside a slot, not
         // one inside the other: a button cannot hold a button, and the slot is
@@ -994,8 +996,8 @@ const SettingsUI = (() => {
         const chip = document.createElement('button');
         chip.type = 'button';
         chip.className = 'bgfield__chip';
-        chip.title = record.name || 'Recent background';
-        chip.setAttribute('aria-label', 'Use ' + named + ' again');
+        chip.title = record.name || t('bg_recent');
+        chip.setAttribute('aria-label', t('bg_useAgain', named));
         // The one already on screen is marked rather than left out: a strip
         // that reshuffles itself as you click through it is hard to aim at.
         chip.classList.toggle('is-on', Boolean(shown) && shown.src === record.src);
@@ -1015,8 +1017,8 @@ const SettingsUI = (() => {
         const forget = document.createElement('button');
         forget.type = 'button';
         forget.className = 'bgfield__forget';
-        forget.title = 'Remove from recent';
-        forget.setAttribute('aria-label', 'Remove ' + named + ' from recent backgrounds');
+        forget.title = t('bg_forget');
+        forget.setAttribute('aria-label', t('bg_forgetLabel', named));
         forget.append(Icons.create('x', { size: 11 }));
         forget.addEventListener('click', () => send({ action: 'forget', src: record.src }));
 
@@ -1141,14 +1143,14 @@ const SettingsUI = (() => {
     const url = document.createElement('input');
     url.type = 'text';
     url.className = 'field__input';
-    url.placeholder = 'or paste a web address…';
+    url.placeholder = t('bg_urlPlaceholder');
     url.autocomplete = 'off';
     url.spellcheck = false;
 
     const useUrl = document.createElement('button');
     useUrl.type = 'button';
     useUrl.className = 'btn btn--sm';
-    useUrl.append(document.createTextNode('Use'));
+    useUrl.append(document.createTextNode(t('btn_use')));
 
     const sendUrl = () => {
       const value = url.value.trim();
@@ -1257,7 +1259,7 @@ const SettingsUI = (() => {
     group.setAttribute('role', 'radiogroup');
     group.setAttribute('aria-labelledby', caption.id);
 
-    const buttons = [{ id: FONT_ALL, label: 'All' }, ...options].map(option => {
+    const buttons = [{ id: FONT_ALL, label: t('font_filterAll') }, ...options].map(option => {
       const button = document.createElement('button');
       button.type = 'button';
       button.className = 'segmented__item segmented__item--text';
@@ -1325,18 +1327,17 @@ const SettingsUI = (() => {
 
     const empty = document.createElement('p');
     empty.className = 'fontfield__empty';
-    empty.textContent = 'No family in the list covers both of those.';
+    empty.textContent = t('font_noneMatch');
     empty.hidden = true;
 
     const hint = document.createElement('p');
     hint.className = 'fontfield__hint';
-    hint.textContent = 'The specimens need a connection the first time. '
-      + 'Every family still works; they are just all drawn in Inter for now.';
+    hint.textContent = t('font_previewsOffline');
     hint.hidden = true;
 
     const preview = document.createElement('p');
     preview.className = 'preview';
-    preview.textContent = 'The quick brown fox jumps over the lazy dog';
+    preview.textContent = t('font_pangram');
 
     /** The cards, in the order they sit in the grid. */
     const cards = [];
@@ -1424,7 +1425,7 @@ const SettingsUI = (() => {
 
     const entries = [{
       name: '',
-      label: field.emptyLabel || 'System font',
+      label: field.emptyLabel || t('font_system'),
       any: true,
       drawAs: inherited()
     }];
@@ -1480,7 +1481,7 @@ const SettingsUI = (() => {
     otherBtn.setAttribute('aria-expanded', 'false');
     otherBtn.append(
       Icons.create('plus', { size: 14 }),
-      document.createTextNode('Other family…')
+      document.createTextNode(t('font_other'))
     );
 
     const form = document.createElement('div');
@@ -1491,15 +1492,15 @@ const SettingsUI = (() => {
     input.type = 'text';
     input.className = 'field__input';
     input.id = 'set-' + field.key;
-    input.placeholder = 'Any family on Google Fonts';
+    input.placeholder = t('font_otherPlaceholder');
     input.autocomplete = 'off';
     input.spellcheck = false;
-    input.setAttribute('aria-label', 'Another font family');
+    input.setAttribute('aria-label', t('font_otherLabel'));
 
     const use = document.createElement('button');
     use.type = 'button';
     use.className = 'btn btn--sm';
-    use.textContent = 'Use';
+    use.textContent = t('btn_use');
 
     const send = () => {
       const name = input.value.trim();
@@ -1560,12 +1561,12 @@ const SettingsUI = (() => {
     const filters = document.createElement('div');
     filters.className = 'fontfield__filters';
     filters.append(
-      buildFontFilter('Style', Fonts.STYLES, id => {
+      buildFontFilter(t('font_filterStyle'), Fonts.STYLES, id => {
         styleFilter = id;
         grid.scrollTop = 0;
         refresh();
       }),
-      buildFontFilter('Script', Fonts.SCRIPTS, id => {
+      buildFontFilter(t('font_filterScript'), Fonts.SCRIPTS, id => {
         scriptFilter = id;
         grid.scrollTop = 0;
         refresh();
@@ -1705,7 +1706,7 @@ const SettingsUI = (() => {
     const nav = document.createElement('nav');
     nav.className = 'tabs';
     nav.setAttribute('role', 'tablist');
-    nav.setAttribute('aria-label', 'Settings sections');
+    nav.setAttribute('aria-label', t('settings_sections'));
 
     const panels = document.createElement('div');
     panels.className = 'panels';

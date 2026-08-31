@@ -108,6 +108,7 @@ const sandbox = {
   }
 };
 vm.createContext(sandbox);
+vm.runInContext(read('i18n.js'), sandbox, { filename: 'i18n.js' });
 vm.runInContext(read('favicons.js'), sandbox, { filename: 'favicons.js' });
 
 const Favicons = vm.runInContext('Favicons', sandbox);
@@ -265,7 +266,7 @@ const fieldIcon = { value: '', tag: 'fieldIcon' };
 let status = null;
 
 const build = new Function('modal', 'fieldIcon', 'setIconStatus', 'paintPreview',
-  'Favicons',
+  'Favicons', 't',
   block + '\n; return { clipboardFiles };');
 
 build(
@@ -279,7 +280,9 @@ build(
     looksLikeSvg: Favicons.looksLikeSvg,
     fromFile: file => { calls.push({ call: 'fromFile', file }); return 'data:image/png;base64,AA'; },
     fromSvg: text => { calls.push({ call: 'fromSvg', text }); return 'data:image/svg+xml,%3Csvg%3E'; }
-  }
+  },
+  // What the handler says when a paste is not a picture, from the real table.
+  vm.runInContext('I18N', sandbox).t
 );
 
 check('the sheet listens for a paste', typeof onPaste === 'function');

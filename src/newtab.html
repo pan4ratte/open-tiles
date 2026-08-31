@@ -20,13 +20,14 @@
 
   <!-- Tile groups: a floating HUD pill above the clock, or a bar across the
        window. Chips are built in newtab.js from the saved groups. -->
-  <nav class="groupbar" id="groupBar" aria-label="Tile groups">
+  <nav class="groupbar" id="groupBar" data-i18n-label="page_groupbar">
     <div class="groupbar__inner" id="groupChips"></div>
   </nav>
 
   <div class="toolbar">
-    <button class="toolbtn" id="btnSettings" type="button" title="Settings"
-            aria-label="Settings" data-icon="settings" data-icon-size="18"></button>
+    <button class="toolbtn" id="btnSettings" type="button"
+            data-i18n-title="page_settings" data-i18n-label="page_settings"
+            data-icon="settings" data-icon-size="18"></button>
   </div>
 
   <main class="page">
@@ -61,9 +62,9 @@
       <p class="page__date" id="date" hidden></p>
     </header>
 
-    <section class="grid" id="grid" aria-label="Quick access tiles"></section>
+    <section class="grid" id="grid" data-i18n-label="page_grid"></section>
 
-    <p class="empty" id="empty" hidden>No tiles yet. Hit <strong>+</strong> to add your first site.</p>
+    <p class="empty" id="empty" data-i18n="empty_noTiles" hidden></p>
   </main>
 
   <!-- Add / edit tile. A sheet: it belongs to the page it interrupts, so it
@@ -71,26 +72,28 @@
   <div class="modal sheet" id="modal" tabindex="-1" role="dialog" aria-modal="true"
        aria-labelledby="modalTitle" hidden>
     <form class="sheet__box" id="tileForm">
-      <h2 class="sheet__title" id="modalTitle">Add tile</h2>
-      <p class="sheet__subtitle">Type an address — the rest is filled in for you.</p>
+      <h2 class="sheet__title" id="modalTitle" data-i18n="tile_addTitle"></h2>
+      <p class="sheet__subtitle" data-i18n="tile_sheetNote"></p>
 
       <div class="sheet__body">
         <label class="field">
-          <span class="field__label">URL</span>
-          <input class="field__input" id="fieldUrl" type="text" placeholder="example.com" required
+          <span class="field__label" data-i18n="tile_url"></span>
+          <input class="field__input" id="fieldUrl" type="text"
+                 data-i18n-placeholder="tile_urlPlaceholder" required
                  autocomplete="off" spellcheck="false">
         </label>
 
         <label class="field">
-          <span class="field__label">Name <em>(optional)</em></span>
-          <input class="field__input" id="fieldTitle" type="text" placeholder="Example"
-                 autocomplete="off">
+          <span class="field__label"><span data-i18n="tile_name"></span>
+            <em data-i18n="tile_optional"></em></span>
+          <input class="field__input" id="fieldTitle" type="text"
+                 data-i18n-placeholder="tile_namePlaceholder" autocomplete="off">
         </label>
 
         <!-- A div, not a label: it holds buttons of its own, and a button
              inside a label steals the click meant for the field. -->
         <div class="field">
-          <span class="field__label">Appearance</span>
+          <span class="field__label" data-i18n="tile_appearance"></span>
 
           <!-- The tile above, the things that shape it underneath: each is a
                row of its own, so no control has to share a line with the
@@ -111,82 +114,83 @@
 
             <div class="tilefield__rows">
               <div class="tilefield__group">
-                <label class="tilefield__sub" for="fieldIcon">Icon <em>(optional)</em></label>
+                <label class="tilefield__sub" for="fieldIcon">
+                  <span data-i18n="tile_icon"></span> <em data-i18n="tile_optional"></em>
+                </label>
                 <div class="tilefield__row">
                   <input class="field__input" id="fieldIcon" type="text"
-                         placeholder="Web address, or paste a picture or SVG"
+                         data-i18n-placeholder="tile_iconPlaceholder"
                          autocomplete="off" spellcheck="false">
                   <button class="btn btn--sm" type="button" id="btnIconReload"
-                          title="Look up the site's own icon again"
-                          aria-label="Look up the site's own icon again"
+                          data-i18n-title="tile_iconReload"
+                          data-i18n-label="tile_iconReload"
                           data-icon="refresh-cw" data-icon-size="15"></button>
                   <button class="btn btn--sm" type="button" id="btnIconFile"
-                          title="Choose a picture file"
-                          aria-label="Choose a picture file"
+                          data-i18n-title="tile_iconFile"
+                          data-i18n-label="tile_iconFile"
                           data-icon="upload" data-icon-size="15"></button>
                   <input class="file-input" id="fieldIconFile" type="file" accept="image/*">
                 </div>
                 <!-- Two of the three ways in leave no mark on the sheet, so
                      they are said out loud rather than left to be discovered. -->
-                <p class="tilefield__note" id="iconHelp">
-                  Paste a picture, or the SVG code of one, anywhere in this sheet —
-                  or press <span class="tilefield__key" data-icon="upload" data-icon-size="12"></span>
-                  to choose a file.
+                <p class="tilefield__note" id="iconHelp" data-i18n="tile_iconHelp">
+                  <span class="tilefield__key" data-i18n-slot
+                        data-icon="upload" data-icon-size="12"></span>
                 </p>
               </div>
 
               <div class="tilefield__group">
-                <span class="tilefield__sub">Icon colour</span>
+                <span class="tilefield__sub" data-i18n="tile_iconColor"></span>
                 <!-- The colour well is built in newtab.js, from the same
                      picker the accent uses. -->
                 <div class="tilefield__row" id="tileIconRow">
                   <button class="btn btn--sm" type="button" id="btnIconPipette"
-                          title="Pick a colour out of the icon"
-                          aria-label="Pick a colour out of the icon"
+                          data-i18n-title="tile_pipette"
+                          data-i18n-label="tile_pipette"
                           aria-pressed="false"
                           data-icon="pipette" data-icon-size="15"></button>
                   <button class="btn btn--sm" type="button" id="btnIconColorClear"
-                          title="Back to the icon's own colours"
-                          aria-label="Back to the icon's own colours"
+                          data-i18n-title="tile_iconColorClear"
+                          data-i18n-label="tile_iconColorClear"
                           data-icon="rotate-ccw" data-icon-size="15"></button>
                 </div>
               </div>
 
               <div class="tilefield__group">
-                <span class="tilefield__sub">Background</span>
+                <span class="tilefield__sub" data-i18n="tile_bg"></span>
                 <div class="tilefield__row" id="tileBgRow">
                   <button class="btn btn--sm" type="button" id="btnPipette"
-                          title="Pick a colour out of the icon"
-                          aria-label="Pick a colour out of the icon"
+                          data-i18n-title="tile_pipette"
+                          data-i18n-label="tile_pipette"
                           aria-pressed="false"
                           data-icon="pipette" data-icon-size="15"></button>
                   <button class="btn btn--sm" type="button" id="btnBgClear"
-                          title="Back to the usual tile"
-                          aria-label="Back to the usual tile"
+                          data-i18n-title="tile_bgClear"
+                          data-i18n-label="tile_bgClear"
                           data-icon="rotate-ccw" data-icon-size="15"></button>
                 </div>
               </div>
 
               <div class="tilefield__group">
-                <span class="tilefield__sub">Padding</span>
+                <span class="tilefield__sub" data-i18n="tile_pad"></span>
                 <!-- The slider is built in newtab.js, from the same control
                      the Logo padding setting uses. -->
                 <div class="tilefield__row" id="tilePadRow">
                   <button class="btn btn--sm" type="button" id="btnPadClear"
-                          title="Back to the padding set for every tile"
-                          aria-label="Back to the padding set for every tile"
+                          data-i18n-title="tile_padClear"
+                          data-i18n-label="tile_padClear"
                           data-icon="rotate-ccw" data-icon-size="15"></button>
                 </div>
               </div>
 
               <div class="tilefield__group">
-                <span class="tilefield__sub">Icon rounding</span>
+                <span class="tilefield__sub" data-i18n="tile_round"></span>
                 <!-- The slider is built in newtab.js, from the same control
                      the padding above uses. -->
                 <div class="tilefield__row" id="tileRoundRow">
                   <button class="btn btn--sm" type="button" id="btnRoundClear"
-                          title="Back to the icon's own corners"
-                          aria-label="Back to the icon's own corners"
+                          data-i18n-title="tile_roundClear"
+                          data-i18n-label="tile_roundClear"
                           data-icon="rotate-ccw" data-icon-size="15"></button>
                 </div>
               </div>
@@ -195,7 +199,7 @@
         </div>
 
         <label class="field">
-          <span class="field__label">Group</span>
+          <span class="field__label" data-i18n="tile_group"></span>
           <span class="popup">
             <select class="select" id="fieldGroup"></select>
             <span class="popup__chevron" data-icon="chevrons-up-down" data-icon-size="13"></span>
@@ -207,11 +211,12 @@
 
       <div class="sheet__actions">
         <button class="btn btn--danger" type="button" id="btnDelete" hidden>
-          <span class="btn__icon" data-icon="trash-2" data-icon-size="14"></span>Delete
+          <span class="btn__icon" data-icon="trash-2" data-icon-size="14"></span
+          ><span data-i18n="btn_delete"></span>
         </button>
         <span class="sheet__spacer"></span>
-        <button class="btn" type="button" id="btnCancel">Cancel</button>
-        <button class="btn btn--primary" type="submit" id="btnSave">Save</button>
+        <button class="btn" type="button" id="btnCancel" data-i18n="btn_cancel"></button>
+        <button class="btn btn--primary" type="submit" id="btnSave" data-i18n="btn_save"></button>
       </div>
     </form>
   </div>
@@ -219,13 +224,14 @@
   <!-- Settings. A window rather than a sheet: it stands on its own, so it is
        centred, fully rounded, and closed from its toolbar. -->
   <div class="modal window" id="settings" tabindex="-1" role="dialog" aria-modal="true"
-       aria-label="Settings" hidden>
+       data-i18n-label="settings_title" hidden>
     <form class="window__box" id="settingsForm">
       <div class="window__toolbar">
-        <h2 class="window__title" id="settingsTitle">Settings</h2>
+        <h2 class="window__title" id="settingsTitle" data-i18n="settings_title"></h2>
         <span class="window__spacer"></span>
-        <button class="toolbtn" type="button" id="btnSettingsClose" title="Close"
-                aria-label="Close" data-icon="x" data-icon-size="16"></button>
+        <button class="toolbtn" type="button" id="btnSettingsClose"
+                data-i18n-title="btn_close" data-i18n-label="btn_close"
+                data-icon="x" data-icon-size="16"></button>
       </div>
 
       <div class="window__body" id="settingsBody"></div>
@@ -236,13 +242,14 @@
   <div class="modal sheet" id="groupModal" tabindex="-1" role="dialog" aria-modal="true"
        aria-labelledby="groupModalTitle" hidden>
     <form class="sheet__box" id="groupForm">
-      <h2 class="sheet__title" id="groupModalTitle">New group</h2>
-      <p class="sheet__subtitle">Drag tiles onto a group to put them in it.</p>
+      <h2 class="sheet__title" id="groupModalTitle" data-i18n="group_new"></h2>
+      <p class="sheet__subtitle" data-i18n="group_sheetNote"></p>
 
       <div class="sheet__body">
         <label class="field">
-          <span class="field__label">Name</span>
-          <input class="field__input" id="fieldGroupName" type="text" placeholder="Work" required
+          <span class="field__label" data-i18n="group_name"></span>
+          <input class="field__input" id="fieldGroupName" type="text" required
+                 data-i18n-placeholder="group_namePlaceholder"
                  autocomplete="off" maxlength="32">
         </label>
 
@@ -251,11 +258,12 @@
 
       <div class="sheet__actions">
         <button class="btn btn--danger" type="button" id="btnGroupDelete" hidden>
-          <span class="btn__icon" data-icon="trash-2" data-icon-size="14"></span>Delete
+          <span class="btn__icon" data-icon="trash-2" data-icon-size="14"></span
+          ><span data-i18n="btn_delete"></span>
         </button>
         <span class="sheet__spacer"></span>
-        <button class="btn" type="button" id="btnGroupCancel">Cancel</button>
-        <button class="btn btn--primary" type="submit">Save</button>
+        <button class="btn" type="button" id="btnGroupCancel" data-i18n="btn_cancel"></button>
+        <button class="btn btn--primary" type="submit" data-i18n="btn_save"></button>
       </div>
     </form>
   </div>
@@ -267,15 +275,17 @@
        aria-labelledby="confirmTitle" aria-describedby="confirmText" hidden>
     <div class="alert__box">
       <span class="alert__glyph" data-icon="trash-2" data-icon-size="24"></span>
-      <h2 class="alert__title" id="confirmTitle">Delete this tile?</h2>
+      <h2 class="alert__title" id="confirmTitle" data-i18n="confirm_deleteTitle"></h2>
       <p class="alert__text" id="confirmText"></p>
       <div class="alert__actions">
-        <button class="btn" type="button" id="btnConfirmCancel">Cancel</button>
-        <button class="btn btn--destructive" type="button" id="btnConfirmOk">Delete</button>
+        <button class="btn" type="button" id="btnConfirmCancel" data-i18n="btn_cancel"></button>
+        <button class="btn btn--destructive" type="button" id="btnConfirmOk"
+                data-i18n="btn_delete"></button>
       </div>
     </div>
   </div>
 
+  <script src="i18n.js"></script>
   <script src="icons.js"></script>
   <script src="schema.js"></script>
   <script src="storage.js"></script>

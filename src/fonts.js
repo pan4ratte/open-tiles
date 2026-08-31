@@ -21,6 +21,8 @@
  * the page - see PREVIEW_PREFIX.
  */
 const Fonts = (() => {
+  const t = I18N.t;
+
   const BUNDLED = 'Inter';
   /**
    * One stylesheet per family, named after it. The prefix is long enough that
@@ -108,22 +110,18 @@ const Fonts = (() => {
   ];
 
   /** The Style filter's buttons, in the order they are shown. */
-  const STYLES = [
-    { id: 'sans', label: 'Sans' },
-    { id: 'serif', label: 'Serif' },
-    { id: 'mono', label: 'Mono' },
-    { id: 'display', label: 'Display' }
-  ];
+  const STYLES = ['sans', 'serif', 'mono', 'display']
+    .map(id => ({ id, label: t('font_style' + id[0].toUpperCase() + id.slice(1)) }));
 
   /**
    * The Script filter's buttons. Plain Latin is not among them: every family
    * here has it, so it would rule nothing out.
    */
   const SCRIPTS = [
-    { id: 'latin-ext', label: 'Latin ext', title: 'Extended Latin - accents and the rest of Europe' },
-    { id: 'cyrillic', label: 'Cyrillic', title: 'Cyrillic' },
-    { id: 'greek', label: 'Greek', title: 'Greek' },
-    { id: 'vietnamese', label: 'Vietnamese', title: 'Vietnamese' }
+    { id: 'latin-ext', label: t('font_scriptLatinExt'), title: t('font_scriptLatinExtTitle') },
+    { id: 'cyrillic', label: t('font_scriptCyrillic'), title: t('font_scriptCyrillic') },
+    { id: 'greek', label: t('font_scriptGreek'), title: t('font_scriptGreek') },
+    { id: 'vietnamese', label: t('font_scriptVietnamese'), title: t('font_scriptVietnamese') }
   ];
 
   /** Names only, for anything that just wants the list. */
@@ -288,7 +286,7 @@ const Fonts = (() => {
       if (res.ok) return res.text();
       // Kept for the message, but only from a reply that is not the ordinary
       // "not served": a 503 is worth telling the reader about, a 400 is not.
-      if (res.status !== 400) trouble = `Google Fonts replied ${res.status}.`;
+      if (res.status !== 400) trouble = t('font_googleReplied', res.status);
       return null;
     };
 
@@ -303,7 +301,7 @@ const Fonts = (() => {
       if (css) return css;
     }
 
-    throw new Error(trouble || `Google Fonts has no family called "${family}".`);
+    throw new Error(trouble || t('font_noSuchFamily', family));
   }
 
   /** Replaces every gstatic URL with a data: URI so the CSS is self-contained. */
@@ -323,8 +321,8 @@ const Fonts = (() => {
     });
 
     const out = blocks.filter(Boolean).join('\n');
-    if (!out) throw new Error('Could not download the font files.');
-    if (out.length > MAX_CSS_BYTES) throw new Error('That font is too large to cache.');
+    if (!out) throw new Error(t('font_noFiles'));
+    if (out.length > MAX_CSS_BYTES) throw new Error(t('font_tooLarge'));
     return out;
   }
 
@@ -487,7 +485,7 @@ const Fonts = (() => {
       credentials: 'omit',
       cache: 'no-cache'
     });
-    if (!res.ok) throw new Error(`Google Fonts replied ${res.status}.`);
+    if (!res.ok) throw new Error(t('font_googleReplied', res.status));
 
     // Renamed before anything else, so a block that fails to download cannot
     // leave a real family name behind in the stylesheet either.
@@ -503,7 +501,7 @@ const Fonts = (() => {
     );
 
     const out = blocks.filter(Boolean).join('\n');
-    if (!out) throw new Error('Could not download the font previews.');
+    if (!out) throw new Error(t('font_noPreviews'));
     return out;
   }
 

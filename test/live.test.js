@@ -33,6 +33,10 @@ const SRC = process.argv[2] || path.join(__dirname, '..', 'src');
    endings rather than on the code. */
 const read = file => fs.readFileSync(path.join(SRC, file), 'utf8').replace(/\r\n/g, '\n');
 
+/* The message table, read the same way everything else here is: the checks
+   below pair a colour with the name shown for it, and the name lives there. */
+const I18N = require(path.join(SRC, 'i18n.js'));
+
 // ------------------------------------------------------------------ harness
 
 const results = [];
@@ -104,7 +108,7 @@ const sandbox = {
 };
 vm.createContext(sandbox);
 
-for (const file of ['schema.js', 'storage.js', 'settings.js']) {
+for (const file of ['i18n.js', 'schema.js', 'storage.js', 'settings.js']) {
   vm.runInContext(read(file), sandbox, { filename: file });
 }
 
@@ -359,7 +363,8 @@ Store.onExternalChange((key, value) => heard.push({ key, value }));
   // the shim has neither - the popover itself is checked in a browser. What is
   // checkable here is that it is built and wired the way it says it is.
   check('the picker offers the system accents, on the current palette',
-    read('settings.js').includes("['#0088ff', 'Blue']")
+    read('settings.js').includes("['#0088ff', 'blue']")
+      && I18N.MESSAGES.color_blue === 'Blue'
       && !read('newtab.css').includes('#007aff'),
     'systemBlue moved to 0,136,255 when the palette was re-cut in June 2025');
 
