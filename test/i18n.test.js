@@ -208,6 +208,60 @@ if (built_en) {
     undeclared.length === 0, undeclared.map(([k]) => k).join(', '));
 }
 
+// ------------------------------------------------ every other language
+
+/*
+ * A translation is a file nothing in the code ever names, so nothing here
+ * fails when one goes wrong: a key spelt differently is simply never found, a
+ * key left over from a message that has since gone is translated forever, and
+ * a sentence that dropped the `$1` the caller fills in loses the value with
+ * no complaint at all.
+ *
+ * A language is allowed to be short of a key - that one falls back to English
+ * rather than going blank - so how much of the table it covers is reported
+ * rather than insisted on.
+ */
+const LOCALES = path.join(ROOT, '_locales');
+fs.readdirSync(LOCALES)
+  .filter(code => code !== 'en' && fs.statSync(path.join(LOCALES, code)).isDirectory())
+  .forEach(code => {
+    let words = null;
+    try {
+      words = JSON.parse(fs.readFileSync(path.join(LOCALES, code, 'messages.json'), 'utf8'));
+    } catch (why) {
+      check(code + ' is a file Firefox can read', false, why.message);
+      return;
+    }
+
+    const stale = Object.keys(words).filter(key => !(key in MESSAGES));
+    const blank = Object.entries(words).filter(([, entry]) => !String(entry.message || '').trim());
+    const translated = Object.keys(words).filter(key => key in MESSAGES).length;
+
+    check(code + ' translates keys the table still has',
+      stale.length === 0 && blank.length === 0,
+      [
+        stale.length ? 'stale: ' + stale.join(', ') : '',
+        blank.length ? 'empty: ' + blank.map(([k]) => k).join(', ') : ''
+      ].filter(Boolean).join(' | ')
+        || translated + ' of ' + Object.keys(MESSAGES).length + ' messages');
+
+    /* The same values, in whatever order the language puts them: a `$2` the
+       translation dropped is a value that never reaches the reader. */
+    const subs = text => [...String(text).matchAll(/\$(\d)/g)].map(m => m[1]).sort().join('');
+    const lost = Object.entries(words)
+      .filter(([key, entry]) => key in MESSAGES && subs(entry.message) !== subs(MESSAGES[key]));
+    check(code + ' fills in every value the English one does',
+      lost.length === 0, lost.map(([k]) => k).join(', '));
+
+    const undeclared = Object.entries(words).filter(([, entry]) => {
+      const most = [...String(entry.message).matchAll(/\$(\d)/g)]
+        .reduce((high, m) => Math.max(high, Number(m[1])), 0);
+      return most && Object.keys(entry.placeholders || {}).length !== most;
+    });
+    check(code + ' declares its substitutions, the way a platform expects',
+      undeclared.length === 0, undeclared.map(([k]) => k).join(', '));
+  });
+
 // ------------------------------------------------------- the manifest
 
 const manifest = JSON.parse(fs.readFileSync(path.join(ROOT, 'manifest.json'), 'utf8'));

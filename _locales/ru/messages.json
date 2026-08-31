@@ -1,0 +1,1245 @@
+{
+  "extName": {
+    "message": "OpenTiles",
+    "description": "Shown by Firefox itself, in about:addons and on the add-on's listing. The name is a proper noun and is here to be transliterated, not translated."
+  },
+  "extDescription": {
+    "message": "Бесплатный, современный и гибко настраиваемый менеджер визуальных закладок с открытым исходным кодом — стартовая страница для вашего браузера."
+  },
+  "page_title": {
+    "message": "Новая вкладка"
+  },
+  "page_groupbar": {
+    "message": "Группы плиток"
+  },
+  "page_grid": {
+    "message": "Плитки быстрого доступа"
+  },
+  "page_settings": {
+    "message": "Настройки"
+  },
+  "empty_inGroup": {
+    "message": "В этой группе пока пусто — перетащите плитку на её название, чтобы добавить сюда."
+  },
+  "empty_noTiles": {
+    "message": "Плиток пока нет. Нажмите +, чтобы добавить первый сайт."
+  },
+  "empty_noTilesNoAdd": {
+    "message": "Плиток пока нет. Нажмите правой кнопкой в любом месте, чтобы добавить первый сайт."
+  },
+  "tile_add": {
+    "message": "Добавить плитку"
+  },
+  "tile_visits": {
+    "message": "Переходов отсюда: $1",
+    "description": "$1 is how many times this site has been opened from here.",
+    "placeholders": {
+      "n1": {
+        "content": "$1"
+      }
+    }
+  },
+  "tile_sampleName": {
+    "message": "Пример",
+    "description": "Standing in for a name while the sheet has no address typed in it yet."
+  },
+  "menu_addTile": {
+    "message": "Добавить плитку"
+  },
+  "menu_newGroup": {
+    "message": "Новая группа"
+  },
+  "menu_settings": {
+    "message": "Настройки"
+  },
+  "menu_openInNewTab": {
+    "message": "Открыть в новой вкладке"
+  },
+  "menu_editTile": {
+    "message": "Изменить плитку"
+  },
+  "menu_deleteTile": {
+    "message": "Удалить плитку"
+  },
+  "group_all": {
+    "message": "Все",
+    "description": "The chip that clears the filter, and what its tooltip says."
+  },
+  "group_allTitle": {
+    "message": "Все плитки"
+  },
+  "group_chipTitle": {
+    "message": "$1\nПеретащите, чтобы изменить порядок; правая кнопка — переименовать или удалить",
+    "description": "$1 is the group's name. The line break is deliberate: a tooltip's second line says what can be done to it.",
+    "placeholders": {
+      "n1": {
+        "content": "$1"
+      }
+    }
+  },
+  "group_new": {
+    "message": "Новая группа"
+  },
+  "group_edit": {
+    "message": "Изменить группу"
+  },
+  "group_sheetNote": {
+    "message": "Перетаскивайте плитки на группу, чтобы поместить их в неё."
+  },
+  "group_name": {
+    "message": "Название"
+  },
+  "group_namePlaceholder": {
+    "message": "Работа"
+  },
+  "group_needName": {
+    "message": "Введите название группы."
+  },
+  "group_full": {
+    "message": "Больше групп не поместится (максимум — $1).",
+    "description": "$1 is the most groups there is room for.",
+    "placeholders": {
+      "n1": {
+        "content": "$1"
+      }
+    }
+  },
+  "group_untitled": {
+    "message": "Группа",
+    "description": "What a group with no usable name of its own is called."
+  },
+  "tile_addTitle": {
+    "message": "Добавить плитку"
+  },
+  "tile_editTitle": {
+    "message": "Изменить плитку"
+  },
+  "tile_sheetNote": {
+    "message": "Введите адрес — остальное заполнится само."
+  },
+  "tile_url": {
+    "message": "Адрес"
+  },
+  "tile_urlPlaceholder": {
+    "message": "example.com"
+  },
+  "tile_name": {
+    "message": "Название"
+  },
+  "tile_optional": {
+    "message": "(необязательно)",
+    "description": "Marks a field that may be left empty. Shown after the field's own name."
+  },
+  "tile_namePlaceholder": {
+    "message": "Пример"
+  },
+  "tile_appearance": {
+    "message": "Оформление"
+  },
+  "tile_icon": {
+    "message": "Значок"
+  },
+  "tile_iconPlaceholder": {
+    "message": "Веб-адрес, картинка или SVG"
+  },
+  "tile_iconReload": {
+    "message": "Снова найти собственный значок сайта"
+  },
+  "tile_iconFile": {
+    "message": "Выбрать файл с картинкой"
+  },
+  "tile_iconHelp": {
+    "message": "Вставьте картинку или её SVG-код в любом месте этого окна — либо нажмите $1, чтобы выбрать файл.",
+    "description": "$1 is the button that chooses a file, drawn as its icon.",
+    "placeholders": {
+      "n1": {
+        "content": "$1"
+      }
+    }
+  },
+  "tile_iconColor": {
+    "message": "Цвет значка"
+  },
+  "tile_pipette": {
+    "message": "Взять цвет со значка"
+  },
+  "tile_iconColorClear": {
+    "message": "Вернуть собственные цвета значка"
+  },
+  "tile_bg": {
+    "message": "Фон"
+  },
+  "tile_bgTitle": {
+    "message": "Фон плитки",
+    "description": "The name the colour picker gives itself when it opens on a tile."
+  },
+  "tile_bgClear": {
+    "message": "Вернуть обычный вид плитки"
+  },
+  "tile_pad": {
+    "message": "Отступы"
+  },
+  "tile_padClear": {
+    "message": "Вернуть отступы, заданные для всех плиток"
+  },
+  "tile_round": {
+    "message": "Скругление значка"
+  },
+  "tile_roundClear": {
+    "message": "Вернуть собственные углы значка"
+  },
+  "tile_group": {
+    "message": "Группа"
+  },
+  "icon_looking": {
+    "message": "Ищем самый чёткий значок этого сайта…"
+  },
+  "icon_noneDeep": {
+    "message": "У этого сайта нет собственного значка — выберите или вставьте картинку."
+  },
+  "icon_noneShallow": {
+    "message": "По обычным адресам ничего нет. Глубокий поиск значков в настройках читает саму страницу и обычно находит его."
+  },
+  "icon_vector": {
+    "message": "Найден векторный значок — чёткий при любом размере."
+  },
+  "icon_found": {
+    "message": "Найден значок $1 px.",
+    "description": "$1 is the icon's width in pixels, in all three. Three messages rather than one with a tail: each is a whole sentence to be re-ordered freely.",
+    "placeholders": {
+      "n1": {
+        "content": "$1"
+      }
+    }
+  },
+  "icon_foundLargest": {
+    "message": "Найден значок $1 px — самый крупный из тех, что публикует этот сайт.",
+    "placeholders": {
+      "n1": {
+        "content": "$1"
+      }
+    }
+  },
+  "icon_foundSmall": {
+    "message": "Найден значок $1 px. Глубокий поиск значков в настройках часто находит крупнее.",
+    "placeholders": {
+      "n1": {
+        "content": "$1"
+      }
+    }
+  },
+  "icon_needAddress": {
+    "message": "Сначала введите адрес — поиск идёт по нему."
+  },
+  "icon_cleared": {
+    "message": "Заданная ранее картинка удалена.",
+    "description": "Added after whichever of the above the lookup ended with."
+  },
+  "icon_fetching": {
+    "message": "Загружаем картинку, чтобы плитка сохранила её…"
+  },
+  "icon_cannotKeep": {
+    "message": "Этот адрес не даёт скачать свою картинку, поэтому плитка не может сохранить копию. Сохраните ещё раз, чтобы использовать сам адрес — плитка будет загружать картинку при каждой новой вкладке."
+  },
+  "icon_notAPicture": {
+    "message": "Это не картинка."
+  },
+  "icon_unreadable": {
+    "message": "Этот значок не даёт себя прочитать — попробуйте взять его из файла."
+  },
+  "icon_clickToTake": {
+    "message": "Нажмите на значок, чтобы взять его цвет."
+  },
+  "icon_pointAt": {
+    "message": "Наведите указатель на значок."
+  },
+  "tile_badUrl": {
+    "message": "Это не похоже на веб-адрес."
+  },
+  "icon_fileUnreadable": {
+    "message": "Не удалось прочитать файл."
+  },
+  "icon_notImageFile": {
+    "message": "Это не файл изображения."
+  },
+  "icon_fileTooLarge": {
+    "message": "Эта картинка слишком велика для значка — выберите поменьше."
+  },
+  "icon_svgNotCode": {
+    "message": "Это не похоже на SVG-код."
+  },
+  "icon_svgUnreadable": {
+    "message": "Не удалось прочитать SVG — возможно, он неполный."
+  },
+  "icon_svgTooLong": {
+    "message": "Этот SVG слишком длинный, чтобы держать его на плитке — попробуйте проще."
+  },
+  "confirm_deleteTitle": {
+    "message": "Удалить эту плитку?"
+  },
+  "confirm_deleteText": {
+    "message": "«$1» исчезнет со страницы.",
+    "description": "$1 is the tile's name.",
+    "placeholders": {
+      "n1": {
+        "content": "$1"
+      }
+    }
+  },
+  "btn_save": {
+    "message": "Сохранить"
+  },
+  "btn_cancel": {
+    "message": "Отменить"
+  },
+  "btn_delete": {
+    "message": "Удалить"
+  },
+  "btn_close": {
+    "message": "Закрыть"
+  },
+  "btn_use": {
+    "message": "Применить"
+  },
+  "busy_font": {
+    "message": "Загружаем шрифт…",
+    "description": "What a control says while it is busy, in place of its status line."
+  },
+  "busy_working": {
+    "message": "Работаем…"
+  },
+  "busy_resetting": {
+    "message": "Возвращаем всё к исходному…"
+  },
+  "busy_permission": {
+    "message": "Запрашиваем доступ у Firefox…"
+  },
+  "shortcut_command": {
+    "message": "⌘ ,",
+    "description": "How the shortcut that opens the settings window is written down. The Apple one is a symbol and reads the same everywhere; the other names a key, and a keyboard in another language names it differently."
+  },
+  "shortcut_control": {
+    "message": "Ctrl + ,"
+  },
+  "settings_title": {
+    "message": "Настройки"
+  },
+  "settings_sections": {
+    "message": "Разделы настроек"
+  },
+  "settings_version": {
+    "message": "Версия $1",
+    "description": "$1 is the version number.",
+    "placeholders": {
+      "n1": {
+        "content": "$1"
+      }
+    }
+  },
+  "section_general": {
+    "message": "Основные"
+  },
+  "section_background": {
+    "message": "Фон"
+  },
+  "section_layout": {
+    "message": "Расположение"
+  },
+  "section_header": {
+    "message": "Шапка"
+  },
+  "section_groups": {
+    "message": "Группы"
+  },
+  "section_about": {
+    "message": "О дополнении"
+  },
+  "group_appearance": {
+    "message": "Оформление"
+  },
+  "group_backupReset": {
+    "message": "Копия и сброс"
+  },
+  "group_grid": {
+    "message": "Сетка"
+  },
+  "group_tiles": {
+    "message": "Плитки"
+  },
+  "group_time": {
+    "message": "Время"
+  },
+  "group_date": {
+    "message": "Дата"
+  },
+  "group_bothLines": {
+    "message": "Обе строки"
+  },
+  "group_bundled": {
+    "message": "Сторонние материалы"
+  },
+  "set_theme": {
+    "message": "Тема"
+  },
+  "set_themeSystem": {
+    "message": "Системная"
+  },
+  "set_themeDark": {
+    "message": "Тёмная"
+  },
+  "set_themeLight": {
+    "message": "Светлая"
+  },
+  "set_accent": {
+    "message": "Акцентный цвет"
+  },
+  "set_font": {
+    "message": "Шрифт"
+  },
+  "set_fontNote": {
+    "message": "Задаёт шрифт названий плиток, часов и даты. Диалоги всегда остаются на Inter."
+  },
+  "set_settingsButton": {
+    "message": "Показывать кнопку настроек"
+  },
+  "set_settingsButtonNote": {
+    "message": "Если её выключить, останутся $1 и меню по правой кнопке.",
+    "description": "$1 is the keyboard shortcut that opens this window.",
+    "placeholders": {
+      "n1": {
+        "content": "$1"
+      }
+    }
+  },
+  "set_backup": {
+    "message": "Резервная копия"
+  },
+  "set_backupNote": {
+    "message": "Сохраняет плитки, группы, настройки и фон в файл — и возвращает их обратно."
+  },
+  "set_reset": {
+    "message": "Сброс всех настроек"
+  },
+  "set_resetButton": {
+    "message": "Сбросить всё"
+  },
+  "set_resetNote": {
+    "message": "Все настройки вернутся к значениям по умолчанию, а фон будет убран. Плитки останутся на месте."
+  },
+  "set_background": {
+    "message": "Картинка или видео"
+  },
+  "set_backgroundNote": {
+    "message": "С этого компьютера или по веб-адресу, который загружается заново каждый раз."
+  },
+  "set_blur": {
+    "message": "Размытие"
+  },
+  "set_dim": {
+    "message": "Затемнение"
+  },
+  "set_dimNote": {
+    "message": "Затемняет фон, чтобы плитки оставались читаемыми."
+  },
+  "set_bgPosY": {
+    "message": "Положение по вертикали"
+  },
+  "set_columns": {
+    "message": "Столбцы"
+  },
+  "set_columnsAuto": {
+    "message": "Авто",
+    "description": "Names the bottom of the Columns slider, where a count would be nothing."
+  },
+  "set_columnsNote": {
+    "message": "«Авто» размещает в строке столько плиток, сколько позволяет окно."
+  },
+  "set_tileSize": {
+    "message": "Размер плитки"
+  },
+  "set_gap": {
+    "message": "Интервал"
+  },
+  "set_order": {
+    "message": "Порядок"
+  },
+  "set_orderManual": {
+    "message": "Вручную"
+  },
+  "set_orderVisits": {
+    "message": "По посещениям"
+  },
+  "set_orderNote": {
+    "message": "«По посещениям» учитывает, как часто вы открываете каждый сайт."
+  },
+  "set_shape": {
+    "message": "Форма"
+  },
+  "set_shapeSquare": {
+    "message": "Квадрат"
+  },
+  "set_shapeCircle": {
+    "message": "Круг"
+  },
+  "set_shapeNote": {
+    "message": "Размер плитки задаёт ширину, а форма подбирает высоту под неё."
+  },
+  "set_tileBg": {
+    "message": "Фон"
+  },
+  "set_tileBgTheme": {
+    "message": "Как в теме"
+  },
+  "set_tileBgDark": {
+    "message": "Тёмной темы"
+  },
+  "set_tileBgLight": {
+    "message": "Светлой темы"
+  },
+  "set_tileBgCustom": {
+    "message": "Свой цвет"
+  },
+  "set_tileBgNote": {
+    "message": "Каким цветом рисуется плитка, у которой нет собственного."
+  },
+  "set_tileBgColor": {
+    "message": "Цвет"
+  },
+  "set_tileBgColorNote": {
+    "message": "Применяется только к плиткам без собственного цвета."
+  },
+  "set_logoPad": {
+    "message": "Отступы логотипа"
+  },
+  "set_logoPadNote": {
+    "message": "Свободное место вокруг значка на плитке."
+  },
+  "set_showLabels": {
+    "message": "Показывать названия сайтов"
+  },
+  "set_showVisits": {
+    "message": "Показывать число посещений"
+  },
+  "set_showVisitsNote": {
+    "message": "Показывает в углу плитки, сколько раз вы открывали сайт."
+  },
+  "set_showAddButton": {
+    "message": "Показывать кнопку добавления"
+  },
+  "set_showAddButtonNote": {
+    "message": "Пунктирный + в конце сетки. Добавить плитку можно и правой кнопкой по странице."
+  },
+  "set_openInNewTab": {
+    "message": "Открывать сайты в новой вкладке"
+  },
+  "set_confirmDelete": {
+    "message": "Подтверждать удаление плитки"
+  },
+  "set_confirmDeleteNote": {
+    "message": "Спрашивает подтверждение, откуда бы плитка ни удалялась."
+  },
+  "set_deepIcons": {
+    "message": "Глубокий поиск значков"
+  },
+  "set_deepIconsNote": {
+    "message": "Читает разметку каждого сайта в поисках самого чёткого логотипа. Firefox запросит доступ."
+  },
+  "set_showClock": {
+    "message": "Показывать часы"
+  },
+  "set_format": {
+    "message": "Формат"
+  },
+  "set_timeNote": {
+    "message": "Точный вид зависит от языка браузера."
+  },
+  "set_clockFont": {
+    "message": "Шрифт"
+  },
+  "set_matchPageFont": {
+    "message": "Как на странице",
+    "description": "The card at the head of the clock's and the date's font pickers: no family of their own, follow the one the page is set in."
+  },
+  "set_clockFontNote": {
+    "message": "Только для часов. «Как на странице» следует настройке «Основные → Шрифт»."
+  },
+  "set_weight": {
+    "message": "Насыщенность"
+  },
+  "set_size": {
+    "message": "Размер"
+  },
+  "set_clockSizeNote": {
+    "message": "Доля от размера, который страница подбирает под окно."
+  },
+  "set_tracking": {
+    "message": "Межбуквенный интервал"
+  },
+  "set_clockTrackingNote": {
+    "message": "Apple сжимает крупный шрифт и никогда не разряжает его."
+  },
+  "set_showDate": {
+    "message": "Показывать дату"
+  },
+  "set_dateNote": {
+    "message": "Порядок частей зависит от языка браузера."
+  },
+  "set_dateFontNote": {
+    "message": "Только для даты, точно так же."
+  },
+  "set_headerTint": {
+    "message": "Свой цвет"
+  },
+  "set_headerTintNote": {
+    "message": "Если выключено, они следуют теме, а поверх картинки становятся белыми."
+  },
+  "set_headerColor": {
+    "message": "Цвет"
+  },
+  "set_headerShadow": {
+    "message": "Тень"
+  },
+  "set_headerShadowNote": {
+    "message": "На нуле берётся тень самой страницы."
+  },
+  "set_groupStyle": {
+    "message": "Оформление"
+  },
+  "set_groupFloating": {
+    "message": "Плавающие"
+  },
+  "set_groupBar": {
+    "message": "Панель"
+  },
+  "set_groupStyleNote": {
+    "message": "Капсула поверх страницы или панель во всю её ширину."
+  },
+  "set_groupShow": {
+    "message": "Отображение"
+  },
+  "set_groupAlways": {
+    "message": "Всегда"
+  },
+  "set_groupHover": {
+    "message": "При наведении"
+  },
+  "set_groupShowNote": {
+    "message": "«При наведении» скрывает их, пока не подведён указатель."
+  },
+  "set_showAllGroup": {
+    "message": "Показывать категорию «Все»"
+  },
+  "set_showAllGroupNote": {
+    "message": "Кнопка, снимающая фильтр. Без неё страница всегда открыта в какой-то группе."
+  },
+  "set_showGroupAdd": {
+    "message": "Показывать кнопку новой группы"
+  },
+  "set_showGroupAddNote": {
+    "message": "Знак + в конце блока. Создать группу можно и правой кнопкой по странице."
+  },
+  "set_keepGroup": {
+    "message": "Запоминать открытую группу"
+  },
+  "set_keepGroupNote": {
+    "message": "Новая вкладка открывается на той группе, которую вы смотрели последней."
+  },
+  "set_groupAnimate": {
+    "message": "Анимировать смену групп"
+  },
+  "set_groupAnimateNote": {
+    "message": "Старые плитки уезжают в сторону, а новые появляются следом за ними."
+  },
+  "set_groupScroll": {
+    "message": "Переключать группы прокруткой"
+  },
+  "set_groupScrollNote": {
+    "message": "Поворот колеса или смахивание переключает на следующую группу. На краях переключение останавливается."
+  },
+  "set_groupAxis": {
+    "message": "Направление жеста"
+  },
+  "set_groupAxisVertical": {
+    "message": "Вверх и вниз"
+  },
+  "set_groupAxisHorizontal": {
+    "message": "Влево и вправо"
+  },
+  "set_groupAxisEither": {
+    "message": "Любое"
+  },
+  "set_groupAxisNote": {
+    "message": "Вниз и вправо — вперёд, вверх и влево — назад."
+  },
+  "set_groupPosition": {
+    "message": "Положение"
+  },
+  "set_groupTop": {
+    "message": "Сверху"
+  },
+  "set_groupAboveTiles": {
+    "message": "Над плитками"
+  },
+  "set_groupBottom": {
+    "message": "Снизу"
+  },
+  "set_groupFloatNote": {
+    "message": "«Над плитками» ставит их под часами."
+  },
+  "set_groupAlign": {
+    "message": "Выравнивание"
+  },
+  "set_groupLeft": {
+    "message": "Слева"
+  },
+  "set_groupCentre": {
+    "message": "По центру"
+  },
+  "set_groupRight": {
+    "message": "Справа"
+  },
+  "about_blurb": {
+    "message": "Заменяет страницу новой вкладки сеткой перетаскиваемых плиток для сайтов, которыми вы пользуетесь чаще всего, — с группами, часами и собственным фоном."
+  },
+  "about_author": {
+    "message": "Автор"
+  },
+  "about_licence": {
+    "message": "Лицензия"
+  },
+  "about_licenceNote": {
+    "message": "Пользуйтесь, изучайте, изменяйте и передавайте дальше."
+  },
+  "about_source": {
+    "message": "Исходный код"
+  },
+  "about_sourceNote": {
+    "message": "Код, выпуски и место, куда сообщить о том, что не работает."
+  },
+  "weight_100": {
+    "message": "Тонкий"
+  },
+  "weight_200": {
+    "message": "Сверхсветлый"
+  },
+  "weight_300": {
+    "message": "Светлый"
+  },
+  "weight_400": {
+    "message": "Обычный"
+  },
+  "weight_500": {
+    "message": "Средний"
+  },
+  "weight_600": {
+    "message": "Полужирный"
+  },
+  "weight_700": {
+    "message": "Жирный"
+  },
+  "weight_800": {
+    "message": "Сверхжирный"
+  },
+  "weight_900": {
+    "message": "Чёрный"
+  },
+  "color_blue": {
+    "message": "Синий",
+    "description": "The ten macOS accents, then five whites and five blacks. Names for the ear rather than exact colour words - what a reader would call them."
+  },
+  "color_indigo": {
+    "message": "Индиго"
+  },
+  "color_purple": {
+    "message": "Фиолетовый"
+  },
+  "color_pink": {
+    "message": "Розовый"
+  },
+  "color_red": {
+    "message": "Красный"
+  },
+  "color_orange": {
+    "message": "Оранжевый"
+  },
+  "color_yellow": {
+    "message": "Жёлтый"
+  },
+  "color_green": {
+    "message": "Зелёный"
+  },
+  "color_teal": {
+    "message": "Бирюзовый"
+  },
+  "color_graphite": {
+    "message": "Графитовый"
+  },
+  "color_white": {
+    "message": "Белый"
+  },
+  "color_offWhite": {
+    "message": "Молочный"
+  },
+  "color_paleGrey": {
+    "message": "Бледно-серый"
+  },
+  "color_lightGrey": {
+    "message": "Светло-серый"
+  },
+  "color_silver": {
+    "message": "Серебристый"
+  },
+  "color_slate": {
+    "message": "Грифельный"
+  },
+  "color_charcoal": {
+    "message": "Угольный"
+  },
+  "color_ink": {
+    "message": "Чернильный"
+  },
+  "color_nearBlack": {
+    "message": "Почти чёрный"
+  },
+  "color_black": {
+    "message": "Чёрный"
+  },
+  "picker_area": {
+    "message": "Насыщенность и яркость"
+  },
+  "picker_hue": {
+    "message": "Оттенок"
+  },
+  "picker_hex": {
+    "message": "Значение HEX"
+  },
+  "bg_chooseFile": {
+    "message": "Выбрать файл"
+  },
+  "bg_remove": {
+    "message": "Убрать"
+  },
+  "bg_reposition": {
+    "message": "Сместить"
+  },
+  "bg_done": {
+    "message": "Готово"
+  },
+  "bg_empty": {
+    "message": "Пока пусто — перетащите сюда картинку или видео либо выберите файл."
+  },
+  "bg_localFile": {
+    "message": "Локальный файл",
+    "description": "What a picture chosen from this computer is called when it has no name."
+  },
+  "bg_tooWide": {
+    "message": "Эта картинка шире окна, поэтому обрезана по краям — двигать её вверх и вниз нечего."
+  },
+  "bg_dragIt": {
+    "message": "Перетащите картинку или воспользуйтесь стрелками на клавиатуре."
+  },
+  "bg_position": {
+    "message": "Положение фона по вертикали"
+  },
+  "bg_urlPlaceholder": {
+    "message": "или вставьте веб-адрес…"
+  },
+  "bg_recent": {
+    "message": "Недавний фон"
+  },
+  "bg_useAgain": {
+    "message": "Снова использовать: $1",
+    "description": "$1 is the picture's name, or `bg_thisOne` where it has none.",
+    "placeholders": {
+      "n1": {
+        "content": "$1"
+      }
+    }
+  },
+  "bg_thisOne": {
+    "message": "этот фон"
+  },
+  "bg_forget": {
+    "message": "Убрать из недавних"
+  },
+  "bg_forgetLabel": {
+    "message": "Убрать из недавних фонов: $1",
+    "placeholders": {
+      "n1": {
+        "content": "$1"
+      }
+    }
+  },
+  "bg_fileUnreadable": {
+    "message": "Не удалось прочитать файл."
+  },
+  "bg_pictureTooBig": {
+    "message": "Размер картинки — $1, а предел — $2. Выберите поменьше.",
+    "description": "$1 is the file's size, $2 the largest allowed - both already in words.",
+    "placeholders": {
+      "n1": {
+        "content": "$1"
+      },
+      "n2": {
+        "content": "$2"
+      }
+    }
+  },
+  "bg_pictureNoRoom": {
+    "message": "Это изображение слишком велико, чтобы его сохранить, даже уменьшенным."
+  },
+  "bg_videoTooBig": {
+    "message": "Размер видео — $1, а предел — $2. Выберите короче или меньше.",
+    "placeholders": {
+      "n1": {
+        "content": "$1"
+      },
+      "n2": {
+        "content": "$2"
+      }
+    }
+  },
+  "bg_videoUnplayable": {
+    "message": "Этот браузер не может воспроизвести такое видео."
+  },
+  "bg_slowAddress": {
+    "message": "Этот адрес слишком долго не отвечал."
+  },
+  "bg_notAPicture": {
+    "message": "Это не картинка."
+  },
+  "bg_notAVideo": {
+    "message": "Это не видео."
+  },
+  "bg_notMedia": {
+    "message": "Это не файл изображения или видео."
+  },
+  "bg_nothingThere": {
+    "message": "По этому адресу ничего не загрузилось — это точно картинка или видео?"
+  },
+  "bg_needsHttp": {
+    "message": "Нужен веб-адрес, начинающийся с http:// или https://."
+  },
+  "bg_noRoom": {
+    "message": "Не осталось места, чтобы сохранить этот фон."
+  },
+  "bg_unusable": {
+    "message": "Непригодное изображение."
+  },
+  "bg_untitled": {
+    "message": "Изображение",
+    "description": "The name a picture with none of its own is filed under."
+  },
+  "bg_droppedOff": {
+    "message": "Этот фон уже выпал из списка."
+  },
+  "bg_setByAddress": {
+    "message": "Фон установлен. Этот адрес не даёт скачать свою картинку, поэтому она загружается заново при каждой новой вкладке."
+  },
+  "bg_setRemembered": {
+    "message": "Фон установлен — в том виде, в каком вы смотрели его в прошлый раз."
+  },
+  "bg_setDefaults": {
+    "message": "Фон установлен; размытие, затемнение и положение вернулись к значениям по умолчанию."
+  },
+  "bg_setDimmed": {
+    "message": "Готово — уменьшите затемнение, чтобы фон был виднее."
+  },
+  "bg_set": {
+    "message": "Фон установлен."
+  },
+  "font_filterStyle": {
+    "message": "Стиль"
+  },
+  "font_filterScript": {
+    "message": "Язык"
+  },
+  "font_filterAll": {
+    "message": "Все",
+    "description": "The first button of either filter: no filter at all."
+  },
+  "font_styleSans": {
+    "message": "Без засечек"
+  },
+  "font_styleSerif": {
+    "message": "С засечками"
+  },
+  "font_styleMono": {
+    "message": "Моноширинные"
+  },
+  "font_styleDisplay": {
+    "message": "Декоративные"
+  },
+  "font_scriptLatinExt": {
+    "message": "Расш. латиница"
+  },
+  "font_scriptLatinExtTitle": {
+    "message": "Расширенная латиница — диакритика и остальная Европа"
+  },
+  "font_scriptCyrillic": {
+    "message": "Кириллица"
+  },
+  "font_scriptGreek": {
+    "message": "Греческая"
+  },
+  "font_scriptVietnamese": {
+    "message": "Вьетнамская"
+  },
+  "font_system": {
+    "message": "Системный шрифт",
+    "description": "The card at the head of the page font's picker: no family at all."
+  },
+  "font_noneMatch": {
+    "message": "Ни один шрифт в списке не подходит сразу под оба условия."
+  },
+  "font_previewsOffline": {
+    "message": "Для образцов при первом показе нужно подключение к сети. Все шрифты работают — просто сейчас они все нарисованы шрифтом Inter."
+  },
+  "font_pangram": {
+    "message": "Съешь же ещё этих мягких французских булок, да выпей чаю",
+    "description": "The line under the grid, drawn in whichever family is chosen. Any sentence that shows the alphabet off will do - it need not be this one."
+  },
+  "font_other": {
+    "message": "Другой шрифт…"
+  },
+  "font_otherPlaceholder": {
+    "message": "Любой шрифт из Google Fonts"
+  },
+  "font_otherLabel": {
+    "message": "Другой шрифт"
+  },
+  "font_loaded": {
+    "message": "$1 — $2",
+    "description": "$1 is the family, $2 where it came from - one of the four below.",
+    "placeholders": {
+      "n1": {
+        "content": "$1"
+      },
+      "n2": {
+        "content": "$2"
+      }
+    }
+  },
+  "font_fromBundle": {
+    "message": "входит в состав расширения"
+  },
+  "font_fromSystem": {
+    "message": "используется системный шрифт"
+  },
+  "font_fromCache": {
+    "message": "загружен из кэша"
+  },
+  "font_fromNetwork": {
+    "message": "скачан и сохранён в кэше"
+  },
+  "font_following": {
+    "message": "Используется шрифт страницы."
+  },
+  "font_googleReplied": {
+    "message": "Google Fonts ответил: $1.",
+    "description": "$1 is the HTTP status Google Fonts answered with.",
+    "placeholders": {
+      "n1": {
+        "content": "$1"
+      }
+    }
+  },
+  "font_noSuchFamily": {
+    "message": "В Google Fonts нет шрифта с названием «$1».",
+    "description": "$1 is the family that was asked for.",
+    "placeholders": {
+      "n1": {
+        "content": "$1"
+      }
+    }
+  },
+  "font_noFiles": {
+    "message": "Не удалось скачать файлы шрифта."
+  },
+  "font_tooLarge": {
+    "message": "Этот шрифт слишком велик, чтобы держать его в кэше."
+  },
+  "font_noPreviews": {
+    "message": "Не удалось скачать образцы шрифтов."
+  },
+  "perm_unavailable": {
+    "message": "API разрешений недоступен."
+  },
+  "perm_notInstalled": {
+    "message": "Доступно только после установки дополнения в Firefox."
+  },
+  "perm_hint": {
+    "message": "Также можно включить «Доступ к вашим данным для всех веб-сайтов» в about:addons → Tiles → Разрешения.",
+    "description": "The way in that does not go through this toggle. Added to both refusals below, so it is written once."
+  },
+  "perm_refused": {
+    "message": "Firefox отклонил запрос ($1). $2",
+    "description": "$1 is the reason Firefox gave, $2 is perm_hint.",
+    "placeholders": {
+      "n1": {
+        "content": "$1"
+      },
+      "n2": {
+        "content": "$2"
+      }
+    }
+  },
+  "perm_declined": {
+    "message": "Доступ не предоставлен. $1",
+    "description": "$1 is perm_hint.",
+    "placeholders": {
+      "n1": {
+        "content": "$1"
+      }
+    }
+  },
+  "perm_deepOn": {
+    "message": "Теперь каждый сайт перечитывается ради самого чёткого значка."
+  },
+  "perm_deepOff": {
+    "message": "Возврат к обычным путям поиска значков."
+  },
+  "backup_saved": {
+    "message": "Сохранено как $1.",
+    "description": "$1 is the name the file was saved under.",
+    "placeholders": {
+      "n1": {
+        "content": "$1"
+      }
+    }
+  },
+  "backup_fileUnreadable": {
+    "message": "Не удалось прочитать файл."
+  },
+  "backup_noFile": {
+    "message": "Нет файла для чтения."
+  },
+  "backup_tooLarge": {
+    "message": "Этот файл слишком велик для резервной копии."
+  },
+  "backup_notJson": {
+    "message": "Это не корректный JSON."
+  },
+  "backup_notABackup": {
+    "message": "Это не тот файл резервной копии, который умеет читать это дополнение."
+  },
+  "backup_empty": {
+    "message": "Эта резервная копия пуста — восстанавливать нечего."
+  },
+  "backup_stopped": {
+    "message": "Восстановление прервалось на полпути: $1",
+    "description": "$1 is whatever went wrong, in the browser's own words.",
+    "placeholders": {
+      "n1": {
+        "content": "$1"
+      }
+    }
+  },
+  "restore_done": {
+    "message": "Восстановлено — $1.",
+    "description": "$1 is a list of what came back - \"3 groups, 12 tiles and your settings\".",
+    "placeholders": {
+      "n1": {
+        "content": "$1"
+      }
+    }
+  },
+  "restore_doneFrom": {
+    "message": "Восстановлено из резервной копии $2 — $1.",
+    "description": "$2 is the add-on the file was written by.",
+    "placeholders": {
+      "n1": {
+        "content": "$1"
+      },
+      "n2": {
+        "content": "$2"
+      }
+    }
+  },
+  "restore_pictureRefused": {
+    "message": "Фоновая картинка не поместилась, поэтому осталась прежняя."
+  },
+  "restore_lost": {
+    "message": "В нём также было: $1 — этому дополнению негде это хранить.",
+    "description": "$1 is a list, the same shape as restore_done's.",
+    "placeholders": {
+      "n1": {
+        "content": "$1"
+      }
+    }
+  },
+  "restore_lostStats": {
+    "message": "разбивка посещений по времени суток"
+  },
+  "restore_lostColours": {
+    "message": "цвета групп"
+  },
+  "restore_someSettings": {
+    "message": "некоторые настройки"
+  },
+  "restore_allSettings": {
+    "message": "ваши настройки"
+  },
+  "restore_background": {
+    "message": "фон"
+  },
+  "restore_tile": {
+    "message": "плиток: $1",
+    "description": "One tile, and more than one. See `plural` below.",
+    "placeholders": {
+      "n1": {
+        "content": "$1"
+      }
+    }
+  },
+  "restore_tiles": {
+    "message": "плиток: $1",
+    "placeholders": {
+      "n1": {
+        "content": "$1"
+      }
+    }
+  },
+  "restore_group": {
+    "message": "групп: $1",
+    "placeholders": {
+      "n1": {
+        "content": "$1"
+      }
+    }
+  },
+  "restore_groups": {
+    "message": "групп: $1",
+    "placeholders": {
+      "n1": {
+        "content": "$1"
+      }
+    }
+  },
+  "list_and": {
+    "message": "$1 и $2",
+    "description": "Joining a list of the above. $1 is everything but the last, already joined by `list_comma`; $2 is the last one.",
+    "placeholders": {
+      "n1": {
+        "content": "$1"
+      },
+      "n2": {
+        "content": "$2"
+      }
+    }
+  },
+  "list_comma": {
+    "message": "$1, $2",
+    "placeholders": {
+      "n1": {
+        "content": "$1"
+      },
+      "n2": {
+        "content": "$2"
+      }
+    }
+  },
+  "list_nothing": {
+    "message": "ничего"
+  }
+}
