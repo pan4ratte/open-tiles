@@ -148,6 +148,10 @@
     applyTileMaterial(root);
     root.style.setProperty('--bg-blur', settings.bgBlur + 'px');
     root.style.setProperty('--bg-dim', settings.bgDim / 100);
+    // Where a picture taller than the window is cut. The same property drives
+    // the picture, the film and the preview in the settings dialog, so all
+    // three are cut at the same place.
+    root.style.setProperty('--bg-pos-y', settings.bgPosY + '%');
 
     // Zero is the bottom of the Columns slider, where it reads "Auto" - see
     // the field in schema.js. Anything above it is a count.
@@ -3001,18 +3005,18 @@
       : Backgrounds.fromFile(payload.file);
   }
 
-  /** Blur and Dim as they stand: what a wallpaper is being looked at with. */
+  /** How a wallpaper is being looked at: its blur, its dim and its position. */
   const currentEffects = () =>
     Object.fromEntries(Schema.EFFECT_KEYS.map(key => [key, settings[key]]));
 
   /**
-   * Puts Blur and Dim back to what the wallpaper being restored was last seen
+   * Puts the effects back to what the wallpaper being restored was last seen
    * with, and says whether that moved anything.
    *
    * Written straight into `settings` rather than through one `updateSetting`
-   * per key, so the two land in a single repaint and a single write - and so
-   * the caller can decide, once, whether the dialog needs rebuilding around
-   * the sliders that just moved under it.
+   * per key, so they land in a single repaint and a single write - and so the
+   * caller can decide, once, whether the dialog needs rebuilding around the
+   * controls that just moved under it.
    */
   function applyEffects(effects) {
     const wanted = Schema.coerceEffects(effects);
@@ -3026,8 +3030,8 @@
   }
 
   /**
-   * Hands the background being left the Blur and Dim it was last looked at
-   * with, so going back to it later goes back to how it looked.
+   * Hands the background being left the effects it was last looked at with, so
+   * going back to it later goes back to how it looked.
    *
    * This is the moment to write them rather than every time a slider moves:
    * the list is the heaviest thing in the storage area, and a wallpaper still
@@ -3090,17 +3094,17 @@
         throw err;
       }
 
-      // The one being left keeps the Blur and Dim it was looked at with, and
-      // the one arriving gets them back if it had any of its own. Nothing to
-      // do when the same wallpaper is picked twice.
+      // The one being left keeps the effects it was looked at with, and the
+      // one arriving gets them back if it had any of its own. Nothing to do
+      // when the same wallpaper is picked twice.
       const swapped = !previous || previous.src !== background.src;
       if (swapped) await partWith(previous);
 
-      // A wallpaper arriving brings its own pair or it brings none; what it
-      // must not do is go on wearing the last one's. One picked off the strip
+      // A wallpaper arriving brings its own effects or it brings none; what
+      // it must not do is go on wearing the last one's. One picked off the strip
       // remembers what it was last looked at with. Anything newly chosen - a
       // file, an address, or an entry old enough to have been remembered
-      // before the pair was kept with it - starts at the defaults, which is
+      // before they were kept with it - starts at the defaults, which is
       // the only honest answer to "what were this one's settings": it has
       // never had any.
       const remembered = swapped && record.effects ? record.effects : null;
@@ -3121,14 +3125,15 @@
             + 'downloaded, so it is fetched again on every new tab.'
           : moved
             ? (remembered
-                ? 'Background set, with the Blur and Dim it was last seen with.'
-                : 'Background set, with Blur and Dim back to their defaults.')
+                ? 'Background set, the way it was last looked at.'
+                : 'Background set, with blur, dim and position back to their '
+                  + 'defaults.')
             : settings.bgDim >= 80
               ? 'Set — turn Dim down to see more of it.'
               : 'Background set.'
       };
 
-      // Blur and Dim just changed under their own sliders, so the whole dialog
+      // The effects just changed under their own controls, so the whole dialog
       // is rebuilt to show them - which takes the row waiting on this status
       // with it, and the new mount is handed the line instead.
       if (moved) {

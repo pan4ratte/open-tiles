@@ -438,7 +438,9 @@ body {
   /* Blur samples nothing past the edge, so grow the layer by the radius to
      keep a soft grey frame from creeping in. */
   inset: calc(var(--bg-blur) * -2.5);
-  background-position: center;
+  /* Across, always centred; down, wherever the Vertical position slider left
+     it - which is the only axis a picture cut to a wider window has to spare. */
+  background-position: center var(--bg-pos-y, 50%);
   background-size: cover;
   background-repeat: no-repeat;
   filter: blur(var(--bg-blur));
@@ -455,7 +457,7 @@ body {
   width: calc(100% + var(--bg-blur) * 5);
   height: calc(100% + var(--bg-blur) * 5);
   object-fit: cover;
-  object-position: center;
+  object-position: center var(--bg-pos-y, 50%);
   filter: blur(var(--bg-blur));
   animation: picture-in var(--t-slow) var(--ease-out) both;
 }
@@ -2281,6 +2283,7 @@ body.tile-round .tile {
    picture itself, so 40px on a 1920px page reads as 40px here. */
 .bgfield__preview {
   --preview-blur: calc(var(--bg-blur) * var(--preview-scale, .3));
+  --preview-height: 260px;
 
   position: relative;
   display: grid;
@@ -2290,7 +2293,17 @@ body.tile-round .tile {
   grid-template-rows: minmax(0, 1fr);
   place-items: center;
   width: 100%;
-  max-height: 220px;
+  /* The ceiling is put on the width rather than the height, and worked out
+     from the height it stands for. A `max-height` would win against
+     `aspect-ratio` and quietly flatten the box — which is the whole point of
+     the preview lost, since a box wider than the window shows a crop the page
+     will never make. Narrowing instead keeps the shape whatever the panel is,
+     and `margin-inline` puts what is left over on both sides.
+
+     --page-ratio is written as `1418 / 802`, so the parentheses make it the
+     division it reads as. */
+  max-width: calc(var(--preview-height) * (var(--page-ratio)));
+  margin-inline: auto;
   aspect-ratio: var(--page-ratio);
   overflow: hidden;
   border-radius: var(--r-box);
@@ -2309,6 +2322,33 @@ body.tile-round .tile {
   color: var(--accent-text);
 }
 
+/* Repositioning. The accent ring says the box has stopped being a picture of
+   the page and become the picture itself, and the cursor says what to do with
+   it — the one piece of affordance a drag has, since there is no handle to
+   put anywhere without covering the thing being aimed at. */
+.bgfield__preview.is-moving {
+  box-shadow: 0 0 0 2px var(--accent);
+  cursor: grab;
+  /* A drag on a touch screen is this gesture, not the page scrolling under
+     it. Horizontal panning is left alone: nothing here reads it. */
+  touch-action: pan-x;
+}
+
+.bgfield__preview.is-moving:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--bg-box), 0 0 0 4px var(--accent);
+}
+
+.bgfield__preview.is-grabbing { cursor: grabbing; }
+
+/* The picture keeps up with the pointer, so it must not be lagging behind it
+   on a transition of its own - and the drag would select it otherwise. */
+.bgfield__preview.is-moving .bgfield__thumb {
+  transition: none;
+  user-select: none;
+  -webkit-user-drag: none;
+}
+
 /* Grown by the blur radius on every side, exactly as .bg__image is, so a
    blurred picture keeps its edges instead of fading into a grey frame. */
 .bgfield__thumb {
@@ -2318,7 +2358,7 @@ body.tile-round .tile {
   width: calc(100% + var(--preview-blur) * 5);
   height: calc(100% + var(--preview-blur) * 5);
   object-fit: cover;
-  object-position: center;
+  object-position: center var(--bg-pos-y, 50%);
   filter: blur(var(--preview-blur));
 }
 
@@ -2351,9 +2391,9 @@ body.tile-round .tile {
    rather than a gallery, so they are small and shaped like the window the way
    the preview above them is.
 
-   A grid three across rather than a row that shares itself out, so the six
-   fill two even rows and - this is the point of it - a thumbnail is the same
-   size whether there is one of them or six. A flex row grows the last picture
+   A grid three across rather than a row that shares itself out, so the nine
+   fill three even rows and - this is the point of it - a thumbnail is the same
+   size whether there is one of them or nine. A flex row grows the last picture
    left to the full width of the panel, which reads as a second preview. */
 .bgfield__recent {
   display: grid;
@@ -2395,9 +2435,9 @@ body.tile-round .tile {
 
 /* Drops one from the list without touching the background on screen.
 
-   Hidden until the slot is pointed at or tabbed into: six of these on show
-   would turn a row of pictures into a row of controls, and the thumbnails are
-   what the strip is for. Dark on white, like the play badge in the other
+   Hidden until the slot is pointed at or tabbed into: nine of these on show
+   would turn a grid of pictures into a grid of controls, and the thumbnails
+   are what the strip is for. Dark on white, like the play badge in the other
    corner, because it stands on a photograph and has no material of its own.
 
    Inside the thumbnail rather than overhanging it, so the last column cannot

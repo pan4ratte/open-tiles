@@ -354,14 +354,16 @@ const Store = (() => {
    * Whole records rather than thumbnails: a stored picture *is* its data URI,
    * and there would be nothing to put back from a thumbnail. That makes this
    * the heaviest thing in the storage area, so it is capped twice over - by
-   * how many it holds, and by the room they may take between them. One named
-   * by web address costs only its address, so a list of those never comes near
-   * the ceiling; a list of stored videos reaches it after three or four.
+   * how many it holds, and by the room they may take between them. The second
+   * cap is what the first one leans on: nine stored videos would be well past
+   * anywhere worth going, and the budget stops that long before the count
+   * does. One named by web address costs only its address, so a list of those
+   * never comes near the ceiling.
    *
-   * Six, because the strip is drawn three across and two down: a row and a
+   * Nine, because the strip is drawn three across and three down: a row and a
    * half of thumbnails would be a hole in the grid rather than a layout.
    */
-  const MAX_RECENT = 6;
+  const MAX_RECENT = 9;
   const RECENT_BUDGET = 64 * 1024 * 1024;
 
   /**

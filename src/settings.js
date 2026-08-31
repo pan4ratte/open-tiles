@@ -632,7 +632,7 @@ const SettingsUI = (() => {
    * A video shows as a video in the big preview rather than as a frame of one,
    * because what the preview is for is saying what the page will look like,
    * and a still of a moving background does not. In the strip of recent ones
-   * it is the other way about: six films playing at once to pick one from is
+   * it is the other way about: nine films playing at once to pick one from is
    * noise, so those are left on their first frame with a badge to mark them.
    */
   function buildMedia(record, className, live) {
@@ -663,8 +663,9 @@ const SettingsUI = (() => {
    *
    * The preview is shaped like the window (see --page-ratio) and covers, the
    * same way the page paints the background, so the crop on show here is the
-   * crop that ends up behind the tiles - blur and dim included, both scaled
-   * down to the size of the preview so they look the way they will full size.
+   * crop that ends up behind the tiles - blur, dim and vertical position
+   * included, the blur scaled down to the size of the preview so it looks the
+   * way it will full size.
    *
    * `commit` is handed one of
    * `{action:'file'|'url'|'recent'|'forget'|'clear'}` and answers with
@@ -674,12 +675,15 @@ const SettingsUI = (() => {
    * which is how removing the background leaves the list alone and how
    * dropping one from the list leaves the background alone.
    */
-  function buildBackground(field, value, commit) {
+  function buildBackground(field, value, commit, ctx) {
     const wrap = document.createElement('div');
     wrap.className = 'bgfield';
 
     const preview = document.createElement('div');
     preview.className = 'bgfield__preview';
+    // Named, because the Reposition button below points at it: the button is
+    // the thing pressed, the preview is the thing that changes.
+    preview.id = 'bgPreview';
 
     const caption = document.createElement('p');
     caption.className = 'bgfield__caption';
@@ -700,7 +704,18 @@ const SettingsUI = (() => {
     remove.className = 'btn btn--sm btn--danger';
     remove.append(Icons.create('trash-2', { size: 15 }), document.createTextNode('Remove'));
 
-    // The last few, newest first: a grid three across and two down under the
+    // Turns the preview into something to drag rather than something to look
+    // at. A mode rather than a permanent grab handle, because the preview is
+    // also the drop target for a new picture - and a box that both takes a
+    // drop and slides under the pointer is a box that does the wrong one of
+    // the two about half the time.
+    const move = document.createElement('button');
+    move.type = 'button';
+    move.className = 'btn btn--sm';
+    move.setAttribute('aria-pressed', 'false');
+    move.setAttribute('aria-controls', preview.id);
+
+    // The last few, newest first: a grid three across and three down under the
     // buttons, and gone altogether until there is something in it.
     const strip = document.createElement('div');
     strip.className = 'bgfield__recent';
@@ -710,12 +725,15 @@ const SettingsUI = (() => {
     /** What is on screen, and the list - held so either can be redrawn alone. */
     let shown = null;
     let recent = [];
+    /** The <img> or <video> in the preview, which is what a drag moves. */
+    let thumb = null;
 
     function showRecord(record) {
       const has = Boolean(record && record.src);
 
       preview.textContent = '';
       preview.classList.toggle('is-empty', !has);
+      thumb = null;
 
       if (has) {
         // The same veil the page lays over the background, reading the same
@@ -723,14 +741,128 @@ const SettingsUI = (() => {
         const veil = document.createElement('div');
         veil.className = 'bgfield__veil';
 
-        preview.append(buildMedia(record, 'bgfield__thumb', true), veil);
-        caption.textContent = record.name || 'Local file';
+        thumb = buildMedia(record, 'bgfield__thumb', true);
+        // Whether there is anything to drag is a fact about the picture's own
+        // shape, which the browser may not have read yet - a preview built and
+        // pointed at inside the same breath has nothing to measure. So the
+        // hint is written again the moment there is.
+        const measured = () => { if (moving) showCaption(); };
+        thumb.addEventListener('load', measured);
+        thumb.addEventListener('loadedmetadata', measured);
+
+        preview.append(thumb, veil);
       } else {
         preview.append(Icons.create('image', { size: 22 }));
-        caption.textContent = 'Nothing yet — drop a picture or video here, or choose a file.';
       }
 
       remove.hidden = !has;
+      move.hidden = !has;
+      // A picture that has just been taken away leaves nothing to drag, and a
+      // new one arriving is a new crop to look at before moving anything.
+      setMoving(false);
+    }
+
+    // -------------------------------------------------- moving the picture
+
+    /**
+     * Repositioning: the preview stops being a picture of the page and becomes
+     * the picture itself, to be pushed up and down under the pointer.
+     *
+     * The value is `bgPosY`, an ordinary setting - so this writes it through
+     * the same door every other control uses, the page repaints from it, and
+     * the preview follows because it reads the very same custom property. The
+     * field is marked `hidden` in the schema: it is stored and validated like
+     * any other, it simply has no row of its own, because a number between 0
+     * and 100 is a poor way to say "a little further down".
+     */
+    let moving = false;
+    let drag = null;
+    let posY = Number(ctx && ctx.values ? ctx.values.bgPosY : NaN);
+    if (!Number.isFinite(posY)) posY = Schema.DEFAULTS.bgPosY;
+
+    /**
+     * How much of the picture is hidden above and below the preview, in
+     * pixels: the whole range the drag has to play with.
+     *
+     * Measured off the element as it is actually drawn rather than worked out
+     * from the preview's box, because a blurred thumbnail is deliberately
+     * bigger than the box it sits in - see .bgfield__thumb.
+     *
+     * Zero where the picture is wider than the window it is cut to: `cover`
+     * then trims the sides and there is nothing to move. Null while the
+     * browser has yet to report a size, which is the one case where a drag
+     * has to guess.
+     */
+    function slack() {
+      if (!thumb || !thumb.getBoundingClientRect) return null;
+      const box = thumb.getBoundingClientRect();
+      const wide = thumb.naturalWidth || thumb.videoWidth || 0;
+      const tall = thumb.naturalHeight || thumb.videoHeight || 0;
+      if (!wide || !tall || !box.width || !box.height) return null;
+
+      const scale = Math.max(box.width / wide, box.height / tall);
+      return Math.max(0, tall * scale - box.height);
+    }
+
+    function showCaption() {
+      if (!shown || !shown.src) {
+        caption.textContent =
+          'Nothing yet — drop a picture or video here, or choose a file.';
+      } else if (!moving) {
+        caption.textContent = shown.name || 'Local file';
+      } else if (slack() === 0) {
+        caption.textContent =
+          'This one is wider than the window, so it is cut at the sides — '
+          + 'there is nothing to move up or down.';
+      } else {
+        caption.textContent = 'Drag the picture, or use the arrow keys.';
+      }
+    }
+
+    /** Turns the mode on or off, and says so in every place that shows it. */
+    function setMoving(on) {
+      moving = Boolean(on) && Boolean(shown && shown.src);
+      drag = null;
+
+      preview.classList.toggle('is-moving', moving);
+      preview.classList.remove('is-grabbing');
+      move.setAttribute('aria-pressed', String(moving));
+
+      // Only a slider while it is one: out of the mode the preview is a
+      // picture and a drop target, and announcing a value on it would be a
+      // control the reader cannot find anything to do with.
+      if (moving) {
+        preview.tabIndex = 0;
+        preview.setAttribute('role', 'slider');
+        preview.setAttribute('aria-label', 'Vertical position of the background');
+        preview.setAttribute('aria-valuemin', '0');
+        preview.setAttribute('aria-valuemax', '100');
+        preview.setAttribute('aria-orientation', 'vertical');
+      } else {
+        preview.tabIndex = -1;
+        preview.removeAttribute('role');
+        preview.removeAttribute('aria-valuenow');
+      }
+
+      move.textContent = '';
+      move.append(
+        Icons.create(moving ? 'check' : 'move-vertical', { size: 15 }),
+        document.createTextNode(moving ? 'Done' : 'Reposition'));
+
+      if (moving) sayPosition();
+      showCaption();
+    }
+
+    const sayPosition = () =>
+      preview.setAttribute('aria-valuenow', String(Math.round(posY)));
+
+    /** Writes a new position, clamped, and only when it is a new one. */
+    function moveTo(next) {
+      const wanted = Math.round(Math.min(100, Math.max(0, next)));
+      if (wanted === posY) return;
+      posY = wanted;
+      sayPosition();
+      ctx.onChange('bgPosY', wanted);
     }
 
     function showRecent(list) {
@@ -743,7 +875,7 @@ const SettingsUI = (() => {
         // The thumbnail and its delete button are siblings inside a slot, not
         // one inside the other: a button cannot hold a button, and the slot is
         // also what gives every thumbnail the same size whether the grid holds
-        // one of them or six.
+        // one of them or nine.
         const slot = document.createElement('div');
         slot.className = 'bgfield__slot';
 
@@ -766,7 +898,7 @@ const SettingsUI = (() => {
         }
 
         // Out of the way until the slot is pointed at or tabbed into, because
-        // six delete buttons on show turn a row of pictures into a row of
+        // nine delete buttons on show turn a grid of pictures into a grid of
         // controls. It stays put once it is there, so it can be aimed at.
         const forget = document.createElement('button');
         forget.type = 'button';
@@ -806,6 +938,72 @@ const SettingsUI = (() => {
     });
 
     remove.addEventListener('click', () => send({ action: 'clear' }));
+
+    move.addEventListener('click', () => {
+      setMoving(!moving);
+      if (moving && preview.focus) preview.focus();
+    });
+
+    /**
+     * The drag itself.
+     *
+     * A pixel of pointer is a pixel of picture: the distance travelled is
+     * divided by the slack rather than by the height of the box, so the
+     * picture keeps up with the hand instead of racing it on a tall photograph
+     * and crawling on a short one. Dragging up pushes the picture up, which
+     * brings what is below it into view - hence the minus.
+     *
+     * Where the browser has not yet reported a size (`slack` is null) the box
+     * itself stands in for it. That is the wrong number, but it is the right
+     * direction and the right order of magnitude, and it is only ever the
+     * first moments of a picture that has just arrived.
+     */
+    preview.addEventListener('pointerdown', e => {
+      if (!moving) return;
+      const room = slack();
+      if (room === 0) return;
+
+      const box = preview.getBoundingClientRect
+        ? preview.getBoundingClientRect() : { height: 0 };
+      const travel = room || box.height;
+      if (!travel) return;
+
+      e.preventDefault();
+      drag = { id: e.pointerId, from: e.clientY, at: posY, travel };
+      if (preview.setPointerCapture) preview.setPointerCapture(e.pointerId);
+      preview.classList.add('is-grabbing');
+    });
+
+    preview.addEventListener('pointermove', e => {
+      if (!drag || e.pointerId !== drag.id) return;
+      moveTo(drag.at - (e.clientY - drag.from) / drag.travel * 100);
+    });
+
+    const endDrag = e => {
+      if (!drag || e.pointerId !== drag.id) return;
+      if (preview.releasePointerCapture) preview.releasePointerCapture(drag.id);
+      drag = null;
+      preview.classList.remove('is-grabbing');
+    };
+    preview.addEventListener('pointerup', endDrag);
+    preview.addEventListener('pointercancel', endDrag);
+
+    // The same move without a pointer. Up on the keyboard means up the
+    // picture - the top of it - which is the way a scrollbar reads, and the
+    // opposite of what dragging does, where the hand pushes the picture
+    // itself.
+    preview.addEventListener('keydown', e => {
+      if (!moving) return;
+
+      const step = { ArrowUp: -2, ArrowDown: 2, PageUp: -10, PageDown: 10 }[e.key];
+      if (step !== undefined) moveTo(posY + step);
+      else if (e.key === 'Home') moveTo(0);
+      else if (e.key === 'End') moveTo(100);
+      else if (e.key === 'Escape' || e.key === 'Enter') setMoving(false);
+      else return;
+
+      e.preventDefault();
+    });
 
     ['dragenter', 'dragover'].forEach(type => {
       preview.addEventListener(type, e => {
@@ -858,7 +1056,8 @@ const SettingsUI = (() => {
 
     const actions = document.createElement('div');
     actions.className = 'bgfield__actions';
-    actions.append(choose, remove, file);
+    // Remove last: it is the one that undoes everything the other two did.
+    actions.append(choose, move, remove, file);
 
     wrap.append(preview, caption, actions, address, strip);
 
@@ -1445,6 +1644,10 @@ const SettingsUI = (() => {
         box.className = 'box';
 
         group.fields.forEach(field => {
+          // A `hidden` field is stored and validated like any other, it simply
+          // has no row here: something else on the page sets it. See schema.js.
+          if (field.hidden) return;
+
           const { row, status } = buildField(field, ctx.values[field.key], inner);
           if (field.when) conditional.push({ field, row });
           statusOf[field.key] = status;

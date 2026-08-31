@@ -30,7 +30,7 @@ const fs = require('fs');
 const vm = require('vm');
 const path = require('path');
 
-const { El, document } = require('./dom-shim');
+const { El, event, document } = require('./dom-shim');
 
 const SRC = process.argv[2] || path.join(__dirname, '..', 'src');
 
@@ -93,6 +93,8 @@ const at = cls => field.find(el => el.className.includes(cls));
 
 const preview = at('bgfield__preview');
 const caption = at('bgfield__caption');
+const moveBtn = field.findAll(el => el.tagName === 'button'
+  && 'aria-pressed' in el.attrs)[0];
 const strip = at('bgfield__recent');
 const fileInput = field.find(el => el.tagName === 'input' && el.type === 'file');
 const removeBtn = field.findAll(el => el.className.includes('btn--danger'))[0];
@@ -181,10 +183,18 @@ check('the rest start closed',
   panels.slice(1).every(panel => panel.hidden === true));
 
 const missing = Schema.STORED
-  .filter(f => f.type !== 'segmented' && !container.find(el => el.id === 'set-' + f.key))
+  .filter(f => f.type !== 'segmented' && !f.hidden
+    && !container.find(el => el.id === 'set-' + f.key))
   .map(f => f.key);
 check('every control is built, open tab or not', missing.length === 0,
   missing.join(', ') || 'all there');
+
+// The vertical position is set by dragging the picture, so it has a default
+// and a validator like any other setting but no row of its own to be found.
+check('the vertical position is stored but draws no row',
+  Schema.DEFAULTS.bgPosY === 50
+    && Schema.FIELDS.find(f => f.key === 'bgPosY').hidden === true
+    && !container.find(el => el.id === 'set-bgPosY'));
 
 tabs[2].fire('click');
 check('clicking a tab opens its panel and closes the last',
@@ -288,6 +298,129 @@ const settle = () => new Promise(resolve => setTimeout(resolve, 0));
 
   check('emptying the list hides the strip',
     strip.hidden === true && chips().length === 0, 'hidden=' + strip.hidden);
+
+  // ------------------------------------------------------- repositioning
+
+  // The vertical position has no slider: the preview itself is the control,
+  // once the Reposition button has said so. What the drag has to get right is
+  // the arithmetic - a pixel of pointer is a pixel of picture, which means
+  // dividing by the part of the picture that is hidden rather than by the box
+  // it is hidden behind.
+
+  check('the button is offered, and hides with the picture it moves',
+    Boolean(moveBtn) && moveBtn.hidden === true,
+    moveBtn ? 'hidden=' + moveBtn.hidden : 'no button');
+
+  answer = { record: LOCAL };
+  fileInput.files = [FILE];
+  fileInput.fire('change');
+  await settle();
+
+  check('and comes back with one', moveBtn.hidden === false);
+  check('the mode is off until it is asked for',
+    moveBtn.attrs['aria-pressed'] === 'false'
+      && !preview.className.includes('is-moving'),
+    moveBtn.attrs['aria-pressed']);
+
+  // A 400x900 picture in a 460x260 box: `cover` scales it by 460/400, so it
+  // stands 1035 tall and hides 775 of that - the whole range of the drag.
+  const thumb = preview.find(el => el.tagName === 'img');
+  thumb.naturalWidth = 400;
+  thumb.naturalHeight = 900;
+  thumb.rect = { width: 460, height: 260 };
+  preview.rect = { width: 460, height: 260 };
+
+  moveBtn.fire('click');
+  check('the button turns the preview into a control',
+    moveBtn.attrs['aria-pressed'] === 'true'
+      && preview.className.includes('is-moving')
+      && preview.attrs.role === 'slider'
+      && preview.attrs['aria-valuenow'] === '50',
+    preview.attrs.role + ' at ' + preview.attrs['aria-valuenow']);
+  check('and says what to do with it',
+    caption.textContent.includes('Drag'), caption.textContent);
+
+  const pointer = (type, y) => preview.fire(type, event(type, {
+    pointerId: 1, clientY: y, preventDefault() {}
+  }));
+
+  sent.length = 0;
+  pointer('pointerdown', 200);
+  pointer('pointermove', 122);
+  // 78px up out of 775 is 10.06% of the travel, and pushing the picture up
+  // brings what is below it into view - so the position goes up, not down.
+  check('dragging up moves the picture by what the hand moved',
+    sent.length === 1 && sent[0].key === 'bgPosY' && sent[0].value === 60,
+    JSON.stringify(sent));
+
+  pointer('pointermove', 1400);
+  check('and it stops at the end of the picture rather than past it',
+    sent[sent.length - 1].value === 0, JSON.stringify(sent[sent.length - 1]));
+
+  pointer('pointerup', 1400);
+  sent.length = 0;
+  pointer('pointermove', 200);
+  check('a move after the drag has ended moves nothing',
+    sent.length === 0, JSON.stringify(sent));
+
+  // The same control without a pointer, which is the only way to reach it
+  // from the keyboard now that the slider is gone.
+  const key = name => preview.fire('keydown', event('keydown', { key: name }));
+
+  sent.length = 0;
+  key('ArrowDown');
+  check('the arrow keys move it too',
+    sent.length === 1 && sent[0].value === 2, JSON.stringify(sent));
+  key('End');
+  check('End goes to the foot of the picture',
+    sent[sent.length - 1].value === 100, JSON.stringify(sent[sent.length - 1]));
+  key('Home');
+  check('Home to the top of it',
+    sent[sent.length - 1].value === 0, JSON.stringify(sent[sent.length - 1]));
+
+  key('Escape');
+  check('Escape leaves the mode',
+    moveBtn.attrs['aria-pressed'] === 'false'
+      && !preview.className.includes('is-moving')
+      && !('role' in preview.attrs),
+    moveBtn.attrs['aria-pressed']);
+
+  sent.length = 0;
+  pointer('pointerdown', 200);
+  pointer('pointermove', 100);
+  check('and a drag outside the mode does nothing at all',
+    sent.length === 0, JSON.stringify(sent));
+
+  // A picture cut at the sides has no slack to play with, and says so rather
+  // than sitting there refusing to move. Its shape arrives late here, the way
+  // a browser reports one - which is what the hint has to survive.
+  moveBtn.fire('click');
+  thumb.naturalWidth = 1600;
+  thumb.naturalHeight = 400;
+  thumb.fire('load');
+  check('a picture wider than the window says there is nothing to move',
+    caption.textContent.includes('nothing to move'), caption.textContent);
+
+  sent.length = 0;
+  pointer('pointerdown', 200);
+  pointer('pointermove', 100);
+  check('and does not move under the pointer either',
+    sent.length === 0, JSON.stringify(sent));
+
+  // Whatever the mode was doing, a new picture is a new crop to look at.
+  moveBtn.fire('click');
+  thumb.naturalWidth = 400;
+  thumb.naturalHeight = 900;
+  answer = { record: OLDER };
+  fileInput.files = [FILE];
+  fileInput.fire('change');
+  await settle();
+
+  check('a new background puts the mode away',
+    moveBtn.attrs['aria-pressed'] === 'false'
+      && !preview.className.includes('is-moving')
+      && caption.textContent.includes('hills.png'),
+    caption.textContent);
 
   // ---------------------------------------------------------------- report
 

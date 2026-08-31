@@ -27,6 +27,11 @@
  *   backup      export and import, as a pair of buttons
  *   action      a button that does something once, storing nothing
  *
+ * A field marked `hidden: true` is the other way about: an ordinary stored
+ * setting, with a default and a type that validates it, that draws no row of
+ * its own because some other control sets it. The background's vertical
+ * position is the one of these - it is set by dragging the picture.
+ *
  * A field marked `external: true` has no value in `settings` - it is a control
  * for something stored elsewhere (the background image is megabytes of data
  * URI, far too big to rewrite on every slider drag), or no value at all, like
@@ -177,9 +182,9 @@ const Schema = (() => {
           note: 'A picture or a video from this computer — up to 6 MB for a '
               + 'picture, 16 MB for a video — or a web address, which is fetched '
               + 'fresh on every new tab. Large pictures are scaled down to fit; '
-              + 'the preview shows the crop you will get. The last six are kept '
-              + 'underneath, each with the Blur and Dim it was last seen with; '
-              + 'going back to one brings those back with it.'
+              + 'the preview shows the crop you will get. The last nine are kept '
+              + 'underneath, each with the blur, dim and position it was last '
+              + 'seen with; going back to one brings those back with it.'
         },
         { key: 'bgBlur', label: 'Blur', type: 'range', default: 0, min: 0, max: 40, step: 2, unit: 'px' },
         {
@@ -192,6 +197,21 @@ const Schema = (() => {
           step: 5,
           unit: '%',
           note: 'Darkens the background so tiles stay readable, in either theme.'
+        },
+        {
+          key: 'bgPosY',
+          label: 'Vertical position',
+          type: 'range',
+          default: 50,
+          min: 0,
+          max: 100,
+          step: 1,
+          unit: '%',
+          // Set by dragging the picture in the preview above rather than by a
+          // slider of its own - see `hidden`, and buildBackground in
+          // settings.js. Kept a `range` all the same: that is what says what a
+          // valid one is, and what clamps a hand-edited backup file.
+          hidden: true
         }
       ]
     },
@@ -713,16 +733,19 @@ const Schema = (() => {
   }
 
   /**
-   * The background effects: what Blur and Dim are set to.
+   * The background effects: what Blur, Dim and Vertical position are set to.
    *
-   * They are named as a pair because they travel as one - a wallpaper in the
-   * recent strip carries the pair it was last looked at with, and going back
-   * to it brings them back too. They are ordinary stored settings all the
-   * same; this is only the subset, not a second home for them.
+   * They are named together because they travel as one - a wallpaper in the
+   * recent strip carries the three it was last looked at with, and going back
+   * to it brings them back too. Position belongs with the other two for the
+   * same reason they belong with each other: where a tall photograph should be
+   * cut is a fact about that photograph, not about the page. They are ordinary
+   * stored settings all the same; this is only the subset, not a second home
+   * for them.
    */
-  const EFFECT_KEYS = ['bgBlur', 'bgDim'];
+  const EFFECT_KEYS = ['bgBlur', 'bgDim', 'bgPosY'];
 
-  /** The pair, filled in from the defaults and clamped the way a slider is. */
+  /** The three, filled in from the defaults and clamped the way a slider is. */
   function coerceEffects(raw) {
     const source = raw && typeof raw === 'object' ? raw : {};
     const out = {};

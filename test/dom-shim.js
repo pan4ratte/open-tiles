@@ -68,7 +68,24 @@ class El {
   }
   addEventListener(type, fn) { (this.listeners[type] ||= []).push(fn); }
   setAttribute(k, v) { this.attrs[k] = v; }
+  removeAttribute(k) { delete this.attrs[k]; }
   click() { this.fire('click', event('click')); }
+  focus() { document.activeElement = this; }
+
+  /**
+   * Geometry, for the two controls that measure themselves - the colour square
+   * and the background preview, which turns a drag into a percentage. Nothing
+   * here has a layout, so a test that cares sets `el.rect` itself; everything
+   * else reads an empty box and asks no more of it.
+   */
+  getBoundingClientRect() {
+    return { width: 0, height: 0, top: 0, left: 0, right: 0, bottom: 0, ...this.rect };
+  }
+
+  /** A pointer drag is one element's for its whole length; here it always is. */
+  setPointerCapture(id) { this._captured = id; }
+  releasePointerCapture() { this._captured = null; }
+  hasPointerCapture(id) { return this._captured === id; }
 
   querySelectorAll(sel) {
     const want = sel.replace('.', '');
@@ -117,6 +134,7 @@ function event(type, props = {}) {
 const document = {
   // Somewhere for a transient element - the download link - to be appended to.
   body: new El('body'),
+  activeElement: null,
   createElement: tag => new El(tag),
   createTextNode: text => ({ text, children: [] }),
   createElementNS: () => new El('svg')
