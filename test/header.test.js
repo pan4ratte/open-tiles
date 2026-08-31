@@ -59,8 +59,11 @@ check('a profile that never had either simply gets the default',
 const css = read('newtab.css');
 const fallback = name => (css.match(new RegExp('var\\(' + name + ', ([^)]*)\\)')) || [])[1];
 
-check('the clock still defaults to the light face the stylesheet draws',
-  Schema.DEFAULTS.clockWeight === 300 && fallback('--clock-weight') === '300',
+/* Regular rather than Light: Apple's typography guidance is to avoid the
+   Ultralight, Thin and Light weights, and the clamp takes this clock down to
+   56px on a narrow window. The slider still reaches 300. */
+check('the clock defaults to the face the stylesheet draws, and it is not a light one',
+  Schema.DEFAULTS.clockWeight === 400 && fallback('--clock-weight') === '400',
   `settings ${Schema.DEFAULTS.clockWeight}, stylesheet ${fallback('--clock-weight')}`);
 
 check('and to the tracking it was drawn with before there was a slider',

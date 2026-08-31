@@ -68,7 +68,7 @@
 
   <!-- Add / edit tile. A sheet: it belongs to the page it interrupts, so it
        comes down from the top edge and is dismissed by its own buttons. -->
-  <div class="modal sheet" id="modal" role="dialog" aria-modal="true"
+  <div class="modal sheet" id="modal" tabindex="-1" role="dialog" aria-modal="true"
        aria-labelledby="modalTitle" hidden>
     <form class="sheet__box" id="tileForm">
       <h2 class="sheet__title" id="modalTitle">Add tile</h2>
@@ -218,11 +218,11 @@
 
   <!-- Settings. A window rather than a sheet: it stands on its own, so it is
        centred, fully rounded, and closed from its toolbar. -->
-  <div class="modal window" id="settings" role="dialog" aria-modal="true"
+  <div class="modal window" id="settings" tabindex="-1" role="dialog" aria-modal="true"
        aria-label="Settings" hidden>
     <form class="window__box" id="settingsForm">
       <div class="window__toolbar">
-        <h2 class="window__title">Settings</h2>
+        <h2 class="window__title" id="settingsTitle">Settings</h2>
         <span class="window__spacer"></span>
         <button class="toolbtn" type="button" id="btnSettingsClose" title="Close"
                 aria-label="Close" data-icon="x" data-icon-size="16"></button>
@@ -233,7 +233,7 @@
   </div>
 
   <!-- Add / edit group -->
-  <div class="modal sheet" id="groupModal" role="dialog" aria-modal="true"
+  <div class="modal sheet" id="groupModal" tabindex="-1" role="dialog" aria-modal="true"
        aria-labelledby="groupModalTitle" hidden>
     <form class="sheet__box" id="groupForm">
       <h2 class="sheet__title" id="groupModalTitle">New group</h2>
@@ -263,7 +263,7 @@
   <!-- The alert that stands in front of something that cannot be undone. It
        has no title bar and no close button: an alert is answered, not
        dismissed. Last in the file, so it stands over every other dialog. -->
-  <div class="modal alert" id="confirmAlert" role="alertdialog" aria-modal="true"
+  <div class="modal alert" id="confirmAlert" tabindex="-1" role="alertdialog" aria-modal="true"
        aria-labelledby="confirmTitle" aria-describedby="confirmText" hidden>
     <div class="alert__box">
       <span class="alert__glyph" data-icon="trash-2" data-icon-size="24"></span>

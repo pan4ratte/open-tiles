@@ -51,6 +51,7 @@
   const settingsModal = document.getElementById('settings');
   const settingsForm = document.getElementById('settingsForm');
   const settingsBody = document.getElementById('settingsBody');
+  const settingsTitle = document.getElementById('settingsTitle');
   const btnSettings = document.getElementById('btnSettings');
   const btnSettingsClose = document.getElementById('btnSettingsClose');
 
@@ -1552,11 +1553,48 @@
 
   // ---------------------------------------------------------------- dialogs
 
+  /**
+   * Every layer of the page that a dialog can stand in front of, the other
+   * dialogs included - an alert opens over the sheet that raised it.
+   *
+   * `aria-modal` is a claim, not a mechanism: on its own it does nothing to
+   * stop Tab leaving the dialog or a screen reader wandering out of it. What
+   * it claims, `inert` actually does - it takes a subtree out of the tab
+   * order and out of the accessibility tree in one attribute.
+   */
+  const LAYERS = [groupBar, toolbar, document.querySelector('.page'),
+                  modal, groupModal, settingsModal, confirmAlert];
+
+  /**
+   * What is up, innermost last, and what had the focus when each went up. A
+   * stack rather than a flag because the alert opens over a sheet: closing it
+   * has to hand the page back to that sheet, not to the page behind it.
+   */
+  const dialogStack = [];
+
+  function isolateTop() {
+    const top = dialogStack.length ? dialogStack[dialogStack.length - 1].el : null;
+    LAYERS.forEach(node => {
+      if (node) node.inert = Boolean(top) && node !== top;
+    });
+  }
+
   function openDialog(el, focusEl) {
+    dialogStack.push({ el, opener: document.activeElement });
     el.hidden = false;
+    // Before the focus call, not after: making a subtree inert while the focus
+    // is inside it drops the focus on the floor.
+    isolateTop();
+
     if (focusEl) {
       focusEl.focus();
       focusEl.select();
+    } else {
+      // Nothing here to type in, so the dialog takes the focus itself.
+      // Without this it stays on whatever opened the dialog - the gear, which
+      // is now behind the scrim - and the first Tab walks into the page that
+      // was just covered up.
+      el.focus();
     }
   }
 
@@ -1565,6 +1603,14 @@
     // that opened it, so hiding the sheet would leave it standing on its own.
     SettingsUI.closePicker();
     el.hidden = true;
+
+    const at = dialogStack.findIndex(entry => entry.el === el);
+    const going = at === -1 ? null : dialogStack.splice(at, 1)[0];
+    isolateTop();
+
+    // Back where it came from, so the keyboard carries on from the control
+    // that opened this rather than from the top of the page.
+    if (going && going.opener && going.opener.focus) going.opener.focus();
   }
 
   [modal, groupModal, settingsModal].forEach(el => {
@@ -1573,8 +1619,18 @@
     });
   });
 
+  /**
+   * The two gestures macOS cancels a dialog with. Escape everywhere, and
+   * Command-Period on an Apple keyboard, which is the older of the two and
+   * still the one some hands reach for first.
+   */
+  function isCancelKey(e) {
+    if (e.key === 'Escape') return true;
+    return Schema.SETTINGS_SHORTCUT.apple && e.metaKey && e.key === '.';
+  }
+
   document.addEventListener('keydown', e => {
-    if (e.key !== 'Escape') return;
+    if (!isCancelKey(e)) return;
     // The alert stands over every other dialog, so it is the one that answers -
     // and the answer Escape gives is the safe one.
     if (settleAlert) settleAlert(false);
@@ -1650,15 +1706,18 @@
     if (settleAlert) settleAlert(false);
 
     confirmText.textContent = text;
-    confirmAlert.hidden = false;
-    // The destructive button takes focus, the way macOS does it, so Return
-    // answers the question that was actually asked - and Escape still cancels.
-    btnConfirmOk.focus();
+    // No button is the default. Apple's rule is that a destructive button is
+    // never given the primary role, "because people sometimes choose a primary
+    // button without reading it first" - and the one way it names to make
+    // somebody actually read an alert is to leave no button for Return to
+    // press. Escape still cancels, and the alert itself takes the focus so the
+    // keyboard is inside it.
+    openDialog(confirmAlert);
 
     return new Promise(resolve => {
       settleAlert = answer => {
         settleAlert = null;
-        confirmAlert.hidden = true;
+        closeDialog(confirmAlert);
         resolve(answer);
       };
     });
@@ -2048,7 +2107,7 @@
     if (bgWell) bgWell.remove();
 
     const built = SettingsUI.colorControl(
-      { key: 'tileBg', label: 'Tile background', default: '#007aff' },
+      { key: 'tileBg', label: 'Tile background', default: '#0088ff' },
       // With no colour set the picker still has to open on something, and the
       // tile's own monogram colour is the one already on screen.
       value || colorFor(previewFields().url || 'tile'),
@@ -3386,7 +3445,12 @@
     SettingsUI.mount(settingsBody, {
       values: { ...settings, background: { record: background, recent: recentBackgrounds } },
       status,
-      onChange: onSettingChange
+      onChange: onSettingChange,
+      // macOS titles a settings window with the pane it is showing.
+      onSection: label => { settingsTitle.textContent = label || 'Settings'; },
+      // The scroll edge effect: the hairline under the toolbar arrives with
+      // the content that passes beneath it. See .window__box.is-scrolled.
+      onScroll: top => settingsForm.classList.toggle('is-scrolled', top > 0)
     });
   }
 

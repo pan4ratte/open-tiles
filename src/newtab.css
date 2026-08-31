@@ -30,21 +30,34 @@
 
 :root {
   /* -- system colours (light) -- */
-  --system-blue: #007aff;
-  --system-red: #ff3b30;
+  --system-blue: #0088ff;
+  --system-red: #ff383c;
   --system-green: #34c759;
-  --system-orange: #ff9500;
+  --system-orange: #ff8d28;
   --system-yellow: #ffcc00;
-  --system-purple: #af52de;
+  --system-purple: #cb30e0;
   --system-pink: #ff2d55;
-  --system-teal: #30b0c7;
-  --system-indigo: #5856d6;
+  --system-teal: #00c3d0;
+  --system-indigo: #6155f5;
   --system-gray: #8e8e93;
+
+  /* Red as *ink* rather than as a fill: the fill colour on a light ground is
+     3.5:1, which is under the 4.5:1 Apple asks of text this size. This is
+     Apple's own increased-contrast red, used wherever the colour has to be
+     read rather than seen - the same split --accent-text makes. */
+  --danger-text: #e9152d;
 
   /* -- text -- */
   --label: rgba(0, 0, 0, .85);
-  --label-secondary: rgba(0, 0, 0, .5);
-  --label-tertiary: rgba(0, 0, 0, .26);
+  /* Apple asks 4.5:1 of text this size and publishes no alpha of its own. At
+     macOS's apparent .5 the secondary label is 3.98:1 on a white box - and in
+     this interface it carries the note under every setting, which is most of
+     the words on screen rather than an occasional caption. .58 reads as the
+     same colour and measures 5.3:1. */
+  --label-secondary: rgba(0, 0, 0, .58);
+  /* Tertiary is placeholders and the quiet + on the group block: not prose, so
+     3:1 is the bar it has to clear rather than 4.5:1. */
+  --label-tertiary: rgba(0, 0, 0, .42);
   --label-quaternary: rgba(0, 0, 0, .1);
 
   /* -- fills: control backs, and anything that tints rather than paints -- */
@@ -63,6 +76,7 @@
   --bg-window: #ececee;
   --bg-under: #e3e3e6;
   --bg-content: #f5f5f7;
+  --bg-sidebar: rgba(228, 228, 233, .82);
   --bg-box: #ffffff;
   --control-bg: #ffffff;
   --control-bg-active: #f0f0f2;
@@ -95,20 +109,23 @@
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --system-blue: #0a84ff;
-    --system-red: #ff453a;
+    --system-blue: #0091ff;
+    --system-red: #ff4245;
     --system-green: #30d158;
-    --system-orange: #ff9f0a;
-    --system-yellow: #ffd60a;
-    --system-purple: #bf5af2;
+    --system-orange: #ff9230;
+    --system-yellow: #ffd600;
+    --system-purple: #db34f2;
     --system-pink: #ff375f;
-    --system-teal: #40c8e0;
-    --system-indigo: #5e5ce6;
+    --system-teal: #00d2e0;
+    --system-indigo: #6d7cff;
     --system-gray: #8e8e93;
+
+    /* On a dark ground the fill colour already reads, so ink and fill agree. */
+    --danger-text: var(--system-red);
 
     --label: rgba(255, 255, 255, .85);
     --label-secondary: rgba(255, 255, 255, .55);
-    --label-tertiary: rgba(255, 255, 255, .25);
+    --label-tertiary: rgba(255, 255, 255, .38);
     --label-quaternary: rgba(255, 255, 255, .1);
 
     --fill-primary: rgba(120, 120, 128, .36);
@@ -124,6 +141,7 @@
     --bg-window: #26262a;
     --bg-under: #161619;
     --bg-content: #1e1e20;
+    --bg-sidebar: rgba(44, 44, 47, .76);
     --bg-box: #2c2c2e;
     --control-bg: #48484a;
     --control-bg-active: #5a5a5c;
@@ -140,20 +158,23 @@
 }
 
 :root[data-theme="dark"] {
-  --system-blue: #0a84ff;
-  --system-red: #ff453a;
+  --system-blue: #0091ff;
+  --system-red: #ff4245;
   --system-green: #30d158;
-  --system-orange: #ff9f0a;
-  --system-yellow: #ffd60a;
-  --system-purple: #bf5af2;
+  --system-orange: #ff9230;
+  --system-yellow: #ffd600;
+  --system-purple: #db34f2;
   --system-pink: #ff375f;
-  --system-teal: #40c8e0;
-  --system-indigo: #5e5ce6;
+  --system-teal: #00d2e0;
+  --system-indigo: #6d7cff;
   --system-gray: #8e8e93;
+
+  /* On a dark ground the fill colour already reads, so ink and fill agree. */
+  --danger-text: var(--system-red);
 
   --label: rgba(255, 255, 255, .85);
   --label-secondary: rgba(255, 255, 255, .55);
-  --label-tertiary: rgba(255, 255, 255, .25);
+  --label-tertiary: rgba(255, 255, 255, .38);
   --label-quaternary: rgba(255, 255, 255, .1);
 
   --fill-primary: rgba(120, 120, 128, .36);
@@ -169,6 +190,7 @@
   --bg-window: #26262a;
   --bg-under: #161619;
   --bg-content: #1e1e20;
+  --bg-sidebar: rgba(44, 44, 47, .76);
   --bg-box: #2c2c2e;
   --control-bg: #48484a;
   --control-bg-active: #5a5a5c;
@@ -200,29 +222,54 @@
      backdrop so it keeps its punch; --accent-text does the same here, and is
      what carries accent-coloured *text* and hairlines. Solid fills keep the
      raw colour, so the swatch in the picker tells the truth. */
-  --accent: #007aff;
-  --accent-text: var(--accent);
+  --accent: #0088ff;
+  /* Darkened against a light ground for the same reason the dark theme
+     lightens it: a tint sized for a fill is not a tint that can be read as
+     text. systemBlue on white is 3.5:1 raw and 4.6:1 taken down this far. */
+  --accent-text: color-mix(in srgb, var(--accent) 86%, black);
+  /* The accent as a fill with white on it: the selected sidebar row, the
+     default button, the chosen group. It is the raw accent by default, and
+     taken down under Increase Contrast, where white on systemBlue's 3.5:1 is
+     the thing that setting exists to fix. */
+  --accent-fill: var(--accent);
   --on-accent: #ffffff;
   --accent-ring: color-mix(in srgb, var(--accent) 45%, transparent);
   --accent-wash: color-mix(in srgb, var(--accent) 12%, transparent);
 
   /* -- radii --
      macOS: 12 for a window or a sheet, 10 for a grouped box, 6 for a control.
-     Tiles are widget-sized, so their radius scales with them. */
+     Tiles are widget-sized, so their radius scales with them.
+
+     Nested corners are *concentric*, which is a rule rather than a taste:
+     an inner radius is its parent's radius less the padding between them, and
+     where that reaches zero the corner goes square. So a radius inside another
+     one is written as arithmetic on the parent's token rather than picked off
+     this ladder - see .tab__icon and .color__swatch. A capsule inside a
+     capsule is concentric at any padding, which is why the controls that went
+     capsule in macOS 26 need no arithmetic at all. */
   --r-window: 12px;
   --r-box: 10px;
   --r-control: 6px;
   --r-control-lg: 8px;
   --r-pill: 999px;
 
-  /* -- type scale (macOS, set in Inter) -- */
-  --t-title1: 22px;
-  --t-title2: 17px;
-  --t-title3: 15px;
-  --t-body: 13px;
-  --t-callout: 12px;
-  --t-subhead: 11px;
-  --t-footnote: 10px;
+  /* The padding a segmented control keeps around its segments, named because
+     both halves of the control read it. */
+  --seg-pad: 2px;
+
+  /* -- type scale (macOS, set in Inter) --
+     Apple's macOS text styles, and its tracking for each. Tracking does not run
+     one way: it is positive below 12pt, zero at 12, and negative above - so a
+     single letter-spacing on the body would track the smallest type in the
+     interface the wrong way. Each step carries its own. */
+  --t-title1: 22px;   --tr-title1: -.012em;
+  --t-title2: 17px;   --tr-title2: -.026em;
+  --t-title3: 15px;   --tr-title3: -.016em;
+  --t-body: 13px;     --tr-body: -.006em;
+  --t-callout: 12px;  --tr-callout: 0em;
+  --t-subhead: 11px;  --tr-subhead: .006em;
+  --t-footnote: 10px; --tr-footnote: .012em;
+  --t-caption: 10px;  --tr-caption: .012em;
 
   /* -- motion --
      Apple's default curve, a decelerating one for things that arrive, and a
@@ -244,6 +291,20 @@
   --group-dir: 1;
   --group-shift: calc(var(--group-travel) * var(--group-dir));
 
+  /* -- the rim on floating chrome --
+     A hairline all the way round, and a brighter line along the top of it.
+     That top line is the one part of macOS 26's glass that CSS can actually
+     draw: the material's edge catches the light, and it catches most of it
+     where the light is coming from. The real thing refracts what is behind it
+     as well, which needs an SVG filter on the backdrop - Chromium only, and
+     this add-on runs on Gecko.
+
+     Chrome only. The tiles are content, and content keeps the plain material
+     under a plain hairline - putting glass on the content layer is the first
+     thing Apple says not to do with it. */
+  --rim: inset 0 .5px 0 rgba(255, 255, 255, .55),
+         inset 0 0 0 .5px var(--stroke-inner);
+
   /* -- elevation --
      A hairline first, then the shadow: a macOS window reads as a sheet of
      glass with an edge, not as a card with a drop shadow. */
@@ -264,7 +325,7 @@
   --columns: 6;
   --bg-blur: 0px;
   --bg-dim: .35;
-  --groupbar-h: 38px;
+  --groupbar-h: 32px;
   /* The air the group block keeps around itself where it is set in the page,
      above and below. Its own, not a share of the clock's - every element
      stacked over the tiles carries the room it needs with it. */
@@ -298,6 +359,8 @@
     --accent-wash: color-mix(in srgb, var(--accent) 22%, transparent);
     --shadow-control: 0 .5px 1px rgba(0, 0, 0, .3), 0 0 0 .5px rgba(0, 0, 0, .3);
     --shadow-raised: 0 1px 3px rgba(0, 0, 0, .3), 0 4px 14px rgba(0, 0, 0, .24);
+    --rim: inset 0 .5px 0 rgba(255, 255, 255, .18),
+           inset 0 0 0 .5px var(--stroke-inner);
   }
 }
 
@@ -307,6 +370,8 @@
   --accent-wash: color-mix(in srgb, var(--accent) 22%, transparent);
   --shadow-control: 0 .5px 1px rgba(0, 0, 0, .3), 0 0 0 .5px rgba(0, 0, 0, .3);
   --shadow-raised: 0 1px 3px rgba(0, 0, 0, .3), 0 4px 14px rgba(0, 0, 0, .24);
+  --rim: inset 0 .5px 0 rgba(255, 255, 255, .18),
+         inset 0 0 0 .5px var(--stroke-inner);
 }
 
 
@@ -335,7 +400,7 @@ body {
   font-family: var(--ui-font);
   font-size: var(--t-body);
   line-height: 1.38;
-  letter-spacing: -.003em;
+  letter-spacing: var(--tr-body);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
@@ -362,6 +427,42 @@ body {
 ::selection {
   background: var(--accent-wash);
   color: var(--label);
+}
+
+/* Windows' own high-contrast mode throws away background and box-shadow and
+   keeps outline - so every ring above becomes invisible there, which is worse
+   than having drawn none at all. The same list, in the one property that
+   survives. */
+@media (forced-colors: active) {
+  .tile:focus-visible,
+  .chip:focus-visible,
+  .toolbtn:focus-visible,
+  .tab:focus-visible,
+  .btn:focus-visible,
+  .select:focus-visible,
+  .segmented__item:focus-visible,
+  .range input:focus-visible,
+  .switch input:focus-visible + .switch__track,
+  .bgfield__chip:focus-visible,
+  .bgfield__forget:focus-visible,
+  .fontcard:focus-visible,
+  .color__well:focus-visible,
+  .field__input:focus,
+  .menu__item:focus-visible {
+    outline: 2px solid Highlight;
+    outline-offset: 2px;
+  }
+
+  /* Selection is carried by a fill everywhere in this interface, and a fill is
+     the other thing forced colours takes away. */
+  .tab.is-on,
+  .chip.is-on,
+  .segmented__item.is-on,
+  .fontcard.is-on,
+  .menu__item:hover {
+    outline: 2px solid currentColor;
+    outline-offset: -2px;
+  }
 }
 
 
@@ -396,6 +497,101 @@ body {
   .mat-thick, .mat-regular, .mat-thin, .mat-ultrathin,
   .tile, .groupbar__inner, .sheet__box, .window__toolbar, .tabs {
     background: var(--bg-window);
+  }
+}
+
+/* -- Increase contrast --
+
+   Apple publishes an increased-contrast variant of every system colour, and
+   asks that an interface which cannot meet 4.5:1 by default at least offer a
+   higher-contrast scheme to anyone who turns the setting on. Everything here
+   goes through the same tokens the rest of the file reads, so this is the whole
+   of it: darker ink, opaque hairlines, and the accents Apple cut for this.
+
+   Apple's own warning applies to the dark half: increased contrast in a dark
+   theme can *reduce* the separation between dark text and a dark ground, so
+   the surfaces move apart here rather than only the ink getting brighter. */
+@media (prefers-contrast: more) {
+  :root {
+    --system-blue: #1e6ef4;
+    --system-red: #e9152d;
+    --system-green: #008932;
+    --system-orange: #c55300;
+    --system-yellow: #a16a00;
+    --system-purple: #b02fc2;
+    --system-pink: #e7124d;
+    --system-teal: #008198;
+    --system-indigo: #564ade;
+    --danger-text: var(--system-red);
+
+    --label: rgba(0, 0, 0, .95);
+    --label-secondary: rgba(0, 0, 0, .72);
+    --label-tertiary: rgba(0, 0, 0, .55);
+
+    --separator: rgba(0, 0, 0, .28);
+    --separator-opaque: #8e8e93;
+    --accent-text: color-mix(in srgb, var(--accent) 78%, black);
+    --accent-fill: color-mix(in srgb, var(--accent) 80%, black);
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --system-blue: #5cb8ff;
+      --system-red: #ff6165;
+      --system-green: #4ad968;
+      --system-orange: #ffa056;
+      --system-yellow: #fedf43;
+      --system-purple: #ea8dff;
+      --system-pink: #ff8ac4;
+      --system-teal: #3bddec;
+      --system-indigo: #a7aaff;
+      --danger-text: var(--system-red);
+
+      --label: #ffffff;
+      --label-secondary: rgba(255, 255, 255, .78);
+      --label-tertiary: rgba(255, 255, 255, .58);
+
+      --separator: rgba(255, 255, 255, .34);
+      --separator-opaque: #8e8e93;
+      --bg-box: #000000;
+      --bg-content: #0a0a0c;
+      --accent-text: color-mix(in srgb, var(--accent) 78%, white);
+      --accent-fill: color-mix(in srgb, var(--accent) 80%, black);
+    }
+  }
+
+  :root[data-theme="dark"] {
+    --system-blue: #5cb8ff;
+    --system-red: #ff6165;
+    --system-green: #4ad968;
+    --system-orange: #ffa056;
+    --system-yellow: #fedf43;
+    --system-purple: #ea8dff;
+    --system-pink: #ff8ac4;
+    --system-teal: #3bddec;
+    --system-indigo: #a7aaff;
+    --danger-text: var(--system-red);
+
+    --label: #ffffff;
+    --label-secondary: rgba(255, 255, 255, .78);
+    --label-tertiary: rgba(255, 255, 255, .58);
+
+    --separator: rgba(255, 255, 255, .34);
+    --separator-opaque: #8e8e93;
+    --bg-box: #000000;
+    --bg-content: #0a0a0c;
+    --accent-text: color-mix(in srgb, var(--accent) 78%, white);
+    --accent-fill: color-mix(in srgb, var(--accent) 80%, black);
+  }
+
+  /* Increase contrast puts a border on things the material was defining. */
+  .box,
+  .btn,
+  .select,
+  .field__input,
+  .segmented,
+  .switch__track {
+    box-shadow: inset 0 0 0 1px var(--separator-opaque);
   }
 }
 
@@ -506,7 +702,13 @@ body.has-bg .toolbar .toolbtn:hover { color: var(--label); }
    property only when it has something to say - see applySettings. */
 body.has-bg .page__clock,
 body.has-bg .page__date {
-  text-shadow: var(--header-shadow, 0 1px 12px rgba(0, 0, 0, .28));
+  /* Two shadows rather than one. The soft halo alone separated the type from a
+     mid-tone photograph and did almost nothing against a bright one - white on
+     a pale sky is a contrast of about 1.3:1, and a 12px blur at .28 cannot
+     carry that on its own. The tight one hugging the glyph is what actually
+     draws the edge; the soft one still sets it back off the picture. */
+  text-shadow: var(--header-shadow,
+                   0 1px 2px rgba(0, 0, 0, .38), 0 1px 14px rgba(0, 0, 0, .3));
 }
 
 body.has-bg .empty { text-shadow: 0 1px 12px rgba(0, 0, 0, .28); }
@@ -648,7 +850,7 @@ body.gb-floating .groupbar__inner {
   background: var(--mat-regular);
   -webkit-backdrop-filter: var(--mat-filter);
   backdrop-filter: var(--mat-filter);
-  box-shadow: inset 0 0 0 .5px var(--stroke-inner), var(--shadow-raised);
+  box-shadow: var(--rim), var(--shadow-raised);
 }
 
 @keyframes pill-in {
@@ -761,6 +963,7 @@ body.gb-hover.is-dragging .groupbar { opacity: 1; }
   color: var(--label-secondary);
   font: inherit;
   font-size: var(--t-body);
+  letter-spacing: var(--tr-body);
   font-weight: 500;
   white-space: nowrap;
   cursor: pointer;
@@ -790,7 +993,7 @@ body.gb-bar .chip { border-radius: var(--r-control); }
 .chip:active { transform: scale(.96); }
 
 .chip.is-on {
-  background: var(--accent);
+  background: var(--accent-fill);
   color: var(--on-accent);
   box-shadow: var(--shadow-control);
 }
@@ -874,7 +1077,7 @@ body.gb-bar .chip { border-radius: var(--r-control); }
   background: var(--mat-regular);
   -webkit-backdrop-filter: var(--mat-filter);
   backdrop-filter: var(--mat-filter);
-  box-shadow: inset 0 0 0 .5px var(--stroke-inner), var(--shadow-raised);
+  box-shadow: var(--rim), var(--shadow-raised);
 }
 
 /* The gear can be taken off the page altogether — see Show the settings button
@@ -976,7 +1179,11 @@ body.no-toolbar.gb-bar .groupbar__inner { padding: 0 12px; }
      of it, so a clock set larger still gives way on a narrow window rather
      than running off the side of it. */
   font-size: calc(clamp(56px, 8.5vw, 86px) * var(--clock-scale, 1));
-  font-weight: var(--clock-weight, 300);
+  /* Regular rather than Light. Apple's typography guidance is to avoid
+     Ultralight, Thin and Light, and at the bottom of the clamp - 56px on a
+     narrow window, over a picture - Light is where this stops holding up. The
+     slider still reaches 300 for anyone who wants it. */
+  font-weight: var(--clock-weight, 400);
   /* Apple tracks large type in, never out - which is what the slider defaults
      to, though it will let you track out if you want to. */
   letter-spacing: var(--clock-tracking, -.025em);
@@ -1409,7 +1616,7 @@ body.tile-round .tile {
   text-wrap: balance;
   color: var(--label-secondary);
   font-size: var(--t-title3);
-  letter-spacing: -.01em;
+  letter-spacing: var(--tr-title3);
 }
 
 .empty[hidden] { display: none; }
@@ -1430,9 +1637,10 @@ body.tile-round .tile {
   inset: 0;
   z-index: 10;
   display: grid;
+  /* Dimmed, not blurred. macOS dims the window a sheet belongs to; blurring it
+     is an iOS habit, and it put a full-viewport backdrop filter behind every
+     dialog for the sake of two pixels of defocus. */
   background: var(--scrim);
-  -webkit-backdrop-filter: blur(2px);
-  backdrop-filter: blur(2px);
   animation: scrim-in var(--t-base) var(--ease) both;
 }
 
@@ -1462,7 +1670,7 @@ body.tile-round .tile {
   background: var(--mat-thick);
   -webkit-backdrop-filter: var(--mat-filter);
   backdrop-filter: var(--mat-filter);
-  box-shadow: inset 0 0 0 .5px var(--stroke-inner), var(--shadow-window);
+  box-shadow: var(--rim), var(--shadow-window);
   animation: sheet-down var(--t-slow) var(--ease-out) both;
 }
 
@@ -1476,13 +1684,14 @@ body.tile-round .tile {
   margin: 0 0 3px;
   font-size: var(--t-title2);
   font-weight: 640;
-  letter-spacing: -.015em;
+  letter-spacing: var(--tr-title2);
 }
 
 .sheet__subtitle {
   margin: 0;
   color: var(--label-secondary);
   font-size: var(--t-subhead);
+  letter-spacing: var(--tr-subhead);
 }
 
 .sheet__body {
@@ -1524,7 +1733,7 @@ body.tile-round .tile {
   background: var(--mat-thick);
   -webkit-backdrop-filter: var(--mat-filter);
   backdrop-filter: var(--mat-filter);
-  box-shadow: inset 0 0 0 .5px var(--stroke-inner), var(--shadow-window);
+  box-shadow: var(--rim), var(--shadow-window);
   text-align: center;
   animation: window-in var(--t-base) var(--ease-out) both;
 }
@@ -1542,25 +1751,27 @@ body.tile-round .tile {
   margin: 0 0 4px;
   font-size: var(--t-title3);
   font-weight: 640;
-  letter-spacing: -.01em;
+  letter-spacing: var(--tr-title3);
 }
 
 .alert__text {
   margin: 0;
   color: var(--label-secondary);
   font-size: var(--t-subhead);
+  letter-spacing: var(--tr-subhead);
   line-height: 1.45;
 }
 
-/* Two buttons of equal width, the safe way out on the left - the same hand
-   macOS deals them in a sheet. */
+/* Sized to their words and pushed to the trailing edge, the safe way out on
+   the left of the pair - the same hand macOS deals them in a sheet, and the
+   same arrangement .sheet__actions already uses. Two half-width buttons
+   filling the box is the iOS alert, not this one. */
 .alert__actions {
   display: flex;
+  justify-content: flex-end;
   gap: 10px;
   margin-top: 18px;
 }
-
-.alert__actions .btn { flex: 1; }
 
 /* -- the window -- */
 
@@ -1594,8 +1805,26 @@ body.tile-round .tile {
   background: var(--mat-thick);
   -webkit-backdrop-filter: var(--mat-filter);
   backdrop-filter: var(--mat-filter);
-  box-shadow: inset 0 -.5px 0 var(--separator);
   z-index: 1;
+  /* The hairline is here at rest, not only once something has scrolled under
+     it. macOS can take its title bar separator away at the top of a pane
+     because the bar is glass over a desktop and reads as its own surface
+     without one; this bar is a near-opaque strip over a pane of almost the
+     same tone, so taking the line away does not make it quieter - it makes the
+     window stop having a title bar. Apple's own reason for the scroll edge
+     effect is that controls stay *visually distinct*, which is the thing that
+     was being lost. */
+  box-shadow: inset 0 -.5px 0 var(--separator);
+  transition: box-shadow var(--t-base) var(--ease);
+}
+
+/* The scroll edge effect proper: content is passing under the bar, so the edge
+   deepens - the hairline goes solid and picks up a soft shadow beneath it.
+   macOS calls this the `hard` style, and prefers it for a pinned header. The
+   class is written by the settings window; see mount in settings.js. */
+.window__box.is-scrolled .window__toolbar {
+  box-shadow: inset 0 -.5px 0 var(--separator-opaque),
+              0 4px 10px -6px rgba(0, 0, 0, .28);
 }
 
 /* macOS centres a window title over the whole toolbar, not over what is left
@@ -1607,7 +1836,7 @@ body.tile-round .tile {
   margin: 0;
   font-size: var(--t-body);
   font-weight: 590;
-  letter-spacing: -.006em;
+  letter-spacing: var(--tr-body);
   text-align: center;
   pointer-events: none;
 }
@@ -1636,7 +1865,11 @@ body.tile-round .tile {
   gap: 2px;
   width: 196px;
   padding: 10px 10px 14px;
-  background: var(--mat-regular);
+  /* Its own fill rather than the plain material. A macOS sidebar separates
+     from the pane beside it by being vibrant over a desktop; this one stands
+     over a scrim, so there is nothing behind it to pick up and in the light
+     theme it resolved to within a hair of the content pane. */
+  background: var(--bg-sidebar);
   -webkit-backdrop-filter: var(--mat-filter);
   backdrop-filter: var(--mat-filter);
   box-shadow: inset -.5px 0 0 var(--separator);
@@ -1652,12 +1885,12 @@ body.tile-round .tile {
   flex: none;
   padding: 5px 8px;
   border: 0;
-  border-radius: var(--r-control);
+  border-radius: var(--r-pill);
   background: transparent;
   color: var(--label);
   font: inherit;
   font-size: var(--t-body);
-  letter-spacing: -.004em;
+  letter-spacing: var(--tr-body);
   text-align: left;
   cursor: pointer;
   transition: background var(--t-fast) var(--ease), color var(--t-fast) var(--ease);
@@ -1671,7 +1904,9 @@ body.tile-round .tile {
   flex: none;
   width: 20px;
   height: 20px;
-  border-radius: 5px;
+  /* Concentric with the row: the row's own corner less the padding between
+     them. See --r-control-lg's note on the rule. */
+  border-radius: calc(var(--r-control) - 1px);
   background: var(--tab-tint, var(--system-gray));
   color: #fff;
   box-shadow: inset 0 0 0 .5px rgba(0, 0, 0, .08);
@@ -1680,7 +1915,7 @@ body.tile-round .tile {
 .tab:hover { background: var(--fill-quaternary); }
 
 .tab.is-on {
-  background: var(--accent);
+  background: var(--accent-fill);
   color: var(--on-accent);
 }
 
@@ -1714,7 +1949,7 @@ body.tile-round .tile {
   margin: 0 0 12px;
   font-size: var(--t-title2);
   font-weight: 640;
-  letter-spacing: -.015em;
+  letter-spacing: var(--tr-title2);
   color: var(--label);
 }
 
@@ -1725,7 +1960,7 @@ body.tile-round .tile {
   margin: 22px 0 7px 2px;
   font-size: var(--t-callout);
   font-weight: 600;
-  letter-spacing: -.005em;
+  letter-spacing: var(--tr-callout);
   color: var(--label-secondary);
 }
 
@@ -1818,7 +2053,7 @@ body.tile-round .tile {
 .row__label {
   display: block;
   font-size: var(--t-body);
-  letter-spacing: -.004em;
+  letter-spacing: var(--tr-body);
 }
 
 /* No line-length cap here. The row is the measure: its label column already
@@ -1829,6 +2064,7 @@ body.tile-round .tile {
   margin-top: 2px;
   color: var(--label-secondary);
   font-size: var(--t-subhead);
+  letter-spacing: var(--tr-subhead);
   line-height: 1.36;
 }
 
@@ -1836,7 +2072,7 @@ body.tile-round .tile {
    quieter than a control, because there is nothing here to touch. */
 .row__value {
   font-size: var(--t-body);
-  letter-spacing: -.004em;
+  letter-spacing: var(--tr-body);
   color: var(--label-secondary);
   text-align: right;
   overflow-wrap: anywhere;
@@ -1868,6 +2104,7 @@ body.tile-round .tile {
   gap: 5px;
   margin-bottom: 5px;
   font-size: var(--t-subhead);
+  letter-spacing: var(--tr-subhead);
   font-weight: 500;
   color: var(--label-secondary);
 }
@@ -1885,6 +2122,7 @@ body.tile-round .tile {
   color: var(--label);
   font: inherit;
   font-size: var(--t-body);
+  letter-spacing: var(--tr-body);
   transition: box-shadow var(--t-fast) var(--ease);
 }
 
@@ -1940,7 +2178,7 @@ body.tile-round .tile {
 }
 
 .switch input:checked + .switch__track {
-  background: var(--accent);
+  background: var(--accent-fill);
   box-shadow: inset 0 0 0 .5px rgba(0, 0, 0, .06);
 }
 
@@ -1968,6 +2206,7 @@ body.tile-round .tile {
   color: var(--label);
   font: inherit;
   font-size: var(--t-body);
+  letter-spacing: var(--tr-body);
   line-height: 1.5;
   cursor: pointer;
   transition: background var(--t-fast) var(--ease);
@@ -1980,7 +2219,9 @@ body.tile-round .tile {
 .popup__chevron {
   position: absolute;
   right: 7px;
-  color: var(--label-secondary);
+  /* Tinted rather than grey: on a settings row it is what separates a pop-up
+     button from a bordered label with words in it. */
+  color: var(--accent-text);
   pointer-events: none;
 }
 
@@ -1994,15 +2235,20 @@ body.tile-round .tile {
 }
 
 /* -- segmented control --
-   Ventura's: a tinted trough with the chosen segment raised out of it in the
-   control colour. The accent is deliberately not used here — selection is
-   shown by height, which leaves the accent free to mean something else. */
+   A tinted trough with the chosen segment raised out of it in the control
+   colour. The accent is deliberately not used here — selection is shown by
+   height, which leaves the accent free to mean something else.
+
+   macOS 26 made the segmented control a capsule, so the trough is one and each
+   segment inside it is one too. That also makes the nesting concentric for
+   free: a capsule inside a capsule is still concentric whatever the padding,
+   which is the one shape where the radius arithmetic cannot go wrong. */
 
 .segmented {
   display: inline-flex;
   gap: 2px;
-  padding: 2px;
-  border-radius: var(--r-control-lg);
+  padding: var(--seg-pad);
+  border-radius: var(--r-pill);
   background: var(--fill-tertiary);
   box-shadow: inset 0 0 0 .5px var(--separator);
 }
@@ -2014,11 +2260,12 @@ body.tile-round .tile {
   height: 22px;
   padding: 0 6px;
   border: 0;
-  border-radius: 5px;
+  border-radius: var(--r-pill);
   background: transparent;
   color: var(--label-secondary);
   font: inherit;
   font-size: var(--t-callout);
+  letter-spacing: var(--tr-callout);
   cursor: pointer;
   transition: background var(--t-base) var(--ease),
               color var(--t-base) var(--ease),
@@ -2053,11 +2300,15 @@ body.tile-round .tile {
   gap: 10px;
 }
 
+/* The input is taller than it looks: the trough it paints stays 4px and the
+   rest is grab area, which is what takes the control over the 20pt floor Apple
+   sets for a macOS control. A slider is dragged rather than clicked, so it is
+   the one place an undersized target is felt on every use. */
 .range input {
   appearance: none;
   -webkit-appearance: none;
   width: 150px;
-  height: 18px;
+  height: 24px;
   margin: 0;
   border-radius: var(--r-pill);
   background:
@@ -2070,8 +2321,8 @@ body.tile-round .tile {
 
 .range input::-webkit-slider-thumb {
   -webkit-appearance: none;
-  width: 16px;
-  height: 16px;
+  width: 18px;
+  height: 18px;
   border-radius: 50%;
   background: var(--knob);
   box-shadow: var(--shadow-knob);
@@ -2108,6 +2359,7 @@ body.tile-round .tile {
   min-width: 42px;
   color: var(--label-secondary);
   font-size: var(--t-callout);
+  letter-spacing: var(--tr-callout);
   font-variant-numeric: tabular-nums;
   text-align: right;
 }
@@ -2141,7 +2393,8 @@ body.tile-round .tile {
   display: block;
   width: 100%;
   height: 100%;
-  border-radius: 4px;
+  /* Concentric with the well: its 6px corner less the 2px padding. */
+  border-radius: calc(var(--r-control) - 2px);
   /* The chequer shows through nothing here, but it keeps a pale colour from
      dissolving into the well around it. */
   box-shadow: inset 0 0 0 .5px rgba(0, 0, 0, .18);
@@ -2150,6 +2403,7 @@ body.tile-round .tile {
 .color__hex {
   color: var(--label-secondary);
   font-size: var(--t-callout);
+  letter-spacing: var(--tr-callout);
   text-transform: uppercase;
   font-variant-numeric: tabular-nums;
 }
@@ -2167,7 +2421,7 @@ body.tile-round .tile {
   background: var(--mat-thick);
   -webkit-backdrop-filter: var(--mat-filter);
   backdrop-filter: var(--mat-filter);
-  box-shadow: var(--shadow-window);
+  box-shadow: var(--rim), var(--shadow-window);
   animation: picker-in var(--t-fast) var(--ease-out) both;
 }
 
@@ -2180,9 +2434,13 @@ body.tile-round .tile {
    them the neutrals - five whites and five blacks, off Apple's own grey scale.
    Two rows rather than twenty in one: they are answers to different questions,
    and a hue picked out of a run of greys is a hue picked by accident. */
+/* Eight to a row rather than ten. At ten they came out 16.7px across, under
+   the 20pt Apple sets as the smallest a macOS control may be - and these are
+   round, so the real target was smaller again. Eight gives 21.9px in the same
+   popover: (236 - 24 - 35) / 8. */
 .picker__presets {
   display: grid;
-  grid-template-columns: repeat(10, 1fr);
+  grid-template-columns: repeat(8, 1fr);
   gap: 5px;
   margin-bottom: 5px;
 }
@@ -2299,7 +2557,7 @@ body.tile-round .tile {
   color: var(--label);
   font: inherit;
   font-size: var(--t-body);
-  letter-spacing: -.004em;
+  letter-spacing: var(--tr-body);
   /* The class is worn by an <a> as well as a <button> - the link to the
      repository - and a link brings an underline with it. */
   text-decoration: none;
@@ -2320,10 +2578,11 @@ body.tile-round .tile {
   min-height: 22px;
   padding: 2px 11px;
   font-size: var(--t-callout);
+  letter-spacing: var(--tr-callout);
 }
 
 .btn--primary {
-  background: var(--accent);
+  background: var(--accent-fill);
   box-shadow: inset 0 0 0 .5px rgba(0, 0, 0, .1), var(--shadow-control);
   color: var(--on-accent);
   font-weight: 500;
@@ -2341,7 +2600,7 @@ body.tile-round .tile {
 .btn--danger {
   background: transparent;
   box-shadow: none;
-  color: var(--system-red);
+  color: var(--danger-text);
 }
 
 .btn--danger:hover { background: color-mix(in srgb, var(--system-red) 12%, transparent); }
@@ -2400,8 +2659,11 @@ body.tile-round .tile {
   aspect-ratio: var(--page-ratio);
   overflow: hidden;
   border-radius: var(--r-box);
-  background: var(--fill-quaternary);
-  box-shadow: inset 0 0 0 .5px var(--separator);
+  /* No fill and no hairline at rest: this sits inside a grouped box, and a
+     bordered box inside a box is the nesting Apple asks you not to do. The
+     drop target still lights up - see .bgfield__preview.is-over - which is the
+     one moment an edge here means something. */
+  background: transparent;
   color: var(--label-tertiary);
   transition: box-shadow var(--t-fast) var(--ease),
               background var(--t-fast) var(--ease);
@@ -2467,6 +2729,7 @@ body.tile-round .tile {
   margin: 8px 0 0;
   color: var(--label-secondary);
   font-size: var(--t-subhead);
+  letter-spacing: var(--tr-subhead);
   text-align: center;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -2650,6 +2913,7 @@ body.tile-round .tile {
   display: block;
   margin-bottom: 4px;
   font-size: var(--t-caption);
+  letter-spacing: var(--tr-caption);
   font-weight: 500;
   color: var(--label-secondary);
 }
@@ -2679,8 +2943,11 @@ body.tile-round .tile {
 .tilefield__note {
   margin: 5px 0 0;
   font-size: var(--t-caption);
+  letter-spacing: var(--tr-caption);
   line-height: 1.45;
-  color: var(--label-tertiary);
+  /* Prose, so it takes the colour prose is set in - tertiary is for a
+     placeholder standing in for a value, not for a line meant to be read. */
+  color: var(--label-secondary);
 }
 
 /* The upload glyph, set inline in that sentence so "press this" points at the
@@ -2695,6 +2962,7 @@ body.tile-round .tile {
 .tilefield__hint {
   display: block;
   font-size: var(--t-caption);
+  letter-spacing: var(--tr-caption);
   font-variant-numeric: tabular-nums;
   color: var(--label-secondary);
   text-align: center;
@@ -2790,21 +3058,23 @@ body.tile-round .tile {
   width: 38px;
   color: var(--label-secondary);
   font-size: var(--t-subhead);
+  letter-spacing: var(--tr-subhead);
   font-weight: 500;
 }
 
-/* The list is a sunken well, the way a macOS source list is: the cards inside
-   it carry no chrome of their own until one is hovered or chosen. */
+/* A run of cards rather than a well. It used to be a filled, hairlined box -
+   which put a box inside the grouped box it sits in, and "don't nest boxes" is
+   one of the few things Apple states flatly about them. Hairlines top and
+   bottom say where the scrolling region begins and ends without drawing a
+   second container round it. */
 .fontfield__grid {
   position: relative;
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(172px, 1fr));
   gap: 4px;
   max-height: 320px;
-  padding: 8px;
-  border-radius: var(--r-box);
-  background: var(--fill-quaternary);
-  box-shadow: inset 0 0 0 .5px var(--separator);
+  padding: 8px 0;
+  box-shadow: inset 0 .5px 0 var(--separator), inset 0 -.5px 0 var(--separator);
   overflow-y: auto;
   overscroll-behavior: contain;
   scrollbar-width: thin;
@@ -2833,7 +3103,7 @@ body.tile-round .tile {
 .fontcard:hover { background: var(--fill-tertiary); }
 
 .fontcard.is-on {
-  background: var(--accent);
+  background: var(--accent-fill);
   color: var(--on-accent);
 }
 
@@ -2845,6 +3115,7 @@ body.tile-round .tile {
   flex: 1;
   min-width: 0;
   font-size: var(--t-title3);
+  letter-spacing: var(--tr-title3);
   line-height: 1.5;
   white-space: nowrap;
   overflow: hidden;
@@ -2857,6 +3128,7 @@ body.tile-round .tile {
   padding: 0 2px;
   color: var(--label-secondary);
   font-size: var(--t-subhead);
+  letter-spacing: var(--tr-subhead);
   line-height: 1.36;
 }
 
@@ -2900,6 +3172,7 @@ body.tile-round .tile {
   background: var(--fill-quaternary);
   box-shadow: inset 0 0 0 .5px var(--separator);
   font-size: var(--t-title2);
+  letter-spacing: var(--tr-title2);
   line-height: 1.4;
   text-align: center;
   overflow-wrap: anywhere;
@@ -2932,13 +3205,14 @@ body.tile-round .tile {
   margin: 12px 0 0;
   font-size: var(--t-title1);
   font-weight: 640;
-  letter-spacing: -.02em;
+  letter-spacing: var(--tr-title1);
   color: var(--label);
 }
 
 .about__version {
   margin: 3px 0 0;
   font-size: var(--t-callout);
+  letter-spacing: var(--tr-callout);
   font-variant-numeric: tabular-nums;
   color: var(--label-secondary);
 }
@@ -2949,6 +3223,7 @@ body.tile-round .tile {
   max-width: 44ch;
   margin: 10px 0 0;
   font-size: var(--t-subhead);
+  letter-spacing: var(--tr-subhead);
   line-height: 1.45;
   color: var(--label-secondary);
 }
@@ -2965,6 +3240,7 @@ body.tile-round .tile {
   margin: 0 0 10px;
   color: var(--label-secondary);
   font-size: var(--t-subhead);
+  letter-spacing: var(--tr-subhead);
   line-height: 1.4;
   animation: status-in var(--t-base) var(--ease-out) both;
 }
@@ -3005,7 +3281,7 @@ body.tile-round .tile {
   background: var(--mat-thick);
   -webkit-backdrop-filter: var(--mat-filter);
   backdrop-filter: var(--mat-filter);
-  box-shadow: var(--shadow-window);
+  box-shadow: var(--rim), var(--shadow-window);
   /* Out of the corner it was opened from, which is the corner nearest the
      pointer - see placeMenu, which flips the whole box rather than sliding
      it, so this stays true at every edge of the window. */
@@ -3033,7 +3309,7 @@ body.tile-round .tile {
   color: var(--label);
   font-family: var(--font-family);
   font-size: var(--t-body);
-  letter-spacing: -.004em;
+  letter-spacing: var(--tr-body);
   text-align: left;
   cursor: pointer;
   /* No transition on the fill: a menu row should light up the instant the
@@ -3058,7 +3334,7 @@ body.tile-round .tile {
 .menu__item:hover,
 .menu__item:focus-visible {
   outline: 0;
-  background: var(--accent);
+  background: var(--accent-fill);
   /* --on-accent, not --accent-text: the latter is the accent adjusted to be
      read *as* text on the page, which on an accent fill is the same colour
      twice over. */
@@ -3068,14 +3344,14 @@ body.tile-round .tile {
 .menu__item:hover .icon,
 .menu__item:focus-visible .icon { color: currentColor; }
 
-.menu__item:active { background: var(--accent); }
+.menu__item:active { background: var(--accent-fill); }
 
 /* Destructive, so it is not read as one more thing to try. It keeps the
    accent fill when picked out: the row is what is highlighted, and red on red
    would say nothing. */
-.menu__item--danger { color: var(--system-red); }
+.menu__item--danger { color: var(--danger-text); }
 
-.menu__item--danger .icon { color: var(--system-red); }
+.menu__item--danger .icon { color: var(--danger-text); }
 
 .menu__sep {
   height: 1px;

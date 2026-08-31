@@ -146,7 +146,7 @@ const Schema = (() => {
               key: 'accent',
               label: 'Accent colour',
               type: 'color',
-              default: '#007aff'
+              default: '#0088ff'
             },
             {
               key: 'font',
@@ -154,20 +154,15 @@ const Schema = (() => {
               type: 'font',
               default: 'Inter',
               busyText: 'Loading font…',
-              note: 'Sets the tile names, and the clock and the date wherever they '
-                  + 'are not given a face of their own under Header. Filter the '
-                  + 'list, or name any other family on Google Fonts under "Other '
-                  + 'family". The dialogs and buttons always stay on Inter.'
+              note: 'Sets the tile names, the clock and the date. The dialogs always stay on Inter.'
             },
             {
               key: 'showSettingsButton',
               label: 'Show the settings button',
               type: 'toggle',
               default: true,
-              note: 'The gear in the corner of the page. With it off, two ways in '
-                  + 'are left and neither of them can be turned off: '
-                  + SETTINGS_SHORTCUT.label + ' from anywhere on the page, and '
-                  + 'right-clicking it, which offers Settings at the foot of its menu.'
+              note: 'With it off, ' + SETTINGS_SHORTCUT.label
+                  + ' and the right-click menu are the ways in.'
             }
           ]
         },
@@ -182,9 +177,7 @@ const Schema = (() => {
               type: 'backup',
               external: true,
               busyText: 'Working on it…',
-              note: 'Saves your tiles, groups, settings and background picture to a '
-                  + 'file. Importing one puts back whatever that file holds, over '
-                  + 'what is here now.'
+              note: 'Saves tiles, groups, settings and background to a file, and puts one back.'
             },
             {
               key: 'reset',
@@ -196,8 +189,7 @@ const Schema = (() => {
               buttonLabel: 'Reset all',
               buttonIcon: 'rotate-ccw',
               busyText: 'Putting everything back…',
-              note: 'Puts every setting back to its default and takes the background '
-                  + 'away, recent ones included. Your tiles and groups are left alone.'
+              note: 'Every setting back to its default, and the background away. Tiles are left alone.'
             }
           ]
         }
@@ -216,12 +208,7 @@ const Schema = (() => {
           // Stored under its own key, not in settings - see the header above.
           external: true,
           busyText: 'Working on it…',
-          note: 'A picture or a video from this computer — up to 6 MB for a '
-              + 'picture, 16 MB for a video — or a web address, which is fetched '
-              + 'fresh on every new tab. Large pictures are scaled down to fit; '
-              + 'the preview shows the crop you will get. The last nine are kept '
-              + 'underneath, each with the blur, dim and position it was last '
-              + 'seen with; going back to one brings those back with it.'
+          note: 'From this computer, or a web address fetched fresh each time.'
         },
         { key: 'bgBlur', label: 'Blur', type: 'range', default: 0, min: 0, max: 40, step: 2, unit: 'px' },
         {
@@ -233,7 +220,7 @@ const Schema = (() => {
           max: 90,
           step: 5,
           unit: '%',
-          note: 'Darkens the background so tiles stay readable, in either theme.'
+          note: 'Darkens it so the tiles stay readable.'
         },
         {
           key: 'bgPosY',
@@ -276,8 +263,7 @@ const Schema = (() => {
               max: 12,
               step: 1,
               zeroLabel: 'Auto',
-              note: 'At the far left, Auto fits as many tiles per row as the '
-                  + 'window allows.'
+              note: 'Auto fits as many per row as the window allows.'
             },
             { key: 'tileSize', label: 'Tile size', type: 'range', default: 116, min: 72, max: 200, step: 4, unit: 'px' },
             { key: 'gap', label: 'Spacing', type: 'range', default: 18, min: 4, max: 48, step: 2, unit: 'px' },
@@ -290,9 +276,7 @@ const Schema = (() => {
                 { value: 'manual', label: 'Manual' },
                 { value: 'visits', label: 'Most visited' }
               ],
-              note: 'Manual is the order you drag them into. Most visited sorts '
-                  + 'by how often you have opened each one from here, so dragging '
-                  + 'a tile to a new place stops sticking.'
+              note: 'Most visited counts how often you open each one.'
             }
           ]
         },
@@ -311,8 +295,7 @@ const Schema = (() => {
                 { value: '16:10', label: '16:10' },
                 { value: '16:9', label: '16:9' }
               ],
-              note: 'Tile size sets the width; the shape sets the height to match. '
-                  + 'A wide tile is a short one, so it has less room for a site name.'
+              note: 'Tile size sets the width; the shape sets the height to match.'
             },
             {
               key: 'tileBg',
@@ -325,12 +308,7 @@ const Schema = (() => {
                 { value: 'light', label: "Light theme's" },
                 { value: 'custom', label: 'Custom colour' }
               ],
-              note: 'What a tile is drawn in when it has not been given a colour '
-                  + 'of its own. Follow the theme is the frosted glass it has '
-                  + 'always been, light on a light page and dark on a dark one. '
-                  + 'The other three hold one look whatever the theme and '
-                  + 'whatever is behind them, and the site names take the ink '
-                  + 'that reads against it.'
+              note: 'What a tile without a colour of its own is drawn in.'
             },
             {
               key: 'tileBgColor',
@@ -338,8 +316,7 @@ const Schema = (() => {
               type: 'color',
               default: '#2f2f31',
               when: { tileBg: 'custom' },
-              note: 'A tile given a colour in its own sheet keeps that one; this '
-                  + 'is only what the rest of them fall back to.'
+              note: 'Only what tiles with no colour of their own fall back to.'
             },
             {
               key: 'logoPad',
@@ -350,8 +327,7 @@ const Schema = (() => {
               max: 40,
               step: 5,
               unit: '%',
-              note: 'How much of the room inside a tile is left clear around its '
-                  + 'icon. At 0% the icon fills what the shape and the name leave.'
+              note: 'The room left clear around a tile\'s icon.'
             },
             { key: 'showLabels', label: 'Show site names', type: 'toggle', default: true },
             {
@@ -359,16 +335,14 @@ const Schema = (() => {
               label: 'Show visit counts',
               type: 'toggle',
               default: false,
-              note: 'Puts the number of times you have opened a site from here '
-                  + 'in the corner of its tile.'
+              note: 'Puts the number of times you have opened a site in the corner of its tile.'
             },
             {
               key: 'showAddButton',
               label: 'Show the add button',
               type: 'toggle',
               default: true,
-              note: 'The dotted + at the end of the grid. With it off, '
-                  + 'right-clicking the page is how a tile gets added.'
+              note: 'The dotted + at the end of the grid. Right-clicking the page also adds one.'
             },
             { key: 'openInNewTab', label: 'Open sites in a new tab', type: 'toggle', default: false },
             {
@@ -376,9 +350,7 @@ const Schema = (() => {
               label: 'Confirm before deleting a tile',
               type: 'toggle',
               default: false,
-              note: 'Asks first, whether the tile is being deleted from its own '
-                  + 'sheet or from the right-click menu. Off, it goes at once — a '
-                  + 'tile is a bookmark, and putting one back is typing an address.'
+              note: 'Asks first, wherever the tile is being deleted from.'
             },
             {
               key: 'deepIcons',
@@ -389,8 +361,7 @@ const Schema = (() => {
               // Firefox only grants permissions.request() while it is handling
               // user input, so this toggle has to act on the click itself.
               gesture: true,
-              note: 'Reads each site\'s markup and web manifest to find its sharpest '
-                  + 'logo. Firefox will ask for access to the sites you save.'
+              note: 'Reads each site\'s markup for its sharpest logo. Firefox will ask for access.'
             }
           ]
         }
@@ -421,9 +392,7 @@ const Schema = (() => {
                 { value: '12', label: '1:45 PM' },
                 { value: '12s', label: '1:45:30 PM' }
               ],
-              note: 'The separators and the position of the suffix follow '
-                  + 'the language your browser is set to, so these are examples rather than '
-                  + 'the exact shape you will get.'
+              note: 'The exact shape follows your browser\'s language.'
             },
             {
               key: 'clockFont',
@@ -433,10 +402,9 @@ const Schema = (() => {
               emptyLabel: 'Match page font',
               inherit: 'font',
               busyText: 'Loading font…',
-              note: 'The clock on its own. Leave it on "Match page font" and it '
-                  + 'follows General → Font with everything else.'
+              note: 'The clock on its own. Match page font follows General → Font.'
             },
-            { key: 'clockWeight', label: 'Weight', type: 'choice', default: 300, options: WEIGHTS },
+            { key: 'clockWeight', label: 'Weight', type: 'choice', default: 400, options: WEIGHTS },
             {
               key: 'clockSize',
               label: 'Size',
@@ -446,8 +414,7 @@ const Schema = (() => {
               max: 200,
               step: 5,
               unit: '%',
-              note: 'A share of the size the page picks for the window it is '
-                  + 'in, so the clock still shrinks on a narrow one.'
+              note: 'A share of the size the page picks for the window.'
             },
             {
               key: 'clockTracking',
@@ -458,8 +425,7 @@ const Schema = (() => {
               max: 20,
               step: .5,
               unit: '%',
-              note: 'The room between the letters, as a share of the type size. '
-                  + 'Apple tracks large type in, never out.'
+              note: 'Apple tracks large type in, never out.'
             }
           ]
         },
@@ -479,9 +445,7 @@ const Schema = (() => {
                 { value: 'long', label: '29 August 2026' },
                 { value: 'short', label: '29/08/2026' }
               ],
-              note: 'The order of the day, the month and the year follows '
-                  + 'the language your browser is set to, so these are examples rather than '
-                  + 'the exact shape you will get.'
+              note: 'The order follows your browser\'s language.'
             },
             {
               key: 'dateFont',
@@ -524,8 +488,7 @@ const Schema = (() => {
               label: 'Custom colour',
               type: 'toggle',
               default: false,
-              note: 'Off, the time and the date follow the theme — dark ink on a '
-                  + 'light page, light ink on a dark one, and white over a picture.'
+              note: 'Off, they follow the theme, and go white over a picture.'
             },
             {
               key: 'headerColor',
@@ -547,9 +510,7 @@ const Schema = (() => {
               max: 100,
               step: 5,
               unit: '%',
-              note: 'At 0 they carry the shadow the page gives them: none on a '
-                  + 'plain background, a soft one over a picture. Anything above '
-                  + 'it is yours, on either.'
+              note: 'At 0 they take the page\'s own.'
             }
           ]
         }
@@ -570,8 +531,7 @@ const Schema = (() => {
             { value: 'floating', label: 'Floating' },
             { value: 'bar', label: 'Status bar' }
           ],
-          note: 'Floating sits in a pill over the page; a status bar spans the '
-              + 'whole window.'
+          note: 'A pill over the page, or a bar across it.'
         },
         {
           key: 'groupShow',
@@ -582,55 +542,42 @@ const Schema = (() => {
             { value: 'always', label: 'Always' },
             { value: 'hover', label: 'On hover' }
           ],
-          note: 'On hover keeps the block out of the way until the pointer '
-              + 'reaches it. Picking a group does not bring it back; dragging '
-              + 'a tile does, since that is the moment the chips are wanted.'
+          note: 'On hover hides it until the pointer arrives.'
         },
         {
           key: 'showAllGroup',
           label: 'Show the All category',
           type: 'toggle',
           default: true,
-          note: 'The chip at the front of the block that clears the filter. '
-              + 'With it off the page always sits in a group, and dragging a '
-              + 'tile onto All is no longer the way to take it out of one.'
+          note: 'The chip that clears the filter. With it off the page always sits in a group.'
         },
         {
           key: 'showGroupAdd',
           label: 'Show the new group button',
           type: 'toggle',
           default: true,
-          note: 'The + at the end of the block. With it off, right-clicking the '
-              + 'page is how a group gets made.'
+          note: 'The + at the end of the block. Right-clicking the page also makes one.'
         },
         {
           key: 'keepGroup',
           label: 'Remember the open group',
           type: 'toggle',
           default: true,
-          note: 'Opens a new tab on the group you were last looking at. With it '
-              + 'off, every new tab starts on All - or, where All is not shown, '
-              + 'on the first group.'
+          note: 'Opens a new tab on the group you were last looking at.'
         },
         {
           key: 'groupAnimate',
           label: 'Animate group changes',
           type: 'toggle',
           default: true,
-          note: 'Slides the tiles aside and brings the new ones in behind them, '
-              + 'in the direction the block was travelling. With it off the grid '
-              + 'simply changes.'
+          note: 'Slides the old tiles aside and brings the new ones in behind them.'
         },
         {
           key: 'groupScroll',
           label: 'Switch groups by scrolling',
           type: 'toggle',
           default: false,
-          note: 'Turns to the next group along on a roll of the wheel or a swipe '
-              + 'across the touchpad, and keeps turning for as long as you keep '
-              + 'scrolling. It stops at each end rather than coming round again. '
-              + 'A group with more tiles than the window holds scrolls first: it '
-              + 'turns once you reach the top or the bottom of it.'
+          note: 'A roll of the wheel or a swipe turns to the next group. It stops at each end.'
         },
         {
           key: 'groupScrollAxis',
@@ -643,9 +590,7 @@ const Schema = (() => {
             { value: 'horizontal', label: 'Left and right' },
             { value: 'either', label: 'Either' }
           ],
-          note: 'Which way the gesture runs. Down and right go on to the next '
-              + 'group; up and left go back. Left and right still answers a '
-              + 'mouse wheel, which has only the one direction to give.'
+          note: 'Down and right go on; up and left go back.'
         },
         {
           key: 'groupFloat',
@@ -658,10 +603,7 @@ const Schema = (() => {
             { value: 'tiles', label: 'Above the tiles' },
             { value: 'bottom', label: 'Bottom' }
           ],
-          note: 'Top and bottom float the pill over the page at that edge. '
-              + 'Above the tiles puts it in the page itself, under the clock '
-              + 'and over the grid: the clock moves up to make room for it and '
-              + 'the tiles stay where they are.'
+          note: 'Above the tiles puts it under the clock.'
         },
         {
           key: 'groupAlign',
@@ -725,8 +667,7 @@ const Schema = (() => {
               type: 'info',
               external: true,
               value: APP.licence,
-              note: 'Free software: use it, read it, change it, pass it on. '
-                  + 'The full text is in LICENSE, beside the add-on.'
+              note: 'Use it, read it, change it, pass it on.'
             },
             {
               key: 'source',
@@ -736,8 +677,7 @@ const Schema = (() => {
               href: APP.repo,
               buttonLabel: 'GitHub',
               buttonIcon: 'github',
-              note: 'The code, the releases, and where to report anything '
-                  + 'that is not working.'
+              note: 'The code, the releases, and where to report anything that is not working.'
             }
           ]
         },

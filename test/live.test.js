@@ -358,15 +358,18 @@ Store.onExternalChange((key, value) => heard.push({ key, value }));
   // Opening it needs a body and a window to hang the dismiss handlers on, and
   // the shim has neither - the popover itself is checked in a browser. What is
   // checkable here is that it is built and wired the way it says it is.
-  check('the picker offers the system accents',
-    read('settings.js').includes("['#007aff', 'Blue']"));
+  check('the picker offers the system accents, on the current palette',
+    read('settings.js').includes("['#0088ff', 'Blue']")
+      && !read('newtab.css').includes('#007aff'),
+    'systemBlue moved to 0,136,255 when the palette was re-cut in June 2025');
 
   check('and a square, a hue strip and a hex field for anything else',
     ['picker__area', 'picker__hue', 'picker__hex']
       .every(cls => read('settings.js').includes(cls)));
 
   check('a hex it does not understand is refused rather than stored',
-    Schema.coerce({ accent: 'nonsense' }).accent === '#007aff');
+    Schema.coerce({ accent: 'nonsense' }).accent === '#0088ff',
+    Schema.coerce({ accent: 'nonsense' }).accent);
 
   // ----------------------------------------------------------------- about
 

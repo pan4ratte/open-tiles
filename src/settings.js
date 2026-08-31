@@ -32,6 +32,42 @@ const SettingsUI = (() => {
 
   // ------------------------------------------------------------- controls
 
+  /**
+   * Arrow keys over a run of buttons, which is how both a radio group and a
+   * macOS segmented control are meant to be driven - and, with the roving
+   * tabindex below, what keeps the whole run to a single tab stop instead of
+   * one per option.
+   *
+   * Both axes are wired whichever way the run is laid out: the sidebar is a
+   * column, a segmented control is a row, and the font filters wrap onto two.
+   * Nobody has to remember which.
+   *
+   * @param {HTMLElement} group the container the keys are handled on
+   * @param {() => HTMLElement[]} items the buttons, in order, read fresh each
+   *   time - a filtered list changes under this
+   * @param {(el: HTMLElement) => void} pick what choosing one means
+   */
+  function wireArrowKeys(group, items, pick) {
+    group.addEventListener('keydown', e => {
+      const step = { ArrowDown: 1, ArrowRight: 1, ArrowUp: -1, ArrowLeft: -1 }[e.key];
+      if (!step) return;
+
+      const all = items();
+      if (all.length < 2) return;
+      e.preventDefault();
+
+      const at = all.indexOf(document.activeElement);
+      const next = all[(Math.max(at, 0) + step + all.length) % all.length];
+      next.focus();
+      pick(next);
+    });
+  }
+
+  /** One tab stop for the run: only the chosen button is in the tab order. */
+  function rove(items, current) {
+    items.forEach(el => el.setAttribute('tabindex', el === current ? '0' : '-1'));
+  }
+
   function buildToggle(field, value, commit) {
     const label = document.createElement('label');
     label.className = 'switch';
@@ -124,14 +160,27 @@ const SettingsUI = (() => {
       group.append(button);
     });
 
+    const buttons = () => Array.from(group.querySelectorAll('.segmented__item'));
+
     function sync(current) {
-      group.querySelectorAll('.segmented__item').forEach(button => {
+      const all = buttons();
+      let chosen = null;
+      all.forEach(button => {
         const on = button.dataset.value === current;
         button.classList.toggle('is-on', on);
         button.setAttribute('aria-checked', String(on));
+        if (on) chosen = button;
       });
+      rove(all, chosen || all[0]);
     }
     sync(value);
+
+    // Arrows move the choice as they move the focus, which is what a radio
+    // group does everywhere else and what the segments did nowhere.
+    wireArrowKeys(group, buttons, async button => {
+      const effective = await commit(button.dataset.value);
+      sync(effective);
+    });
 
     return { control: group };
   }
@@ -244,9 +293,9 @@ const SettingsUI = (() => {
    * the one person in ten who wants a colour that is not on the list.
    */
   const ACCENTS = [
-    ['#007aff', 'Blue'], ['#5856d6', 'Indigo'], ['#af52de', 'Purple'],
-    ['#ff2d55', 'Pink'], ['#ff3b30', 'Red'], ['#ff9500', 'Orange'],
-    ['#ffcc00', 'Yellow'], ['#34c759', 'Green'], ['#30b0c7', 'Teal'],
+    ['#0088ff', 'Blue'], ['#6155f5', 'Indigo'], ['#cb30e0', 'Purple'],
+    ['#ff2d55', 'Pink'], ['#ff383c', 'Red'], ['#ff8d28', 'Orange'],
+    ['#ffcc00', 'Yellow'], ['#34c759', 'Green'], ['#00c3d0', 'Teal'],
     ['#8e8e93', 'Graphite']
   ];
 
@@ -1660,7 +1709,10 @@ const SettingsUI = (() => {
 
     const panels = document.createElement('div');
     panels.className = 'panels';
-    panels.addEventListener('scroll', () => { openScroll = Number(panels.scrollTop) || 0; });
+    panels.addEventListener('scroll', () => {
+      openScroll = Number(panels.scrollTop) || 0;
+      if (ctx.onScroll) ctx.onScroll(openScroll);
+    });
 
     const tabs = [];
 
@@ -1753,6 +1805,12 @@ const SettingsUI = (() => {
         entry.panel.hidden = !on;
       });
       panels.scrollTop = openScroll;
+
+      // A settings window titles itself with the pane it is showing, rather
+      // than with the word Settings six times over.
+      const section = Schema.SECTIONS.find(entry => entry.id === id);
+      if (ctx.onSection) ctx.onSection(section ? section.label : '');
+      if (ctx.onScroll) ctx.onScroll(openScroll);
     }
 
     // The strip runs down the side of a wide dialog and across the top of a
