@@ -1519,6 +1519,14 @@ body.is-loading .toolbar {
   width: var(--logo-size);
   height: var(--logo-size);
   object-fit: contain;
+  /* The picture shrinks; the room it stands in does not. Padding is a setting
+     about the icon, so it has no business moving the name: the slot is held at
+     the full --logo-room whatever the padding takes out of the picture, and
+     the name underneath sits the same distance off the bottom edge on every
+     tile - the one set for all of them and the one that padded its own icon
+     alike. --logo-room is worked out from the tile alone, so it is the same on
+     all of them. */
+  margin-block: max(0px, calc((var(--logo-room) - var(--logo-size)) / 2));
   pointer-events: none;
   transition: transform var(--t-base) var(--spring);
 }
@@ -1543,6 +1551,10 @@ body.is-loading .toolbar {
 
   width: var(--icon-w);
   height: var(--icon-h);
+  /* Same slot, measured against the height this box actually took: a wordmark
+     is shorter than the square, and it should no more move the name than
+     padding does. */
+  margin-block: max(0px, calc((var(--logo-room) - var(--icon-h)) / 2));
   /* Taking the icon's own corners off: a share of its short side, so a square
      logo at 50% is a circle and a wordmark at 50% is a lozenge. Set per tile
      in the tile sheet; 0 is the picture as its designer drew it. */
