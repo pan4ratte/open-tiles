@@ -1,5 +1,7 @@
 # OpenTiles
 
+<img src="https://github.com/pan4ratte/open-tiles/blob/main/icons/png/icon-512.png" >
+
 [English](https://github.com/pan4ratte/open-tiles/blob/main/README.md) | **Русский**
 
 Плагин OpenTiles — это бесплатный, современный менеджер визуальных закладок и стартовая страница для вашего браузера с открытым исходным кодом и гибкими настройками.
