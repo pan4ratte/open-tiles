@@ -31,7 +31,9 @@
     "homepage": "src/newtab.html"
   },
   "icons": {
-    "48": "icons/icon.svg",
+    "16": "icons/icon-16.svg",
+    "32": "icons/icon-32.svg",
+    "48": "icons/icon-48.svg",
     "96": "icons/icon.svg",
     "128": "icons/icon.svg"
   },

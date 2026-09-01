@@ -388,12 +388,24 @@ Store.onExternalChange((key, value) => heard.push({ key, value }));
 
   const masthead = aboutPanel.find(el => el.className === 'about');
 
+  const marks = masthead
+    ? masthead.findAll(el => /(^| )about__logo( |$)/.test(el.className || ''))
+    : [];
+
   check('it opens with the mark, the name and the version',
     Boolean(masthead)
-      && masthead.find(el => el.className === 'about__logo').src.endsWith('icon.svg')
+      && marks.length === 2
       && masthead.find(el => el.className === 'about__name').textContent === 'OpenTiles'
       && /^Version \d/.test(masthead.find(el => el.className === 'about__version').textContent),
     masthead ? masthead.textContent : 'no masthead');
+
+  check('the mark is laid down once per theme, for CSS to choose between',
+    marks.length === 2
+      && marks[0].className.includes('about__logo--light')
+      && marks[0].src.endsWith('icon.svg')
+      && marks[1].className.includes('about__logo--dark')
+      && marks[1].src.endsWith('icon-dark.svg'),
+    marks.map(m => m.className + ' ' + m.src).join(' | ') || 'no marks');
 
   check('the masthead is not dressed as a setting - no box, no label column',
     aboutPanel.findAll(el => el.className === 'row')

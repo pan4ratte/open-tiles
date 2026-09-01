@@ -1,11 +1,30 @@
-<!-- Glyph: Lucide "layout-grid" (ISC) - https://lucide.dev -->
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96" width="96" height="96">
-  <rect width="96" height="96" rx="22" fill="#10131a"/>
-  <g transform="translate(24 24) scale(2)" fill="none" stroke="#5b8cff" stroke-width="2"
-     stroke-linecap="round" stroke-linejoin="round">
-    <rect width="7" height="7" x="3" y="3" rx="1" />
-    <rect width="7" height="7" x="14" y="3" rx="1" />
-    <rect width="7" height="7" x="14" y="14" rx="1" />
-    <rect width="7" height="7" x="3" y="14" rx="1" />
+<?xml version="1.0"?><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024" role="img" aria-label="OpenTiles">
+  <title>OpenTiles</title>
+  <defs>
+    <filter id="glow-blur" x="-30%" y="-30%" width="160%" height="160%" color-interpolation-filters="sRGB">
+      <feGaussianBlur stdDeviation="26"></feGaussianBlur>
+    </filter>
+    <filter id="ground-blur" x="-30%" y="-30%" width="160%" height="160%" color-interpolation-filters="sRGB">
+      <feGaussianBlur stdDeviation="12"></feGaussianBlur>
+    </filter>
+  </defs>
+  <rect id="bg" width="1024" height="1024" rx="229" ry="229" fill="#F2F2F7"></rect>
+  <g id="glow" filter="url(#glow-blur)" opacity="0.5" transform="translate(0 26)">
+    <rect x="202" y="202" width="282" height="282" rx="67" ry="67" fill="#007AFF"></rect>
+    <rect x="540" y="202" width="282" height="282" rx="67" ry="67" fill="#AF52DE"></rect>
+    <rect x="202" y="540" width="282" height="282" rx="67" ry="67" fill="#34C759"></rect>
+    <rect x="540" y="540" width="282" height="282" rx="67" ry="67" fill="#FF9500"></rect>
+  </g>
+  <g id="ground" filter="url(#ground-blur)" fill="#0B1020" opacity="0.16" transform="translate(0 12)">
+    <rect x="202" y="202" width="282" height="282" rx="67" ry="67" fill="#0B1020"></rect>
+    <rect x="540" y="202" width="282" height="282" rx="67" ry="67" fill="#0B1020"></rect>
+    <rect x="202" y="540" width="282" height="282" rx="67" ry="67" fill="#0B1020"></rect>
+    <rect x="540" y="540" width="282" height="282" rx="67" ry="67" fill="#0B1020"></rect>
+  </g>
+  <g id="tiles">
+    <rect id="tile-tl" x="202" y="202" width="282" height="282" rx="67" ry="67" fill="#007AFF"></rect>
+    <rect id="tile-tr" x="540" y="202" width="282" height="282" rx="67" ry="67" fill="#AF52DE"></rect>
+    <rect id="tile-bl" x="202" y="540" width="282" height="282" rx="67" ry="67" fill="#34C759"></rect>
+    <rect id="tile-br" x="540" y="540" width="282" height="282" rx="67" ry="67" fill="#FF9500"></rect>
   </g>
 </svg>

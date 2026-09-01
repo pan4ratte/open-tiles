@@ -664,6 +664,7 @@ const Schema = (() => {
               external: true,
               label: APP.name,
               logo: '../icons/icon.svg',
+              logoDark: '../icons/icon-dark.svg',
               version: APP.version,
               note: APP.blurb
             }

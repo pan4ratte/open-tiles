@@ -3250,13 +3250,38 @@ body.tile-round .tile {
 }
 
 /* The add-on's own icon, at the size the Finder shows an application at. Its
-   corner is the one drawn into the file - 22 of its 96 units - kept in
-   proportion here so the two read as the same mark. */
+   corner is the one drawn into the file - 229 of its 1024 units - kept in
+   proportion here so the shadow sits on the shape the artwork already has. */
 .about__logo {
   width: 64px;
   height: 64px;
-  border-radius: 15px;
+  border-radius: 14px;
   box-shadow: var(--shadow-control);
+}
+
+/* The mark ships light and dark. Both are in the page and one is shown, the
+   same two ways the palette picks a side: the system's default, and the
+   explicit choice that overrules it. */
+.about__logo--dark {
+  display: none;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .about__logo--light {
+    display: none;
+  }
+
+  :root:not([data-theme="light"]) .about__logo--dark {
+    display: block;
+  }
+}
+
+:root[data-theme="dark"] .about__logo--light {
+  display: none;
+}
+
+:root[data-theme="dark"] .about__logo--dark {
+  display: block;
 }
 
 .about__name {
