@@ -140,14 +140,28 @@ check('it asks for permission to write a release, and nothing else',
 
 check('and takes one release at a time', /concurrency:\s*\n\s*group:\s*release/.test(WORKFLOW));
 
-/* The script hands the workflow these three by name. A rename on either side
-   leaves the upload step quietly pointing at nothing. */
+/* The script hands the workflow these by name. A rename on either side leaves
+   the upload step quietly pointing at nothing. */
 const RELEASE_JS = read('tools/release.js');
-['released', 'version', 'artifact'].forEach(name => {
+['released', 'version', 'artifact', 'xpi'].forEach(name => {
   check('the workflow and the script agree on the "' + name + '" output',
     RELEASE_JS.includes("emit('" + name + "'")
       && WORKFLOW.includes('steps.release.outputs.' + name));
 });
+
+/* Firefox is handed an add-on as a .xpi, so a release carries one beside the
+   .zip. Both are attached, and both are kept from a rehearsal - a release with
+   only one of them is the failure worth catching here. */
+check('the release attaches an .xpi beside the .zip',
+  /path\.join\(artifacts, xpi\)/.test(RELEASE_JS)
+    && /path\.join\(artifacts, zip\)/.test(RELEASE_JS));
+
+const upload = WORKFLOW.slice(WORKFLOW.indexOf('upload-artifact'));
+check('and a rehearsal keeps both',
+  /path:\s*\|/.test(upload)
+    && upload.includes('steps.release.outputs.artifact')
+    && upload.includes('steps.release.outputs.xpi'),
+  upload.split('\n').filter(l => l.includes('outputs.')).join(' | ').trim());
 
 // ------------------------------------------------- and what is not shipped
 

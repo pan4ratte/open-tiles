@@ -134,7 +134,19 @@ function main() {
     throw new Error('web-ext built nothing ending in "-' + version + '.zip" in '
       + 'web-ext-artifacts/. Did the manifest version change under it?');
   }
-  say('Built ' + zip);
+  /* An XPI is a zip under the name Firefox knows it by, so the second file is
+     a copy rather than a second build: two packages built one after the other
+     could differ, and a release whose two downloads are not the same add-on is
+     worse than a release with one.
+
+     It is unsigned, which is what addons.mozilla.org does to a package and not
+     something that can be done here. Release Firefox will refuse to install it
+     from a file; it is for Developer Edition, for an unbranded build, and for
+     anyone loading it through about:debugging. The installable copy is the one
+     addons.mozilla.org hands out. */
+  const xpi = zip.replace(/\.zip$/, '.xpi');
+  fs.copyFileSync(path.join(artifacts, zip), path.join(artifacts, xpi));
+  say('Built ' + zip + ', and ' + xpi + ' beside it');
 
   // ------------------------------------------------------------ publish it
 
@@ -144,12 +156,13 @@ function main() {
   // Written with a forward slash rather than through `path.join`: this is read
   // by the workflow, which is a POSIX shell wherever it runs.
   emit('artifact', 'web-ext-artifacts/' + zip);
+  emit('xpi', 'web-ext-artifacts/' + xpi);
 
   if (!PUBLISH) {
     say('Rehearsal finished. Everything passed.');
     console.log('Publishing would now create the tag ' + tag + ' and a GitHub release');
     console.log('titled "OpenTiles ' + version + '", with the notes above and '
-      + zip + ' attached.');
+      + zip + ' and ' + xpi + ' attached.');
     console.log('\nRun it for real with:  node tools/release.js --publish');
     return;
   }
@@ -166,7 +179,8 @@ function main() {
     '--notes-file', notesFile,
     '--target', process.env.GITHUB_SHA || output('git', ['rev-parse', 'HEAD']),
     ...(isPrerelease(version) ? ['--prerelease'] : []),
-    path.join(artifacts, zip)
+    path.join(artifacts, zip),
+    path.join(artifacts, xpi)
   ]);
 
   say('Published ' + tag + '.');

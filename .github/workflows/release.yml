@@ -60,12 +60,14 @@ jobs:
             node tools/release.js --publish
           fi
 
-      # A rehearsal has no release to attach the package to, so it is kept on the
-      # run itself - which is the whole point of asking for one.
-      - name: Keep the package from a rehearsal
+      # A rehearsal has no release to attach the packages to, so they are kept on
+      # the run itself - which is the whole point of asking for one.
+      - name: Keep the packages from a rehearsal
         if: ${{ inputs.rehearse && steps.release.outputs.released == 'true' }}
         uses: actions/upload-artifact@v4
         with:
           name: opentiles-${{ steps.release.outputs.version }}
-          path: ${{ steps.release.outputs.artifact }}
+          path: |
+            ${{ steps.release.outputs.artifact }}
+            ${{ steps.release.outputs.xpi }}
           if-no-files-found: error
