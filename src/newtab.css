@@ -326,7 +326,7 @@
   --gap: 12px;
   --columns: 6;
   --bg-blur: 0px;
-  --bg-dim: 0;
+  --bg-dim: .3;
   --groupbar-h: 32px;
   /* The air the group block keeps around itself where it is set in the page,
      above and below. Its own, not a share of the clock's - every element
@@ -2842,6 +2842,31 @@ body.tile-round .tile {
 }
 
 .bgfield__recent[hidden] { display: none; }
+
+/* The photographs that came with the add-on, on the same grid as the history
+   above them - the two are the same kind of thing to look at and to aim at,
+   and only differ in where they came from. */
+.bgfield__gallery {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.bgfield__gallery[hidden] { display: none; }
+
+/* What each strip is. Two grids of photographs with nothing between them read
+   as one long history, so each says which it is - quietly, in the same grey
+   the rest of the sheet uses for a note about the control above it. */
+.bgfield__stripname {
+  margin: 16px 0 -4px;
+  color: var(--label-tertiary);
+  font-size: var(--t-subhead);
+  letter-spacing: var(--tr-subhead);
+  font-weight: 590;
+}
+
+.bgfield__stripname[hidden] { display: none; }
 
 /* The thumbnail and its delete button share this. It is what carries the
    shape, so the two agree on where the corner is. */

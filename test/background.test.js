@@ -34,12 +34,21 @@ const { El, event, document } = require('./dom-shim');
 
 const SRC = process.argv[2] || path.join(__dirname, '..', 'src');
 
+/** localStorage, which is the fallback storage.js uses outside an extension. */
+const disk = {};
+
 const sandbox = {
   document,
   console,
   setTimeout,
   clearTimeout,
   Icons: { create: () => new El('svg') },
+  crypto: { randomUUID: () => 'id-' + Math.random() },
+  localStorage: {
+    getItem: key => (key in disk ? disk[key] : null),
+    setItem: (key, value) => { disk[key] = String(value); },
+    removeItem: key => { delete disk[key]; }
+  },
   Fonts: {
     CATALOG: [
       { name: 'Inter', style: 'sans', scripts: ['latin-ext', 'cyrillic'] },
@@ -56,12 +65,14 @@ const sandbox = {
 };
 vm.createContext(sandbox);
 
-for (const file of ['i18n.js', 'schema.js', 'settings.js']) {
+for (const file of ['i18n.js', 'schema.js', 'storage.js', 'backgrounds.js', 'settings.js']) {
   vm.runInContext(fs.readFileSync(path.join(SRC, file), 'utf8').replace(/\r\n/g, '\n'), sandbox, { filename: file });
 }
 
 const SettingsUI = vm.runInContext('SettingsUI', sandbox);
 const Schema = vm.runInContext('Schema', sandbox);
+const Store = vm.runInContext('Store', sandbox);
+const Backgrounds = vm.runInContext('Backgrounds', sandbox);
 
 // ---------------------------------------------------------------- harness
 
@@ -99,7 +110,11 @@ const strip = at('bgfield__recent');
 const fileInput = field.find(el => el.tagName === 'input' && el.type === 'file');
 const removeBtn = field.findAll(el => el.className.includes('btn--danger'))[0];
 
+const packed = at('bgfield__gallery');
+
 const chips = () => strip.findAll(el => el.className.includes('bgfield__chip')
+  && !el.className.includes('chipmedia'));
+const packedChips = () => packed.findAll(el => el.className.includes('bgfield__chip')
   && !el.className.includes('chipmedia'));
 const slots = () => strip.findAll(el => el.className.includes('bgfield__slot'));
 const forgets = () => strip.findAll(el => el.className.includes('bgfield__forget'));
@@ -114,7 +129,7 @@ check('coerce drops a picture that strays into settings',
   !('background' in Schema.coerce({ background: LOCAL })));
 
 check('the dim and blur sliders are stored settings',
-  Schema.DEFAULTS.bgBlur === 0 && Schema.DEFAULTS.bgDim === 0);
+  Schema.DEFAULTS.bgBlur === 0 && Schema.DEFAULTS.bgDim === 30);
 
 // ------------------------------------------------------------ what is gone
 
@@ -421,6 +436,105 @@ const settle = () => new Promise(resolve => setTimeout(resolve, 0));
       && !preview.className.includes('is-moving')
       && caption.textContent.includes('hills.png'),
     caption.textContent);
+
+  // ------------------------------------------------ the packaged wallpapers
+
+  /*
+   * Six photographs ship inside the add-on. They are the one kind of
+   * background that is not stored as a picture: the record holds the path the
+   * file has inside the add-on, which is what keeps a wallpaper that cannot go
+   * missing from being copied into the storage area a second time - and what
+   * lets a backup carry it to another computer, where a moz-extension://
+   * address would name a host that does not exist there.
+   */
+
+  const gallery = Backgrounds.gallery();
+
+  check('the add-on ships a gallery of wallpapers',
+    gallery.length === 6, gallery.length + ' of them');
+
+  check('each is a path inside the add-on rather than a picture',
+    gallery.every(one => /^backgrounds\/[a-z0-9-]+\.jpg$/.test(one.src)
+      && one.type === 'image' && one.name),
+    gallery.map(one => one.src).join(', '));
+
+  check('and every one of them is credited to a photographer',
+    gallery.every(one => one.name && !one.name.endsWith('.jpg')),
+    gallery.map(one => one.name).join(', '));
+
+  check('a path is resolved to an address the page can load',
+    Backgrounds.resolve('backgrounds/adrien-olichon.jpg') === '../backgrounds/adrien-olichon.jpg',
+    Backgrounds.resolve('backgrounds/adrien-olichon.jpg'));
+
+  check('and anything that is not one of ours is handed back untouched',
+    Backgrounds.resolve(LOCAL.src) === LOCAL.src
+      && Backgrounds.resolve(MOVING.src) === MOVING.src);
+
+  /* What a hand-edited backup can put through the door. A record is an address
+     the page will load, so "somewhere under backgrounds/" is not good enough:
+     the path is matched to the last character. */
+  const takes = async src => {
+    try {
+      return Boolean(await Store.saveBackground({ src, name: 'x', type: 'image' }));
+    } catch {
+      return false;
+    }
+  };
+
+  check('a packaged wallpaper is a record storage will keep',
+    await takes('backgrounds/adrien-olichon.jpg'));
+
+  const refused = [];
+  for (const src of ['backgrounds/../manifest.json', 'backgrounds/deep/one.jpg',
+    'backgrounds/one.svg', '/backgrounds/one.jpg', 'backgrounds/One.JPG']) {
+    if (await takes(src)) refused.push(src);
+  }
+  check('and nothing else under that name is',
+    refused.length === 0, refused.join(', ') || 'all five refused');
+
+  delete disk.background;
+
+  check('the picker offers one chip per packaged wallpaper',
+    packedChips().length === gallery.length, packedChips().length + ' chips');
+
+  check('none of them can be deleted - they are not history',
+    packed.findAll(el => el.className.includes('bgfield__forget')).length === 0);
+
+  check('the one on screen is marked in the strip it appears in',
+    packedChips().every(chip => !chip.className.includes('is-on')),
+    'nothing packaged is on screen; a data: URI is');
+
+  sent.length = 0;
+  answer = {};
+  packedChips()[2].fire('click');
+  await settle();
+
+  check('clicking one asks the page for it by file name',
+    sent.length === 1 && sent[0].value.action === 'gallery'
+      && sent[0].value.file === gallery[2].src.split('/').pop(),
+    JSON.stringify(sent[0] && sent[0].value));
+
+  // ------------------------------------------------- the wallpaper it starts on
+
+  disk.background = JSON.stringify(null);
+  check('a background that was removed stays removed',
+    (await Backgrounds.first()) === null,
+    'cleared is not the same as never chosen');
+
+  delete disk.background;
+  const opening = await Backgrounds.first();
+  check('a page that never had one comes up on the wallpaper it ships with',
+    Boolean(opening) && opening.src === 'backgrounds/adrien-olichon.jpg',
+    opening ? opening.src : 'nothing');
+
+  check('and nothing was written to say so',
+    !('background' in disk),
+    'a default that wrote itself in would make Remove put it back');
+
+  disk.background = JSON.stringify(LOCAL);
+  const held = await Backgrounds.first();
+  check('a page that has one keeps it',
+    Boolean(held) && held.src === LOCAL.src, held ? held.name : 'nothing');
 
   // ---------------------------------------------------------------- report
 

@@ -1,6 +1,6 @@
 # OpenTiles
 
-[English](https://github.com/pan4ratte/open-tiles/blob/main/README.md) · **Русский**
+[English](https://github.com/pan4ratte/open-tiles/blob/main/README.md) | **Русский**
 
 Плагин OpenTiles — это бесплатный, современный менеджер визуальных закладок и стартовая страница для вашего браузера с открытым исходным кодом и гибкими настройками.
 
@@ -49,3 +49,4 @@
 
 * Иконки [Lucide](https://lucide.dev) — ISC
 * Шрифт [Inter](https://rsms.me/inter/) — SIL OFL 1.1
+* Встроенные обои — [Unsplash](https://unsplash.com/license). Авторы: Adrien Olichon, Felix Besombes, Jason Mavrommatis, Julien Riedel, Milad Fakurian, Susk _i.

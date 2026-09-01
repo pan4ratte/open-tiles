@@ -313,10 +313,22 @@ const Store = (() => {
    * hand-edited backups - are read from their `src` instead, so there is
    * nothing to migrate.
    */
+  /**
+   * One of the pictures packaged with the add-on, named by its path inside it
+   * - see the gallery in backgrounds.js.
+   *
+   * Spelt out to the last character rather than allowed as "anything under
+   * backgrounds/": what comes through here can have been hand-written into a
+   * backup file, and a record is an address the page will load. Pinned to the
+   * one folder and the one extension, it can only ever name a picture that
+   * ships with the add-on.
+   */
+  const BUNDLED = /^backgrounds\/[a-z0-9-]+\.jpg$/;
+
   function sanitizeBackground(raw) {
     if (!raw || typeof raw !== 'object') return null;
     const src = typeof raw.src === 'string' ? raw.src.trim() : '';
-    if (!/^(data:(image|video)\/|https?:\/\/)/i.test(src)) return null;
+    if (!/^(data:(image|video)\/|https?:\/\/)/i.test(src) && !BUNDLED.test(src)) return null;
 
     const type = raw.type === 'video' || raw.type === 'image'
       ? raw.type
@@ -378,6 +390,18 @@ const Store = (() => {
   async function clearBackground() {
     await set(BACKGROUND, null);
     return null;
+  }
+
+  /**
+   * Whether a background has ever been chosen on this profile.
+   *
+   * A key that was never written and one holding `null` because the picture
+   * was removed both read as "no background" through `loadBackground`, and
+   * only the first of them should be handed the wallpaper the add-on ships
+   * with - see `first` in backgrounds.js.
+   */
+  async function backgroundUntouched() {
+    return (await get(BACKGROUND)) === undefined;
   }
 
   // ------------------------------------------------------ recent backgrounds
@@ -671,7 +695,7 @@ const Store = (() => {
     loadGroups, saveGroups, MAX_GROUPS,
     loadActiveGroup, saveActiveGroup,
     loadSettings, saveSettings, resetSettings,
-    loadBackground, saveBackground, clearBackground,
+    loadBackground, saveBackground, clearBackground, backgroundUntouched,
     loadRecentBackgrounds, rememberBackground, noteRecentEffects,
     forgetRecentBackground, clearRecentBackgrounds, MAX_RECENT,
     getFontCss, putFontCss,

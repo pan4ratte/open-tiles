@@ -1,6 +1,6 @@
 # OpenTiles
 
-**English** · [Русский](https://github.com/pan4ratte/open-tiles/blob/main/README.ru.md)
+**English** | [Русский](https://github.com/pan4ratte/open-tiles/blob/main/README.ru.md)
 
 OpenTiles is a free, modern, open-source and highly customizable visual bookmark
 manager and start page for your browser.
@@ -69,3 +69,6 @@ of my projects can be found on my [GitHub](https://github.com/pan4ratte) page.
 
 * [Lucide](https://lucide.dev) icons — ISC
 * [Inter](https://rsms.me/inter/) font — SIL OFL 1.1
+* The included wallpapers — [Unsplash](https://unsplash.com/license). Photographers:
+  Adrien Olichon, Felix Besombes, Jason Mavrommatis, Julien Riedel,
+  Milad Fakurian, Susk _i.

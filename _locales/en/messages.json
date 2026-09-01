@@ -809,9 +809,26 @@
   "bg_recent": {
     "message": "Recent background"
   },
+  "bg_history": {
+    "message": "Recent",
+    "description": "The heading over the pictures this page has had before."
+  },
+  "bg_gallery": {
+    "message": "Included wallpapers",
+    "description": "The heading over the photographs the add-on ships with."
+  },
   "bg_useAgain": {
     "message": "Use $1 again",
     "description": "$1 is the picture's name, or `bg_thisOne` where it has none.",
+    "placeholders": {
+      "n1": {
+        "content": "$1"
+      }
+    }
+  },
+  "bg_use": {
+    "message": "Use $1",
+    "description": "The same, for one that has not been used here before. $1 is its name.",
     "placeholders": {
       "n1": {
         "content": "$1"

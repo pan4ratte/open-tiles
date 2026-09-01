@@ -253,7 +253,7 @@ Store.onExternalChange((key, value) => heard.push({ key, value }));
   await settle();
   check('an effect named on its own leaves the rest at their defaults',
     JSON.stringify(partial.find(one => one.name === 'G').effects)
-      === '{"bgBlur":0,"bgDim":0,"bgPosY":12}',
+      === '{"bgBlur":0,"bgDim":30,"bgPosY":12}',
     JSON.stringify(partial.find(one => one.name === 'G').effects));
 
   const nonsense = await Store.noteRecentEffects(

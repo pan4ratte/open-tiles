@@ -3082,6 +3082,15 @@
 
   /** The record a picker action names: one from the list, a file, an address. */
   async function pickedBackground(payload) {
+    // One of the packaged wallpapers. Built from the catalogue rather than
+    // looked up in the history, because it is on offer whether it has ever
+    // been used here or not.
+    if (payload.action === 'gallery') {
+      const found = Backgrounds.galleryRecord(payload.file);
+      if (!found) throw new Error(t('bg_droppedOff'));
+      return found;
+    }
+
     if (payload.action === 'recent') {
       const found = recentBackgrounds.find(item => item.src === payload.src);
       // Another new-tab page can have pushed it off the end between the strip
@@ -3646,7 +3655,7 @@
 
     let remembered;
     [tiles, groups, settings, background, recentBackgrounds, remembered] = await Promise.all([
-      Store.load(), Store.loadGroups(), Store.loadSettings(), Store.loadBackground(),
+      Store.load(), Store.loadGroups(), Store.loadSettings(), Backgrounds.first(),
       Store.loadRecentBackgrounds(), Store.loadActiveGroup()
     ]);
 
@@ -3660,7 +3669,13 @@
     applySettings();
     // Noted before the picture goes up, because putting it up is what sets a
     // frost being made for it going.
-    frostToKeep = background && !background.frost ? background.src : null;
+    // Not for a packaged one: it has nothing stored to write the copy back
+    // into, and writing one would turn "never chose a background" into "chose
+    // this one" - see `first` in backgrounds.js. Cutting it again costs a
+    // canvas the size of a postage stamp.
+    frostToKeep = background && !background.frost && !Backgrounds.isBundled(background.src)
+      ? background.src
+      : null;
     Backgrounds.apply(background);
     // The stacks are already written - applySettings does that - so a family
     // that will not come down still leaves the page on Inter behind it.

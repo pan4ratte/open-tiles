@@ -39,6 +39,82 @@ const Backgrounds = (() => {
   const MAX_STORED = 6 * 1024 * 1024;
   const JPEG_QUALITY = 0.82;
 
+  // ---------------------------------------------------- the wallpapers it ships with
+
+  /** Where the packaged pictures sit, relative to the add-on's root. */
+  const GALLERY_DIR = 'backgrounds/';
+
+  /**
+   * The photographs that come with the add-on: six, each named for the
+   * photographer who took it. That name is what the picker shows, and the
+   * README credits the same six by it - who took which, and the licence they
+   * were published under.
+   *
+   * They are held as paths rather than as pictures. A chosen wallpaper is
+   * stored as a data: URI because the file it came from is not the add-on's to
+   * keep; one of these is already inside the add-on, so storing it would be
+   * keeping a second copy of a file that cannot go missing - a megabyte of the
+   * storage area to say "the one on the left". The path also travels: a backup
+   * taken here and read back on another computer finds the picture again,
+   * where a moz-extension:// address - whose host is a different UUID on every
+   * install - would find nothing.
+   */
+  const GALLERY = [
+    { file: 'adrien-olichon.jpg', name: 'Adrien Olichon' },
+    { file: 'felix-besombes.jpg', name: 'Felix Besombes' },
+    { file: 'jason-mavrommatis.jpg', name: 'Jason Mavrommatis' },
+    { file: 'julien-riedel.jpg', name: 'Julien Riedel' },
+    { file: 'milad-fakurian.jpg', name: 'Milad Fakurian' },
+    { file: 'susk-i.jpg', name: 'Susk _i' }
+  ];
+
+  /** The one a page that has never had a background of its own comes up with. */
+  const DEFAULT_WALLPAPER = 'adrien-olichon.jpg';
+
+  /** Whether a record's `src` names one of the packaged pictures. */
+  const isBundled = src =>
+    typeof src === 'string' && src.startsWith(GALLERY_DIR);
+
+  /**
+   * A packaged picture's path turned into an address the page can load.
+   *
+   * `runtime.getURL` is the real answer - it names the add-on's own origin,
+   * which is where the file actually is. Off disk there is no such origin to
+   * ask for: `src/newtab.html` opened straight from the folder is how the
+   * interface is worked on (see CONTRIBUTING.md), and from there the pictures
+   * sit one level up. Anything that is not one of ours is handed back
+   * untouched, so this can sit in front of every src without asking first.
+   */
+  function resolve(src) {
+    if (!isBundled(src)) return src;
+
+    const ext = (typeof browser !== 'undefined' && browser.runtime)
+      || (typeof chrome !== 'undefined' && chrome.runtime)
+      || null;
+
+    return ext && typeof ext.getURL === 'function' ? ext.getURL(src) : '../' + src;
+  }
+
+  /**
+   * A record's address, packaged or not.
+   *
+   * Named, because the frost is cut inside a `new Promise`, and in there
+   * `resolve` is the promise's own - so the picture's address has to be asked
+   * for by a name that is not taken.
+   */
+  const srcOf = record => (record && record.src ? resolve(record.src) : '');
+
+  /** The record for a packaged picture, or null where nothing is named that. */
+  function galleryRecord(file) {
+    const found = GALLERY.find(one => one.file === file);
+    return found
+      ? { src: GALLERY_DIR + found.file, name: found.name, type: 'image' }
+      : null;
+  }
+
+  /** All of them, in the order the picker shows them. */
+  const gallery = () => GALLERY.map(one => galleryRecord(one.file));
+
   // ------------------------------------------------------------- encoding
 
   /** "6 MB", "12.4 MB", "820 KB" - enough precision to explain a refusal. */
@@ -243,7 +319,7 @@ const Backgrounds = (() => {
         film.crossOrigin = 'anonymous';
         film.addEventListener('loadeddata', () => done(film), { once: true });
         film.addEventListener('error', () => resolve(null), { once: true });
-        film.src = record.src;
+        film.src = srcOf(record);
         return;
       }
 
@@ -252,7 +328,7 @@ const Backgrounds = (() => {
       img.crossOrigin = 'anonymous';
       img.addEventListener('load', () => done(img), { once: true });
       img.addEventListener('error', () => resolve(null), { once: true });
-      img.src = record.src;
+      img.src = srcOf(record);
     });
   }
 
@@ -519,7 +595,10 @@ const Backgrounds = (() => {
     const video = document.getElementById('bgVideo');
     if (!layer || !image) return;
 
-    const src = record && record.src ? record.src : '';
+    // Resolved here rather than at every use below: a packaged wallpaper is
+    // stored as the path it has inside the add-on, and what goes into a
+    // stylesheet or a <video> has to be an address.
+    const src = record && record.src ? resolve(record.src) : '';
     const moving = Boolean(src) && record.type === 'video';
 
     image.style.backgroundImage = src && !moving ? cssUrl(src) : '';
@@ -558,6 +637,24 @@ const Backgrounds = (() => {
 
   const load = () => Store.loadBackground();
 
+  /**
+   * The background a page starts on: the one stored here, or - where none has
+   * ever been chosen - the wallpaper the add-on ships with.
+   *
+   * Nothing is written. "Never chosen" and "chosen, then removed" are
+   * different states, and only the first should be given a picture: writing
+   * the default in on first paint would collapse the two, and Remove would put
+   * the wallpaper back on the next new tab instead of taking it away. It also
+   * keeps the shipped default a shipped default - free to change in a later
+   * version, rather than frozen into everyone's storage on the day they
+   * installed this one.
+   */
+  async function first() {
+    const stored = await Store.loadBackground();
+    if (stored) return stored;
+    return (await Store.backgroundUntouched()) ? galleryRecord(DEFAULT_WALLPAPER) : null;
+  }
+
   async function save(record) {
     try {
       return await Store.saveBackground(record);
@@ -584,6 +681,8 @@ const Backgrounds = (() => {
     MAX_FILE, MAX_VIDEO_FILE, formatSize,
     fromFile, fromUrl, apply,
     withFrost, placeFrost,
+    /** The packaged wallpapers, and what to do with the paths that name them. */
+    gallery, galleryRecord, isBundled, resolve, first,
     /** Called when a frost arrives, so the tiles can be lined up on it. */
     set onFrost(fn) { onFrost = fn; },
     load, save, clear,

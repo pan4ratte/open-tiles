@@ -809,9 +809,26 @@
   "bg_recent": {
     "message": "Недавний фон"
   },
+  "bg_history": {
+    "message": "Недавние",
+    "description": "The heading over the pictures this page has had before."
+  },
+  "bg_gallery": {
+    "message": "Встроенные обои",
+    "description": "The heading over the photographs the add-on ships with."
+  },
   "bg_useAgain": {
     "message": "Снова использовать: $1",
     "description": "$1 is the picture's name, or `bg_thisOne` where it has none.",
+    "placeholders": {
+      "n1": {
+        "content": "$1"
+      }
+    }
+  },
+  "bg_use": {
+    "message": "Использовать: $1",
+    "description": "The same, for one that has not been used here before. $1 is its name.",
     "placeholders": {
       "n1": {
         "content": "$1"

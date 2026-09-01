@@ -256,7 +256,7 @@ const Schema = (() => {
           key: 'bgDim',
           label: t('set_dim'),
           type: 'range',
-          default: 0,
+          default: 30,
           min: 0,
           max: 90,
           step: 5,

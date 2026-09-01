@@ -778,8 +778,24 @@ const SettingsUI = (() => {
       media.alt = '';
     }
 
-    media.src = record.src;
+    media.src = mediaSrc(record.src);
     return media;
+  }
+
+  /**
+   * A record's address.
+   *
+   * One of the packaged wallpapers is stored as its path inside the add-on and
+   * has to be resolved against the add-on's own origin - backgrounds.js owns
+   * that, and is asked for it here. It is asked for cautiously: this file is
+   * also run on its own by the tests, which build the dialog without the
+   * background module in the room, and a picker with no picture in it should
+   * not depend on a module it never calls.
+   */
+  function mediaSrc(src) {
+    return typeof Backgrounds !== 'undefined' && Backgrounds.resolve
+      ? Backgrounds.resolve(src)
+      : src;
   }
 
   /**
@@ -848,11 +864,35 @@ const SettingsUI = (() => {
     const strip = document.createElement('div');
     strip.className = 'bgfield__recent';
 
+    // The pictures that came with the add-on, in a strip of their own under
+    // the history. Two strips rather than one list: these are always there and
+    // cannot be removed, where the history is the page's own and every chip in
+    // it has a delete button. Labelled for the same reason - unlabelled, the
+    // second grid of photographs reads as more history.
+    const packed = document.createElement('div');
+    packed.className = 'bgfield__gallery';
+
+    const packedName = document.createElement('p');
+    packedName.className = 'bgfield__stripname';
+    packedName.textContent = t('bg_gallery');
+
+    const recentName = document.createElement('p');
+    recentName.className = 'bgfield__stripname';
+    recentName.textContent = t('bg_history');
+
     // ------------------------------------------------------------ painting
 
     /** What is on screen, and the list - held so either can be redrawn alone. */
     let shown = null;
     let recent = [];
+    /**
+     * The pictures that came with the add-on. Read once: they are compiled in,
+     * so nothing can change them while the dialog is open. Empty where the
+     * background module is not in the room - see `mediaSrc`.
+     */
+    const catalogue = typeof Backgrounds !== 'undefined' && Backgrounds.gallery
+      ? Backgrounds.gallery()
+      : [];
     /** The <img> or <video> in the preview, which is what a drag moves. */
     let thumb = null;
 
@@ -990,38 +1030,47 @@ const SettingsUI = (() => {
       ctx.onChange('bgPosY', wanted);
     }
 
-    function showRecent(list) {
-      strip.textContent = '';
-      strip.hidden = list.length === 0;
+    /**
+     * One picture in a strip.
+     *
+     * The thumbnail and its delete button are siblings inside a slot, not one
+     * inside the other: a button cannot hold a button, and the slot is also
+     * what gives every thumbnail the same size whether the grid holds one of
+     * them or nine.
+     *
+     * `title` is what an unnamed picture is called on hover, `label` turns the
+     * name into what a screen reader is told, `pick` is the click, and `drop`
+     * is what the delete button would do - a strip that has nothing to delete,
+     * which is the packaged one, passes none and gets no button.
+     */
+    function buildChip(record, { title, label, pick, drop }) {
+      const named = record.name || t('bg_thisOne');
 
-      list.forEach(record => {
-        const named = record.name || t('bg_thisOne');
+      const slot = document.createElement('div');
+      slot.className = 'bgfield__slot';
 
-        // The thumbnail and its delete button are siblings inside a slot, not
-        // one inside the other: a button cannot hold a button, and the slot is
-        // also what gives every thumbnail the same size whether the grid holds
-        // one of them or nine.
-        const slot = document.createElement('div');
-        slot.className = 'bgfield__slot';
+      const chip = document.createElement('button');
+      chip.type = 'button';
+      chip.className = 'bgfield__chip';
+      chip.title = record.name || title;
+      chip.setAttribute('aria-label', label(named));
+      // The one already on screen is marked rather than left out: a strip
+      // that reshuffles itself as you click through it is hard to aim at.
+      chip.classList.toggle('is-on', Boolean(shown) && shown.src === record.src);
 
-        const chip = document.createElement('button');
-        chip.type = 'button';
-        chip.className = 'bgfield__chip';
-        chip.title = record.name || t('bg_recent');
-        chip.setAttribute('aria-label', t('bg_useAgain', named));
-        // The one already on screen is marked rather than left out: a strip
-        // that reshuffles itself as you click through it is hard to aim at.
-        chip.classList.toggle('is-on', Boolean(shown) && shown.src === record.src);
+      chip.append(buildMedia(record, 'bgfield__chipmedia', false));
 
-        chip.append(buildMedia(record, 'bgfield__chipmedia', false));
+      if (record.type === 'video') {
+        const badge = document.createElement('span');
+        badge.className = 'bgfield__badge';
+        badge.append(Icons.create('play', { size: 9 }));
+        chip.append(badge);
+      }
 
-        if (record.type === 'video') {
-          const badge = document.createElement('span');
-          badge.className = 'bgfield__badge';
-          badge.append(Icons.create('play', { size: 9 }));
-          chip.append(badge);
-        }
+      chip.addEventListener('click', pick);
+      slot.append(chip);
 
+      if (drop) {
         // Out of the way until the slot is pointed at or tabbed into, because
         // nine delete buttons on show turn a grid of pictures into a grid of
         // controls. It stays put once it is there, so it can be aimed at.
@@ -1031,13 +1080,41 @@ const SettingsUI = (() => {
         forget.title = t('bg_forget');
         forget.setAttribute('aria-label', t('bg_forgetLabel', named));
         forget.append(Icons.create('x', { size: 11 }));
-        forget.addEventListener('click', () => send({ action: 'forget', src: record.src }));
+        forget.addEventListener('click', drop);
+        slot.append(forget);
+      }
 
-        chip.addEventListener('click', () => send({ action: 'recent', src: record.src }));
+      return slot;
+    }
 
-        slot.append(chip, forget);
-        strip.append(slot);
-      });
+    function showRecent(list) {
+      strip.textContent = '';
+      strip.hidden = list.length === 0;
+      recentName.hidden = list.length === 0;
+
+      list.forEach(record => strip.append(buildChip(record, {
+        title: t('bg_recent'),
+        label: named => t('bg_useAgain', named),
+        pick: () => send({ action: 'recent', src: record.src }),
+        drop: () => send({ action: 'forget', src: record.src })
+      })));
+    }
+
+    /**
+     * The packaged wallpapers. Redrawn with the rest so the mark showing which
+     * one is on screen moves with it, but the list itself never changes - it
+     * is whatever the add-on was built with.
+     */
+    function showGallery() {
+      packed.textContent = '';
+      packed.hidden = catalogue.length === 0;
+      packedName.hidden = catalogue.length === 0;
+
+      catalogue.forEach(record => packed.append(buildChip(record, {
+        title: t('bg_gallery'),
+        label: named => t('bg_use', named),
+        pick: () => send({ action: 'gallery', file: record.src.split('/').pop() })
+      })));
     }
 
     async function send(payload) {
@@ -1048,9 +1125,12 @@ const SettingsUI = (() => {
         showRecord(shown);
       }
       if ('recent' in state) recent = state.recent || [];
-      // Redrawn either way: a new background moves the mark inside the strip
-      // even when the list itself has not changed.
-      if ('record' in state || 'recent' in state) showRecent(recent);
+      // Redrawn either way: a new background moves the mark inside the strips
+      // even when neither list has changed.
+      if ('record' in state || 'recent' in state) {
+        showRecent(recent);
+        showGallery();
+      }
     }
 
     // ------------------------------------------------------------- wiring
@@ -1184,13 +1264,16 @@ const SettingsUI = (() => {
     // Remove last: it is the one that undoes everything the other two did.
     actions.append(choose, move, remove, file);
 
-    wrap.append(preview, caption, actions, address, strip);
+    // The history first, then what came in the box: one is the page's own and
+    // the other is the same for everybody.
+    wrap.append(preview, caption, actions, address, recentName, strip, packedName, packed);
 
     const held = value || {};
     shown = held.record || null;
     recent = held.recent || [];
     showRecord(shown);
     showRecent(recent);
+    showGallery();
     trackPreviewScale(preview);
 
     return { control: wrap, wide: true };

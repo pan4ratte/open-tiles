@@ -397,8 +397,14 @@ const I18N = (() => {
     bg_position: 'Vertical position of the background',
     bg_urlPlaceholder: 'or paste a web address…',
     bg_recent: 'Recent background',
+    // The heading over the pictures this page has had before.
+    bg_history: 'Recent',
+    // The heading over the photographs the add-on ships with.
+    bg_gallery: 'Included wallpapers',
     // $1 is the picture's name, or `bg_thisOne` where it has none.
     bg_useAgain: 'Use $1 again',
+    // The same, for one that has not been used here before. $1 is its name.
+    bg_use: 'Use $1',
     bg_thisOne: 'this background',
     bg_forget: 'Remove from history',
     bg_forgetLabel: 'Remove $1 from history',
