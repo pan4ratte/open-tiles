@@ -68,8 +68,9 @@ const I18N = (() => {
     // The name is a proper noun and is here to be transliterated, not
     // translated.
     extName: 'OpenTiles',
-    extDescription: 'A free, modern, open-source and highly customizable '
-      + 'visual bookmark manager and a start page plugin for your browser.',
+    extDescription: 'A free, modern, open-source and highly customizable visual bookmark '
+      + 'manager and '
+      + 'start page for your browser.',
 
     // -------------------------------------------------------------- the page
     page_title: 'New Tab',
@@ -78,15 +79,15 @@ const I18N = (() => {
     page_settings: 'Settings',
 
     empty_inGroup: 'Nothing in this group yet - drag a tile onto its name to put it here.',
-    empty_noTiles: 'No tiles yet. Hit + to add your first site.',
-    empty_noTilesNoAdd: 'No tiles yet. Right-click anywhere to add your first site.',
+    empty_noTiles: 'No tiles yet. Hit + to add your first bookmark.',
+    empty_noTilesNoAdd: 'No tiles yet. Right-click anywhere to add your first bookmark.',
 
     // ------------------------------------------------------------- the tiles
     tile_add: 'Add a tile',
     // $1 is how many times this site has been opened from here.
-    tile_visits: '$1 visits from here',
+    tile_visits: '$1 visits',
     // Standing in for a name while the sheet has no address typed in it yet.
-    tile_sampleName: 'Example',
+    tile_sampleName: 'My favourite site',
 
     // ------------------------------------------------------ the right-click menu
     menu_addTile: 'Add tile',
@@ -105,7 +106,7 @@ const I18N = (() => {
     group_chipTitle: '$1\nDrag to reorder, right-click to rename or delete',
     group_new: 'New group',
     group_edit: 'Edit group',
-    group_sheetNote: 'Drag tiles onto a group to put them in it.',
+    group_sheetNote: 'Tiles are added to a group by dragging them onto it.',
     group_name: 'Name',
     group_namePlaceholder: 'Work',
     group_needName: 'Give the group a name.',
@@ -117,70 +118,70 @@ const I18N = (() => {
     // -------------------------------------------------------- the tile sheet
     tile_addTitle: 'Add tile',
     tile_editTitle: 'Edit tile',
-    tile_sheetNote: 'Type an address — the rest is filled in for you.',
+    tile_sheetNote: 'The icon is fetched automatically as you type the address.',
     tile_url: 'URL',
     tile_urlPlaceholder: 'example.com',
     tile_name: 'Name',
     // Marks a field that may be left empty. Shown after the field's own name.
     tile_optional: '(optional)',
-    tile_namePlaceholder: 'Example',
+    tile_namePlaceholder: 'My favourite site',
     tile_appearance: 'Appearance',
     tile_icon: 'Icon',
     tile_iconPlaceholder: 'Web address, or paste a picture or SVG',
     tile_iconReload: "Look up the site's own icon again",
     tile_iconFile: 'Choose a picture file',
     // $1 is the button that chooses a file, drawn as its icon.
-    tile_iconHelp: 'Paste a picture, or the SVG code of one, anywhere in this '
-      + 'sheet — or press $1 to choose a file.',
+    tile_iconHelp: 'Press $1 to choose a file, or paste a picture or its SVG code anywhere in this '
+      + 'sheet.',
     tile_iconColor: 'Icon colour',
-    tile_pipette: 'Pick a colour out of the icon',
+    tile_pipette: 'Eyedropper',
     tile_iconColorClear: "Back to the icon's own colours",
     tile_bg: 'Background',
     // The name the colour picker gives itself when it opens on a tile.
     tile_bgTitle: 'Tile background',
-    tile_bgClear: 'Back to the usual tile',
+    tile_bgClear: 'Back to the default background',
     tile_pad: 'Padding',
-    tile_padClear: 'Back to the padding set for every tile',
+    tile_padClear: 'Back to the default padding',
     tile_round: 'Icon rounding',
-    tile_roundClear: "Back to the icon's own corners",
+    tile_roundClear: 'Reset the rounding',
     tile_group: 'Group',
 
     // ------------------------------------------- what the icon lookup reports
-    icon_looking: 'Looking for the sharpest icon this site has…',
-    icon_noneDeep: 'This site offers no icon of its own — choose or paste a picture instead.',
-    icon_noneShallow: 'Nothing at the usual addresses. Deep icon lookup, in Settings, '
-      + 'reads the page itself and usually finds one.',
-    icon_vector: 'Found a vector icon — sharp at any size.',
+    icon_looking: 'Looking for the highest-resolution icon…',
+    icon_noneDeep: 'This site has no icon — choose or paste a picture instead.',
+    icon_noneShallow: 'The usual lookup found nothing. Try switching on Deep icon lookup in '
+      + 'Settings.',
+    icon_vector: 'Found a vector icon.',
     // $1 is the icon's width in pixels, in all three. Three messages rather
     // than one with a tail: each is a whole sentence to be re-ordered freely.
     icon_found: 'Found a $1px icon.',
-    icon_foundLargest: 'Found a $1px icon, which is the largest this site publishes.',
-    icon_foundSmall: 'Found a $1px icon. Deep icon lookup, in Settings, often finds a larger one.',
-    icon_needAddress: 'Fill in the address first — that is what is looked up.',
+    icon_foundLargest: 'Found a $1px icon, the highest resolution there was to find.',
+    icon_foundSmall: 'Found a $1px icon. Try switching on Deep icon lookup in Settings to find a '
+      + 'larger one.',
+    icon_needAddress: "Fill in the site's address first.",
     // Added after whichever of the above the lookup ended with.
-    icon_cleared: 'The picture that was set has been cleared.',
-    icon_fetching: 'Fetching that picture, so the tile keeps it…',
-    icon_cannotKeep: 'That address would not let its picture be downloaded, so the '
-      + 'tile cannot keep a copy. Save again to use the address itself — the tile '
-      + 'will fetch it on every new tab.',
-    icon_notAPicture: 'That is not a picture.',
-    icon_unreadable: 'That icon will not let itself be read — try one from a file.',
-    icon_clickToTake: 'Click the icon to take its colour.',
+    icon_cleared: 'The icon that was set has been cleared.',
+    icon_fetching: 'Fetching the icon…',
+    icon_cannotKeep: 'The icon could not be downloaded. Try choosing a file, or pasting one from '
+      + 'the clipboard.',
+    icon_notAPicture: 'Unsupported image format.',
+    icon_unreadable: 'The image could not be read — try choosing a file.',
+    icon_clickToTake: 'Click the icon to pick a colour out of it.',
     icon_pointAt: 'Point at the icon.',
-    tile_badUrl: 'That does not look like a web address.',
+    tile_badUrl: 'That does not look like a web address…',
 
     // --------------------------------------------------- a picture for a tile
     icon_fileUnreadable: 'That file could not be read.',
-    icon_notImageFile: 'That is not an image file.',
-    icon_fileTooLarge: 'That picture is too large for an icon — pick a smaller one.',
-    icon_svgNotCode: 'That does not look like SVG code.',
+    icon_notImageFile: 'Unsupported image format.',
+    icon_fileTooLarge: 'That image is too large — pick a smaller one.',
+    icon_svgNotCode: 'That does not look like SVG code…',
     icon_svgUnreadable: 'That SVG could not be read — it may be incomplete.',
-    icon_svgTooLong: 'That SVG is too long to keep on a tile — try a simpler one.',
+    icon_svgTooLong: 'That SVG is too long to save.',
 
     // ------------------------------------------------------------- the alert
     confirm_deleteTitle: 'Delete this tile?',
     // $1 is the tile's name.
-    confirm_deleteText: '“$1” will be taken off the page.',
+    confirm_deleteText: '“$1” will be deleted from the page.',
 
     // ------------------------------------------------------------- the buttons
     btn_save: 'Save',
@@ -196,7 +197,7 @@ const I18N = (() => {
     // What a control says while it is busy, in place of its status line.
     busy_font: 'Loading font…',
     busy_working: 'Working on it…',
-    busy_resetting: 'Putting everything back…',
+    busy_resetting: 'Putting everything back to how it was…',
     busy_permission: 'Asking Firefox for access…',
 
     // How the shortcut that opens the settings window is written down. The
@@ -214,7 +215,7 @@ const I18N = (() => {
     section_general: 'General',
     section_background: 'Background',
     section_layout: 'Layout',
-    section_header: 'Header',
+    section_header: 'Date and time',
     section_groups: 'Groups',
     section_about: 'About',
 
@@ -224,8 +225,8 @@ const I18N = (() => {
     group_tiles: 'Tiles',
     group_time: 'Time',
     group_date: 'Date',
-    group_bothLines: 'Both lines',
-    group_bundled: 'Bundled work',
+    group_bothLines: 'Common settings',
+    group_bundled: 'Third-party licences',
 
     // -------------------------------------------------- settings: appearance
     set_theme: 'Theme',
@@ -234,24 +235,23 @@ const I18N = (() => {
     set_themeLight: 'Light',
     set_accent: 'Accent colour',
     set_font: 'Font',
-    set_fontNote: 'Sets the tile names, the clock and the date. The dialogs always stay on Inter.',
+    set_fontNote: 'Sets the font for the tile names, the date and the time.',
     set_settingsButton: 'Show the settings button',
     // $1 is the keyboard shortcut that opens this window.
-    set_settingsButtonNote: 'With it off, $1 and the right-click menu are the ways in.',
+    set_settingsButtonNote: 'It can still be opened with $1 and from the right-click menu.',
 
-    set_backup: 'Backup',
-    set_backupNote: 'Saves tiles, groups, settings and background to a file, and puts one back.',
+    set_backup: 'Backup and restore',
+    set_backupNote: 'Export and import your tiles, groups and settings.',
     set_reset: 'Reset all settings',
     set_resetButton: 'Reset all',
-    set_resetNote: 'Every setting back to its default, and the background away. '
-      + 'Tiles are left alone.',
+    set_resetNote: 'Every setting goes back to its default; your tiles are kept.',
 
     // -------------------------------------------------- settings: background
-    set_background: 'Picture or video',
-    set_backgroundNote: 'From this computer, or a web address fetched fresh each time.',
+    set_background: 'Image or video',
+    set_backgroundNote: 'A local file, or a web address.',
     set_blur: 'Blur',
     set_dim: 'Dim',
-    set_dimNote: 'Darkens it so the tiles stay readable.',
+    set_dimNote: 'Darkens the background for better readability.',
     set_bgPosY: 'Vertical position',
 
     // ------------------------------------------------------ settings: layout
@@ -261,103 +261,89 @@ const I18N = (() => {
     set_columnsNote: 'Auto fits as many per row as the window allows.',
     set_tileSize: 'Tile size',
     set_gap: 'Spacing',
-    set_order: 'Order',
+    set_order: 'Sort order',
     set_orderManual: 'Manual',
-    set_orderVisits: 'Most visited',
-    set_orderNote: 'Most visited counts how often you open each one.',
+    set_orderVisits: 'By visit count',
 
-    set_shape: 'Shape',
+    set_shape: 'Tile shape',
     set_shapeSquare: 'Square',
     set_shapeCircle: 'Circular',
-    set_shapeNote: 'Tile size sets the width; the shape sets the height to match.',
-    set_tileBg: 'Background',
+    set_tileBg: 'Tile background',
     set_tileBgTheme: 'Follow the theme',
     set_tileBgDark: "Dark theme's",
     set_tileBgLight: "Light theme's",
     set_tileBgCustom: 'Custom colour',
-    set_tileBgNote: 'What a tile without a colour of its own is drawn in.',
-    set_tileBgColor: 'Colour',
-    set_tileBgColorNote: 'Only what tiles with no colour of their own fall back to.',
-    set_logoPad: 'Logo padding',
+    set_tileBgColor: 'Custom background colour',
+    set_logoPad: 'Icon padding',
     set_logoPadNote: "The room left clear around a tile's icon.",
     set_showLabels: 'Show site names',
     set_showVisits: 'Show visit counts',
     set_showVisitsNote: 'Puts the number of times you have opened a site in the corner of its tile.',
     set_showAddButton: 'Show the add button',
-    set_showAddButtonNote: 'The dotted + at the end of the grid. Right-clicking the page also adds one.',
+    set_showAddButtonNote: 'A + is shown at the end of the grid for adding a site.',
     set_openInNewTab: 'Open sites in a new tab',
     set_confirmDelete: 'Confirm before deleting a tile',
-    set_confirmDeleteNote: 'Asks first, wherever the tile is being deleted from.',
     set_deepIcons: 'Deep icon lookup',
-    set_deepIconsNote: "Reads each site's markup for its sharpest logo. Firefox will ask for access.",
+    set_deepIconsNote: "Reads a site's markup for its sharpest logo. Firefox permission is "
+      + "required.",
 
     // ------------------------------------------------------ settings: header
     set_showClock: 'Show the clock',
-    set_format: 'Format',
+    set_format: 'Time format',
     set_timeNote: "The exact shape follows your browser's language.",
     set_clockFont: 'Font',
     // The card at the head of the clock's and the date's font pickers: no
     // family of their own, follow the one the page is set in.
-    set_matchPageFont: 'Match page font',
-    set_clockFontNote: 'The clock on its own. Match page font follows General → Font.',
-    set_weight: 'Weight',
+    set_matchPageFont: 'Default',
+    set_clockFontNote: 'Default follows General → Font.',
+    set_weight: 'Font weight',
     set_size: 'Size',
-    set_clockSizeNote: 'A share of the size the page picks for the window.',
-    set_tracking: 'Spacing',
-    set_clockTrackingNote: 'Apple tracks large type in, never out.',
+    set_tracking: 'Letter spacing',
 
     set_showDate: 'Show the date',
-    set_dateNote: "The order follows your browser's language.",
-    set_dateFontNote: 'The date on its own, the same way.',
+    set_dateFontNote: 'Default follows General → Font.',
 
     set_headerTint: 'Custom colour',
-    set_headerTintNote: 'Off, they follow the theme, and go white over a picture.',
+    set_headerTintNote: 'With it off, the colour follows the theme.',
     set_headerColor: 'Colour',
     set_headerShadow: 'Shadow',
-    set_headerShadowNote: "At 0 they take the page's own.",
 
     // ------------------------------------------------------ settings: groups
-    set_groupStyle: 'Appearance',
-    set_groupFloating: 'Floating',
+    set_groupStyle: 'Group bar appearance',
+    set_groupFloating: 'Floating bar',
     set_groupBar: 'Status bar',
-    set_groupStyleNote: 'A pill over the page, or a bar across it.',
-    set_groupShow: 'Display',
+    set_groupShow: 'Visibility',
     set_groupAlways: 'Always',
     set_groupHover: 'On hover',
-    set_groupShowNote: 'On hover hides it until the pointer arrives.',
-    set_showAllGroup: 'Show the All category',
-    set_showAllGroupNote: 'The chip that clears the filter. With it off the page always sits in a group.',
-    set_showGroupAdd: 'Show the new group button',
-    set_showGroupAddNote: 'The + at the end of the block. Right-clicking the page also makes one.',
-    set_keepGroup: 'Remember the open group',
-    set_keepGroupNote: 'Opens a new tab on the group you were last looking at.',
-    set_groupAnimate: 'Animate group changes',
-    set_groupAnimateNote: 'Slides the old tiles aside and brings the new ones in behind them.',
-    set_groupScroll: 'Switch groups by scrolling',
-    set_groupScrollNote: 'A roll of the wheel or a swipe turns to the next group. It stops at each end.',
+    set_showAllGroup: 'Show the All group',
+    set_showAllGroupNote: 'The group that holds every saved page from all groups.',
+    set_showGroupAdd: 'Show the add group button',
+    set_showGroupAddNote: 'The + at the end of the bar. Right-clicking the page also makes one.',
+    set_keepGroup: 'Remember the last group',
+    set_keepGroupNote: 'The start page opens on the group that was open last.',
+    set_groupAnimate: 'Animate switching between groups',
+    set_groupScroll: 'Switch groups by gesture',
+    set_groupScrollNote: 'A mouse scroll or a trackpad gesture changes the group.',
     set_groupAxis: 'Gesture direction',
     set_groupAxisVertical: 'Up and down',
     set_groupAxisHorizontal: 'Left and right',
     set_groupAxisEither: 'Either',
-    set_groupAxisNote: 'Down and right go on; up and left go back.',
-    set_groupPosition: 'Position',
+    set_groupPosition: 'Group bar position',
     set_groupTop: 'Top',
     set_groupAboveTiles: 'Above the tiles',
     set_groupBottom: 'Bottom',
-    set_groupFloatNote: 'Above the tiles puts it under the clock.',
     set_groupAlign: 'Alignment',
     set_groupLeft: 'Left',
     set_groupCentre: 'Centre',
     set_groupRight: 'Right',
 
     // ------------------------------------------------------- settings: about
-    about_blurb: 'Replaces the new tab page with a grid of draggable tiles for the '
-      + 'sites you use most - with groups, a clock, and a background of your own.',
+    about_blurb: 'A free, modern, open-source and highly customizable visual bookmark manager and '
+      + 'start page for your browser.',
     about_author: 'Author',
     about_licence: 'Licence',
-    about_licenceNote: 'Use it, read it, change it, pass it on.',
-    about_source: 'Source code',
-    about_sourceNote: 'The code, the releases, and where to report anything that is not working.',
+    about_source: 'Project page',
+    about_sourceNote: 'The source code, the community, and where to report bugs.',
 
     // ------------------------------------------------------- the type weights
     weight_100: 'Thin',
@@ -403,20 +389,19 @@ const I18N = (() => {
     bg_remove: 'Remove',
     bg_reposition: 'Reposition',
     bg_done: 'Done',
-    bg_empty: 'Nothing yet — drop a picture or video here, or choose a file.',
+    bg_empty: 'Drop an image or video here, or choose a file.',
     // What a picture chosen from this computer is called when it has no name.
     bg_localFile: 'Local file',
-    bg_tooWide: 'This one is wider than the window, so it is cut at the sides — '
-      + 'there is nothing to move up or down.',
-    bg_dragIt: 'Drag the picture, or use the arrow keys.',
+    bg_tooWide: 'This image is wider than the window, so its position cannot be changed.',
+    bg_dragIt: 'Drag it with the mouse, or use the arrow keys.',
     bg_position: 'Vertical position of the background',
     bg_urlPlaceholder: 'or paste a web address…',
     bg_recent: 'Recent background',
     // $1 is the picture's name, or `bg_thisOne` where it has none.
     bg_useAgain: 'Use $1 again',
     bg_thisOne: 'this background',
-    bg_forget: 'Remove from recent',
-    bg_forgetLabel: 'Remove $1 from recent backgrounds',
+    bg_forget: 'Remove from history',
+    bg_forgetLabel: 'Remove $1 from history',
 
     // ------------------------------------------- what the background answers
     bg_fileUnreadable: 'That file could not be read.',
@@ -424,23 +409,24 @@ const I18N = (() => {
     bg_pictureTooBig: 'That picture is $1 — the limit is $2. Pick a smaller one.',
     bg_pictureNoRoom: 'That image is too large to store, even shrunk down.',
     bg_videoTooBig: 'That video is $1 — the limit is $2. Pick a shorter or smaller one.',
-    bg_videoUnplayable: 'This browser cannot play that video.',
-    bg_slowAddress: 'That address took too long to answer.',
-    bg_notAPicture: 'That is not a picture.',
-    bg_notAVideo: 'That is not a video.',
-    bg_notMedia: 'That is not an image or a video file.',
-    bg_nothingThere: 'Nothing loaded from that address — is it a picture or a video?',
+    bg_videoUnplayable: 'The browser cannot play that video.',
+    bg_slowAddress: 'The address took too long to answer.',
+    bg_notAPicture: 'Unsupported image format.',
+    bg_notAVideo: 'Unsupported video format.',
+    bg_notMedia: 'Unsupported format.',
+    bg_nothingThere: 'Nothing could be loaded — is it really an image or a video?',
     bg_needsHttp: 'That needs to be a web address starting http:// or https://.',
     bg_noRoom: 'There was no room left to store that background.',
-    bg_unusable: 'Unusable image.',
+    bg_unusable: 'Unsuitable image.',
     // The name a picture with none of its own is filed under.
     bg_untitled: 'Image',
     bg_droppedOff: 'That one has dropped off the list.',
 
-    bg_setByAddress: 'Background set. That address would not let its picture be '
-      + 'downloaded, so it is fetched again on every new tab.',
-    bg_setRemembered: 'Background set, the way it was last looked at.',
-    bg_setDefaults: 'Background set, with blur, dim and position back to their defaults.',
+    bg_setByAddress: 'Background set. That address would not let its image be downloaded, '
+      + 'so it is fetched '
+      + 'again every time.',
+    bg_setRemembered: 'Background set, with its settings restored.',
+    bg_setDefaults: 'Background set, with default settings.',
     bg_setDimmed: 'Set — turn Dim down to see more of it.',
     bg_set: 'Background set.',
 
@@ -461,8 +447,7 @@ const I18N = (() => {
     // The card at the head of the page font's picker: no family at all.
     font_system: 'System font',
     font_noneMatch: 'No family in the list covers both of those.',
-    font_previewsOffline: 'The specimens need a connection the first time. Every family '
-      + 'still works; they are just all drawn in Inter for now.',
+    font_previewsOffline: 'Drawing the fonts for the first time needs a connection.',
     font_other: 'Other family…',
     font_otherPlaceholder: 'Any family on Google Fonts',
     font_otherLabel: 'Another font family',
@@ -474,9 +459,9 @@ const I18N = (() => {
     font_fromSystem: 'using the system font',
     font_fromCache: 'loaded from cache',
     font_fromNetwork: 'downloaded and cached',
-    font_following: 'Following the page font.',
+    font_following: 'Using the default font.',
     // $1 is the HTTP status Google Fonts answered with.
-    font_googleReplied: 'Google Fonts replied $1.',
+    font_googleReplied: 'Google Fonts: $1.',
     // $1 is the family that was asked for.
     font_noSuchFamily: 'Google Fonts has no family called "$1".',
     font_noFiles: 'Could not download the font files.',
@@ -494,8 +479,8 @@ const I18N = (() => {
     perm_refused: 'Firefox turned the request down ($1). $2',
     // $1 is perm_hint.
     perm_declined: 'Permission declined. $1',
-    perm_deepOn: 'Re-reading every site for its sharpest icon.',
-    perm_deepOff: 'Back to the conventional icon paths.',
+    perm_deepOn: 'Every site is now examined for a high-resolution icon.',
+    perm_deepOff: 'Back to the conventional ways of finding icons.',
 
     // ------------------------------------------------- backing up and back
     // $1 is the name the file was saved under.
@@ -503,17 +488,17 @@ const I18N = (() => {
     backup_fileUnreadable: 'That file could not be read.',
     backup_noFile: 'No file to read.',
     backup_tooLarge: 'That file is too large to be a backup.',
-    backup_notJson: 'That file is not valid JSON.',
-    backup_notABackup: 'That is not a backup file this add-on can read.',
+    backup_notJson: 'Invalid JSON.',
+    backup_notABackup: 'This add-on cannot read that backup file.',
     backup_empty: 'That backup is empty — there is nothing in it to restore.',
     // $1 is whatever went wrong, in the browser's own words.
-    backup_stopped: 'The restore stopped part way through: $1',
+    backup_stopped: 'The restore was interrupted: $1',
 
     // $1 is a list of what came back - "3 groups, 12 tiles and your settings".
     restore_done: 'Restored $1.',
     // $2 is the add-on the file was written by.
     restore_doneFrom: 'Restored $1 from a $2 backup.',
-    restore_pictureRefused: 'The background picture would not fit, so it was left as it is.',
+    restore_pictureRefused: 'The background image would not fit, so the old one was kept.',
     // $1 is a list, the same shape as restore_done's.
     restore_lost: 'It also held $1, which this add-on has nowhere to keep.',
     restore_lostStats: 'the time-of-day split behind the visit counts',

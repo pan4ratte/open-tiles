@@ -398,8 +398,8 @@ const settle = () => new Promise(resolve => setTimeout(resolve, 0));
   thumb.naturalWidth = 1600;
   thumb.naturalHeight = 400;
   thumb.fire('load');
-  check('a picture wider than the window says there is nothing to move',
-    caption.textContent.includes('nothing to move'), caption.textContent);
+  check('a picture wider than the window says its position cannot be changed',
+    caption.textContent.includes('position cannot be changed'), caption.textContent);
 
   sent.length = 0;
   pointer('pointerdown', 200);

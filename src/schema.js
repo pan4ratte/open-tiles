@@ -96,7 +96,7 @@ const Schema = (() => {
     // language, and the blurb under them is the one line of prose here.
     name: 'OpenTiles',
     version: manifestVersion(),
-    author: 'Mark (pan4ratte)',
+    author: 'Mark Ingrem',
     licence: 'GNU AGPL v3',
     repo: 'https://github.com/pan4ratte/open-tiles',
     blurb: t('about_blurb')
@@ -316,8 +316,7 @@ const Schema = (() => {
               options: [
                 { value: 'manual', label: t('set_orderManual') },
                 { value: 'visits', label: t('set_orderVisits') }
-              ],
-              note: t('set_orderNote')
+              ]
             }
           ]
         },
@@ -336,8 +335,7 @@ const Schema = (() => {
                 { value: '3:2', label: '3:2' },
                 { value: '16:10', label: '16:10' },
                 { value: '16:9', label: '16:9' }
-              ],
-              note: t('set_shapeNote')
+              ]
             },
             {
               key: 'tileBg',
@@ -349,16 +347,14 @@ const Schema = (() => {
                 { value: 'dark', label: t('set_tileBgDark') },
                 { value: 'light', label: t('set_tileBgLight') },
                 { value: 'custom', label: t('set_tileBgCustom') }
-              ],
-              note: t('set_tileBgNote')
+              ]
             },
             {
               key: 'tileBgColor',
               label: t('set_tileBgColor'),
               type: 'color',
               default: '#2f2f31',
-              when: { tileBg: 'custom' },
-              note: t('set_tileBgColorNote')
+              when: { tileBg: 'custom' }
             },
             {
               key: 'logoPad',
@@ -391,8 +387,7 @@ const Schema = (() => {
               key: 'confirmDelete',
               label: t('set_confirmDelete'),
               type: 'toggle',
-              default: false,
-              note: t('set_confirmDeleteNote')
+              default: false
             },
             {
               key: 'deepIcons',
@@ -450,8 +445,7 @@ const Schema = (() => {
               min: 50,
               max: 200,
               step: 5,
-              unit: '%',
-              note: t('set_clockSizeNote')
+              unit: '%'
             },
             {
               key: 'clockTracking',
@@ -461,8 +455,7 @@ const Schema = (() => {
               min: -6,
               max: 20,
               step: .5,
-              unit: '%',
-              note: t('set_clockTrackingNote')
+              unit: '%'
             }
           ]
         },
@@ -475,8 +468,7 @@ const Schema = (() => {
               label: t('set_format'),
               type: 'choice',
               default: 'full',
-              options: DATE_OPTIONS,
-              note: t('set_dateNote')
+              options: DATE_OPTIONS
             },
             {
               key: 'dateFont',
@@ -540,8 +532,7 @@ const Schema = (() => {
               min: 0,
               max: 100,
               step: 5,
-              unit: '%',
-              note: t('set_headerShadowNote')
+              unit: '%'
             }
           ]
         }
@@ -561,8 +552,7 @@ const Schema = (() => {
           options: [
             { value: 'floating', label: t('set_groupFloating') },
             { value: 'bar', label: t('set_groupBar') }
-          ],
-          note: t('set_groupStyleNote')
+          ]
         },
         {
           key: 'groupShow',
@@ -572,8 +562,7 @@ const Schema = (() => {
           options: [
             { value: 'always', label: t('set_groupAlways') },
             { value: 'hover', label: t('set_groupHover') }
-          ],
-          note: t('set_groupShowNote')
+          ]
         },
         {
           key: 'showAllGroup',
@@ -600,8 +589,7 @@ const Schema = (() => {
           key: 'groupAnimate',
           label: t('set_groupAnimate'),
           type: 'toggle',
-          default: true,
-          note: t('set_groupAnimateNote')
+          default: true
         },
         {
           key: 'groupScroll',
@@ -620,8 +608,7 @@ const Schema = (() => {
             { value: 'vertical', label: t('set_groupAxisVertical') },
             { value: 'horizontal', label: t('set_groupAxisHorizontal') },
             { value: 'either', label: t('set_groupAxisEither') }
-          ],
-          note: t('set_groupAxisNote')
+          ]
         },
         {
           key: 'groupFloat',
@@ -633,8 +620,7 @@ const Schema = (() => {
             { value: 'top', label: t('set_groupTop') },
             { value: 'tiles', label: t('set_groupAboveTiles') },
             { value: 'bottom', label: t('set_groupBottom') }
-          ],
-          note: t('set_groupFloatNote')
+          ]
         },
         {
           key: 'groupAlign',
@@ -697,8 +683,7 @@ const Schema = (() => {
               label: t('about_licence'),
               type: 'info',
               external: true,
-              value: APP.licence,
-              note: t('about_licenceNote')
+              value: APP.licence
             },
             {
               key: 'source',

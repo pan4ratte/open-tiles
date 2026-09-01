@@ -489,7 +489,7 @@ check('the clock font picker offers the catalogue',
   clockCards.length + ' card(s)');
 
 check('headed by one that hands the line back to the page font',
-  clockCards[0].textContent === 'Match page font'
+  clockCards[0].textContent === 'Default'
     && clockCards[0].dataset.family === '',
   clockCards[0].textContent);
 

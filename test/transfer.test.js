@@ -220,9 +220,9 @@ const settle = () => new Promise(resolve => setTimeout(resolve, 5));
 
   await reject('a file that is not JSON is refused', fileOf('hello'), 'valid JSON');
   await reject('another program’s JSON is refused',
-    fileOf('{"format":"other"}'), 'not a backup file this add-on can read');
+    fileOf('{"format":"other"}'), 'cannot read that backup file');
   await reject('a bare array is refused', fileOf('[1,2,3]'),
-    'not a backup file this add-on can read');
+    'cannot read that backup file');
   await reject('an empty backup is refused',
     fileOf(JSON.stringify({ format: 'tiles-backup', version: 1 })), 'nothing in it');
   await reject('an unreadable file is refused', { name: 'x', size: 10 }, 'could not be read');

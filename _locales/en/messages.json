@@ -4,7 +4,7 @@
     "description": "Shown by Firefox itself, in about:addons and on the add-on's listing. The name is a proper noun and is here to be transliterated, not translated."
   },
   "extDescription": {
-    "message": "A free, modern, open-source and highly customizable visual bookmark manager and a start page plugin for your browser."
+    "message": "A free, modern, open-source and highly customizable visual bookmark manager and start page for your browser."
   },
   "page_title": {
     "message": "New Tab"
@@ -22,16 +22,16 @@
     "message": "Nothing in this group yet - drag a tile onto its name to put it here."
   },
   "empty_noTiles": {
-    "message": "No tiles yet. Hit + to add your first site."
+    "message": "No tiles yet. Hit + to add your first bookmark."
   },
   "empty_noTilesNoAdd": {
-    "message": "No tiles yet. Right-click anywhere to add your first site."
+    "message": "No tiles yet. Right-click anywhere to add your first bookmark."
   },
   "tile_add": {
     "message": "Add a tile"
   },
   "tile_visits": {
-    "message": "$1 visits from here",
+    "message": "$1 visits",
     "description": "$1 is how many times this site has been opened from here.",
     "placeholders": {
       "n1": {
@@ -40,7 +40,7 @@
     }
   },
   "tile_sampleName": {
-    "message": "Example",
+    "message": "My favourite site",
     "description": "Standing in for a name while the sheet has no address typed in it yet."
   },
   "menu_addTile": {
@@ -84,7 +84,7 @@
     "message": "Edit group"
   },
   "group_sheetNote": {
-    "message": "Drag tiles onto a group to put them in it."
+    "message": "Tiles are added to a group by dragging them onto it."
   },
   "group_name": {
     "message": "Name"
@@ -115,7 +115,7 @@
     "message": "Edit tile"
   },
   "tile_sheetNote": {
-    "message": "Type an address — the rest is filled in for you."
+    "message": "The icon is fetched automatically as you type the address."
   },
   "tile_url": {
     "message": "URL"
@@ -131,7 +131,7 @@
     "description": "Marks a field that may be left empty. Shown after the field's own name."
   },
   "tile_namePlaceholder": {
-    "message": "Example"
+    "message": "My favourite site"
   },
   "tile_appearance": {
     "message": "Appearance"
@@ -149,7 +149,7 @@
     "message": "Choose a picture file"
   },
   "tile_iconHelp": {
-    "message": "Paste a picture, or the SVG code of one, anywhere in this sheet — or press $1 to choose a file.",
+    "message": "Press $1 to choose a file, or paste a picture or its SVG code anywhere in this sheet.",
     "description": "$1 is the button that chooses a file, drawn as its icon.",
     "placeholders": {
       "n1": {
@@ -161,7 +161,7 @@
     "message": "Icon colour"
   },
   "tile_pipette": {
-    "message": "Pick a colour out of the icon"
+    "message": "Eyedropper"
   },
   "tile_iconColorClear": {
     "message": "Back to the icon's own colours"
@@ -174,34 +174,34 @@
     "description": "The name the colour picker gives itself when it opens on a tile."
   },
   "tile_bgClear": {
-    "message": "Back to the usual tile"
+    "message": "Back to the default background"
   },
   "tile_pad": {
     "message": "Padding"
   },
   "tile_padClear": {
-    "message": "Back to the padding set for every tile"
+    "message": "Back to the default padding"
   },
   "tile_round": {
     "message": "Icon rounding"
   },
   "tile_roundClear": {
-    "message": "Back to the icon's own corners"
+    "message": "Reset the rounding"
   },
   "tile_group": {
     "message": "Group"
   },
   "icon_looking": {
-    "message": "Looking for the sharpest icon this site has…"
+    "message": "Looking for the highest-resolution icon…"
   },
   "icon_noneDeep": {
-    "message": "This site offers no icon of its own — choose or paste a picture instead."
+    "message": "This site has no icon — choose or paste a picture instead."
   },
   "icon_noneShallow": {
-    "message": "Nothing at the usual addresses. Deep icon lookup, in Settings, reads the page itself and usually finds one."
+    "message": "The usual lookup found nothing. Try switching on Deep icon lookup in Settings."
   },
   "icon_vector": {
-    "message": "Found a vector icon — sharp at any size."
+    "message": "Found a vector icon."
   },
   "icon_found": {
     "message": "Found a $1px icon.",
@@ -213,7 +213,7 @@
     }
   },
   "icon_foundLargest": {
-    "message": "Found a $1px icon, which is the largest this site publishes.",
+    "message": "Found a $1px icon, the highest resolution there was to find.",
     "placeholders": {
       "n1": {
         "content": "$1"
@@ -221,7 +221,7 @@
     }
   },
   "icon_foundSmall": {
-    "message": "Found a $1px icon. Deep icon lookup, in Settings, often finds a larger one.",
+    "message": "Found a $1px icon. Try switching on Deep icon lookup in Settings to find a larger one.",
     "placeholders": {
       "n1": {
         "content": "$1"
@@ -229,56 +229,56 @@
     }
   },
   "icon_needAddress": {
-    "message": "Fill in the address first — that is what is looked up."
+    "message": "Fill in the site's address first."
   },
   "icon_cleared": {
-    "message": "The picture that was set has been cleared.",
+    "message": "The icon that was set has been cleared.",
     "description": "Added after whichever of the above the lookup ended with."
   },
   "icon_fetching": {
-    "message": "Fetching that picture, so the tile keeps it…"
+    "message": "Fetching the icon…"
   },
   "icon_cannotKeep": {
-    "message": "That address would not let its picture be downloaded, so the tile cannot keep a copy. Save again to use the address itself — the tile will fetch it on every new tab."
+    "message": "The icon could not be downloaded. Try choosing a file, or pasting one from the clipboard."
   },
   "icon_notAPicture": {
-    "message": "That is not a picture."
+    "message": "Unsupported image format."
   },
   "icon_unreadable": {
-    "message": "That icon will not let itself be read — try one from a file."
+    "message": "The image could not be read — try choosing a file."
   },
   "icon_clickToTake": {
-    "message": "Click the icon to take its colour."
+    "message": "Click the icon to pick a colour out of it."
   },
   "icon_pointAt": {
     "message": "Point at the icon."
   },
   "tile_badUrl": {
-    "message": "That does not look like a web address."
+    "message": "That does not look like a web address…"
   },
   "icon_fileUnreadable": {
     "message": "That file could not be read."
   },
   "icon_notImageFile": {
-    "message": "That is not an image file."
+    "message": "Unsupported image format."
   },
   "icon_fileTooLarge": {
-    "message": "That picture is too large for an icon — pick a smaller one."
+    "message": "That image is too large — pick a smaller one."
   },
   "icon_svgNotCode": {
-    "message": "That does not look like SVG code."
+    "message": "That does not look like SVG code…"
   },
   "icon_svgUnreadable": {
     "message": "That SVG could not be read — it may be incomplete."
   },
   "icon_svgTooLong": {
-    "message": "That SVG is too long to keep on a tile — try a simpler one."
+    "message": "That SVG is too long to save."
   },
   "confirm_deleteTitle": {
     "message": "Delete this tile?"
   },
   "confirm_deleteText": {
-    "message": "“$1” will be taken off the page.",
+    "message": "“$1” will be deleted from the page.",
     "description": "$1 is the tile's name.",
     "placeholders": {
       "n1": {
@@ -316,7 +316,7 @@
     "message": "Working on it…"
   },
   "busy_resetting": {
-    "message": "Putting everything back…"
+    "message": "Putting everything back to how it was…"
   },
   "busy_permission": {
     "message": "Asking Firefox for access…"
@@ -353,7 +353,7 @@
     "message": "Layout"
   },
   "section_header": {
-    "message": "Header"
+    "message": "Date and time"
   },
   "section_groups": {
     "message": "Groups"
@@ -380,10 +380,10 @@
     "message": "Date"
   },
   "group_bothLines": {
-    "message": "Both lines"
+    "message": "Common settings"
   },
   "group_bundled": {
-    "message": "Bundled work"
+    "message": "Third-party licences"
   },
   "set_theme": {
     "message": "Theme"
@@ -404,13 +404,13 @@
     "message": "Font"
   },
   "set_fontNote": {
-    "message": "Sets the tile names, the clock and the date. The dialogs always stay on Inter."
+    "message": "Sets the font for the tile names, the date and the time."
   },
   "set_settingsButton": {
     "message": "Show the settings button"
   },
   "set_settingsButtonNote": {
-    "message": "With it off, $1 and the right-click menu are the ways in.",
+    "message": "It can still be opened with $1 and from the right-click menu.",
     "description": "$1 is the keyboard shortcut that opens this window.",
     "placeholders": {
       "n1": {
@@ -419,10 +419,10 @@
     }
   },
   "set_backup": {
-    "message": "Backup"
+    "message": "Backup and restore"
   },
   "set_backupNote": {
-    "message": "Saves tiles, groups, settings and background to a file, and puts one back."
+    "message": "Export and import your tiles, groups and settings."
   },
   "set_reset": {
     "message": "Reset all settings"
@@ -431,13 +431,13 @@
     "message": "Reset all"
   },
   "set_resetNote": {
-    "message": "Every setting back to its default, and the background away. Tiles are left alone."
+    "message": "Every setting goes back to its default; your tiles are kept."
   },
   "set_background": {
-    "message": "Picture or video"
+    "message": "Image or video"
   },
   "set_backgroundNote": {
-    "message": "From this computer, or a web address fetched fresh each time."
+    "message": "A local file, or a web address."
   },
   "set_blur": {
     "message": "Blur"
@@ -446,7 +446,7 @@
     "message": "Dim"
   },
   "set_dimNote": {
-    "message": "Darkens it so the tiles stay readable."
+    "message": "Darkens the background for better readability."
   },
   "set_bgPosY": {
     "message": "Vertical position"
@@ -468,19 +468,16 @@
     "message": "Spacing"
   },
   "set_order": {
-    "message": "Order"
+    "message": "Sort order"
   },
   "set_orderManual": {
     "message": "Manual"
   },
   "set_orderVisits": {
-    "message": "Most visited"
-  },
-  "set_orderNote": {
-    "message": "Most visited counts how often you open each one."
+    "message": "By visit count"
   },
   "set_shape": {
-    "message": "Shape"
+    "message": "Tile shape"
   },
   "set_shapeSquare": {
     "message": "Square"
@@ -488,11 +485,8 @@
   "set_shapeCircle": {
     "message": "Circular"
   },
-  "set_shapeNote": {
-    "message": "Tile size sets the width; the shape sets the height to match."
-  },
   "set_tileBg": {
-    "message": "Background"
+    "message": "Tile background"
   },
   "set_tileBgTheme": {
     "message": "Follow the theme"
@@ -506,17 +500,11 @@
   "set_tileBgCustom": {
     "message": "Custom colour"
   },
-  "set_tileBgNote": {
-    "message": "What a tile without a colour of its own is drawn in."
-  },
   "set_tileBgColor": {
-    "message": "Colour"
-  },
-  "set_tileBgColorNote": {
-    "message": "Only what tiles with no colour of their own fall back to."
+    "message": "Custom background colour"
   },
   "set_logoPad": {
-    "message": "Logo padding"
+    "message": "Icon padding"
   },
   "set_logoPadNote": {
     "message": "The room left clear around a tile's icon."
@@ -534,7 +522,7 @@
     "message": "Show the add button"
   },
   "set_showAddButtonNote": {
-    "message": "The dotted + at the end of the grid. Right-clicking the page also adds one."
+    "message": "A + is shown at the end of the grid for adding a site."
   },
   "set_openInNewTab": {
     "message": "Open sites in a new tab"
@@ -542,20 +530,17 @@
   "set_confirmDelete": {
     "message": "Confirm before deleting a tile"
   },
-  "set_confirmDeleteNote": {
-    "message": "Asks first, wherever the tile is being deleted from."
-  },
   "set_deepIcons": {
     "message": "Deep icon lookup"
   },
   "set_deepIconsNote": {
-    "message": "Reads each site's markup for its sharpest logo. Firefox will ask for access."
+    "message": "Reads a site's markup for its sharpest logo. Firefox permission is required."
   },
   "set_showClock": {
     "message": "Show the clock"
   },
   "set_format": {
-    "message": "Format"
+    "message": "Time format"
   },
   "set_timeNote": {
     "message": "The exact shape follows your browser's language."
@@ -564,41 +549,32 @@
     "message": "Font"
   },
   "set_matchPageFont": {
-    "message": "Match page font",
+    "message": "Default",
     "description": "The card at the head of the clock's and the date's font pickers: no family of their own, follow the one the page is set in."
   },
   "set_clockFontNote": {
-    "message": "The clock on its own. Match page font follows General → Font."
+    "message": "Default follows General → Font."
   },
   "set_weight": {
-    "message": "Weight"
+    "message": "Font weight"
   },
   "set_size": {
     "message": "Size"
   },
-  "set_clockSizeNote": {
-    "message": "A share of the size the page picks for the window."
-  },
   "set_tracking": {
-    "message": "Spacing"
-  },
-  "set_clockTrackingNote": {
-    "message": "Apple tracks large type in, never out."
+    "message": "Letter spacing"
   },
   "set_showDate": {
     "message": "Show the date"
   },
-  "set_dateNote": {
-    "message": "The order follows your browser's language."
-  },
   "set_dateFontNote": {
-    "message": "The date on its own, the same way."
+    "message": "Default follows General → Font."
   },
   "set_headerTint": {
     "message": "Custom colour"
   },
   "set_headerTintNote": {
-    "message": "Off, they follow the theme, and go white over a picture."
+    "message": "With it off, the colour follows the theme."
   },
   "set_headerColor": {
     "message": "Colour"
@@ -606,23 +582,17 @@
   "set_headerShadow": {
     "message": "Shadow"
   },
-  "set_headerShadowNote": {
-    "message": "At 0 they take the page's own."
-  },
   "set_groupStyle": {
-    "message": "Appearance"
+    "message": "Group bar appearance"
   },
   "set_groupFloating": {
-    "message": "Floating"
+    "message": "Floating bar"
   },
   "set_groupBar": {
     "message": "Status bar"
   },
-  "set_groupStyleNote": {
-    "message": "A pill over the page, or a bar across it."
-  },
   "set_groupShow": {
-    "message": "Display"
+    "message": "Visibility"
   },
   "set_groupAlways": {
     "message": "Always"
@@ -630,38 +600,32 @@
   "set_groupHover": {
     "message": "On hover"
   },
-  "set_groupShowNote": {
-    "message": "On hover hides it until the pointer arrives."
-  },
   "set_showAllGroup": {
-    "message": "Show the All category"
+    "message": "Show the All group"
   },
   "set_showAllGroupNote": {
-    "message": "The chip that clears the filter. With it off the page always sits in a group."
+    "message": "The group that holds every saved page from all groups."
   },
   "set_showGroupAdd": {
-    "message": "Show the new group button"
+    "message": "Show the add group button"
   },
   "set_showGroupAddNote": {
-    "message": "The + at the end of the block. Right-clicking the page also makes one."
+    "message": "The + at the end of the bar. Right-clicking the page also makes one."
   },
   "set_keepGroup": {
-    "message": "Remember the open group"
+    "message": "Remember the last group"
   },
   "set_keepGroupNote": {
-    "message": "Opens a new tab on the group you were last looking at."
+    "message": "The start page opens on the group that was open last."
   },
   "set_groupAnimate": {
-    "message": "Animate group changes"
-  },
-  "set_groupAnimateNote": {
-    "message": "Slides the old tiles aside and brings the new ones in behind them."
+    "message": "Animate switching between groups"
   },
   "set_groupScroll": {
-    "message": "Switch groups by scrolling"
+    "message": "Switch groups by gesture"
   },
   "set_groupScrollNote": {
-    "message": "A roll of the wheel or a swipe turns to the next group. It stops at each end."
+    "message": "A mouse scroll or a trackpad gesture changes the group."
   },
   "set_groupAxis": {
     "message": "Gesture direction"
@@ -675,11 +639,8 @@
   "set_groupAxisEither": {
     "message": "Either"
   },
-  "set_groupAxisNote": {
-    "message": "Down and right go on; up and left go back."
-  },
   "set_groupPosition": {
-    "message": "Position"
+    "message": "Group bar position"
   },
   "set_groupTop": {
     "message": "Top"
@@ -689,9 +650,6 @@
   },
   "set_groupBottom": {
     "message": "Bottom"
-  },
-  "set_groupFloatNote": {
-    "message": "Above the tiles puts it under the clock."
   },
   "set_groupAlign": {
     "message": "Alignment"
@@ -706,7 +664,7 @@
     "message": "Right"
   },
   "about_blurb": {
-    "message": "Replaces the new tab page with a grid of draggable tiles for the sites you use most - with groups, a clock, and a background of your own."
+    "message": "A free, modern, open-source and highly customizable visual bookmark manager and start page for your browser."
   },
   "about_author": {
     "message": "Author"
@@ -714,14 +672,11 @@
   "about_licence": {
     "message": "Licence"
   },
-  "about_licenceNote": {
-    "message": "Use it, read it, change it, pass it on."
-  },
   "about_source": {
-    "message": "Source code"
+    "message": "Project page"
   },
   "about_sourceNote": {
-    "message": "The code, the releases, and where to report anything that is not working."
+    "message": "The source code, the community, and where to report bugs."
   },
   "weight_100": {
     "message": "Thin"
@@ -833,17 +788,17 @@
     "message": "Done"
   },
   "bg_empty": {
-    "message": "Nothing yet — drop a picture or video here, or choose a file."
+    "message": "Drop an image or video here, or choose a file."
   },
   "bg_localFile": {
     "message": "Local file",
     "description": "What a picture chosen from this computer is called when it has no name."
   },
   "bg_tooWide": {
-    "message": "This one is wider than the window, so it is cut at the sides — there is nothing to move up or down."
+    "message": "This image is wider than the window, so its position cannot be changed."
   },
   "bg_dragIt": {
-    "message": "Drag the picture, or use the arrow keys."
+    "message": "Drag it with the mouse, or use the arrow keys."
   },
   "bg_position": {
     "message": "Vertical position of the background"
@@ -867,10 +822,10 @@
     "message": "this background"
   },
   "bg_forget": {
-    "message": "Remove from recent"
+    "message": "Remove from history"
   },
   "bg_forgetLabel": {
-    "message": "Remove $1 from recent backgrounds",
+    "message": "Remove $1 from history",
     "placeholders": {
       "n1": {
         "content": "$1"
@@ -907,22 +862,22 @@
     }
   },
   "bg_videoUnplayable": {
-    "message": "This browser cannot play that video."
+    "message": "The browser cannot play that video."
   },
   "bg_slowAddress": {
-    "message": "That address took too long to answer."
+    "message": "The address took too long to answer."
   },
   "bg_notAPicture": {
-    "message": "That is not a picture."
+    "message": "Unsupported image format."
   },
   "bg_notAVideo": {
-    "message": "That is not a video."
+    "message": "Unsupported video format."
   },
   "bg_notMedia": {
-    "message": "That is not an image or a video file."
+    "message": "Unsupported format."
   },
   "bg_nothingThere": {
-    "message": "Nothing loaded from that address — is it a picture or a video?"
+    "message": "Nothing could be loaded — is it really an image or a video?"
   },
   "bg_needsHttp": {
     "message": "That needs to be a web address starting http:// or https://."
@@ -931,7 +886,7 @@
     "message": "There was no room left to store that background."
   },
   "bg_unusable": {
-    "message": "Unusable image."
+    "message": "Unsuitable image."
   },
   "bg_untitled": {
     "message": "Image",
@@ -941,13 +896,13 @@
     "message": "That one has dropped off the list."
   },
   "bg_setByAddress": {
-    "message": "Background set. That address would not let its picture be downloaded, so it is fetched again on every new tab."
+    "message": "Background set. That address would not let its image be downloaded, so it is fetched again every time."
   },
   "bg_setRemembered": {
-    "message": "Background set, the way it was last looked at."
+    "message": "Background set, with its settings restored."
   },
   "bg_setDefaults": {
-    "message": "Background set, with blur, dim and position back to their defaults."
+    "message": "Background set, with default settings."
   },
   "bg_setDimmed": {
     "message": "Set — turn Dim down to see more of it."
@@ -1000,7 +955,7 @@
     "message": "No family in the list covers both of those."
   },
   "font_previewsOffline": {
-    "message": "The specimens need a connection the first time. Every family still works; they are just all drawn in Inter for now."
+    "message": "Drawing the fonts for the first time needs a connection."
   },
   "font_other": {
     "message": "Other family…"
@@ -1036,10 +991,10 @@
     "message": "downloaded and cached"
   },
   "font_following": {
-    "message": "Following the page font."
+    "message": "Using the default font."
   },
   "font_googleReplied": {
-    "message": "Google Fonts replied $1.",
+    "message": "Google Fonts: $1.",
     "description": "$1 is the HTTP status Google Fonts answered with.",
     "placeholders": {
       "n1": {
@@ -1097,10 +1052,10 @@
     }
   },
   "perm_deepOn": {
-    "message": "Re-reading every site for its sharpest icon."
+    "message": "Every site is now examined for a high-resolution icon."
   },
   "perm_deepOff": {
-    "message": "Back to the conventional icon paths."
+    "message": "Back to the conventional ways of finding icons."
   },
   "backup_saved": {
     "message": "Saved as $1.",
@@ -1121,16 +1076,16 @@
     "message": "That file is too large to be a backup."
   },
   "backup_notJson": {
-    "message": "That file is not valid JSON."
+    "message": "Invalid JSON."
   },
   "backup_notABackup": {
-    "message": "That is not a backup file this add-on can read."
+    "message": "This add-on cannot read that backup file."
   },
   "backup_empty": {
     "message": "That backup is empty — there is nothing in it to restore."
   },
   "backup_stopped": {
-    "message": "The restore stopped part way through: $1",
+    "message": "The restore was interrupted: $1",
     "description": "$1 is whatever went wrong, in the browser's own words.",
     "placeholders": {
       "n1": {
@@ -1160,7 +1115,7 @@
     }
   },
   "restore_pictureRefused": {
-    "message": "The background picture would not fit, so it was left as it is."
+    "message": "The background image would not fit, so the old one was kept."
   },
   "restore_lost": {
     "message": "It also held $1, which this add-on has nowhere to keep.",
