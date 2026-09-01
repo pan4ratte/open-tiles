@@ -1,6 +1,9 @@
 # OpenTiles
 
-<img src="https://github.com/pan4ratte/open-tiles/blob/main/icons/png/icon-512.png" >
+<p align="center">
+<img src="https://github.com/pan4ratte/open-tiles/blob/main/icons/png/icon-512.png" alt="OpenTiles logo" width="128" height="128">
+</p>
+
 
 [English](https://github.com/pan4ratte/open-tiles/blob/main/README.md) | **Русский**
 
