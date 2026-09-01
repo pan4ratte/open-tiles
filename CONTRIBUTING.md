@@ -57,7 +57,6 @@ node test/header.test.js       # the clock and date settings, a sheet per font
 node test/page.test.js         # the loading screen and the page context menu
 node test/hig.test.js          # the guards from the interface audit
 node test/release.test.js      # the version, the changelog, the workflow
-node test/docs.test.js         # the READMEs against the interface they describe
 ```
 
 Everything guarded here is something that fails *quietly* — a permission request
@@ -125,7 +124,7 @@ section, a changelog out of order, a workflow naming a script that has moved.
 | `src/backgrounds.js` | `Backgrounds` — encoding, limits, painting |
 | `src/transfer.js` | `Transfer` — backup files: the envelope, reading, writing |
 | `src/importers.js` | `Importers` — backups written by other add-ons |
-| `fonts/`, `icons/` | Bundled Inter and the add-on icon |
+| `fonts/`, `icons/` | Bundled Inter, and the add-on icon at each size |
 
 ## Storage keys
 
@@ -155,9 +154,15 @@ and the markup asks by attribute, `data-i18n="tile_addTitle"`.
 ### Adding a language
 
 `README.ru.md` is the Russian README, and is the authority: a change to what
-the project says about itself is written there first, and `README.md` follows.
-`test/docs.test.js` checks that the two carry the same sections and that neither
-quotes a control the interface no longer has.
+the project says about itself is written there first, and `README.md` follows
+it — its sections, their order, and what it does and does not say.
+
+Each one opens with a switcher naming every language, the current one in bold
+and the rest linked. Those links are written out in full —
+`https://github.com/pan4ratte/open-tiles/blob/main/README.ru.md`, not
+`README.ru.md` — because a README is read on addons.mozilla.org and wherever
+else the description is reproduced, and a relative link resolves to nothing at
+all outside the repository.
 
 1. Copy `_locales/en/messages.json` to `_locales/<code>/messages.json`, where
    `<code>` is the language tag Firefox uses — `de`, `fr`, `pt_BR`.
