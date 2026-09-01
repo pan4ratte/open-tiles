@@ -317,16 +317,16 @@
                    0 32px 80px rgba(0, 0, 0, .16);
 
   /* -- written at runtime from the settings -- */
-  --tile-size: 116px;
+  --tile-size: 152px;
   /* Width : height. Written from the Shape setting; a plain number, so the
      stylesheet can both feed it to aspect-ratio and divide by it. */
-  --tile-ratio: 1;
+  --tile-ratio: 1.5;
   /* The share of the room inside a tile left clear on each side of its icon. */
   --logo-pad: .2;
-  --gap: 18px;
+  --gap: 12px;
   --columns: 6;
   --bg-blur: 0px;
-  --bg-dim: .35;
+  --bg-dim: 0;
   --groupbar-h: 32px;
   /* The air the group block keeps around itself where it is set in the page,
      above and below. Its own, not a share of the clock's - every element

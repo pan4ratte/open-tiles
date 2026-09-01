@@ -253,7 +253,7 @@ Store.onExternalChange((key, value) => heard.push({ key, value }));
   await settle();
   check('an effect named on its own leaves the rest at their defaults',
     JSON.stringify(partial.find(one => one.name === 'G').effects)
-      === '{"bgBlur":0,"bgDim":35,"bgPosY":12}',
+      === '{"bgBlur":0,"bgDim":0,"bgPosY":12}',
     JSON.stringify(partial.find(one => one.name === 'G').effects));
 
   const nonsense = await Store.noteRecentEffects(
@@ -322,7 +322,7 @@ Store.onExternalChange((key, value) => heard.push({ key, value }));
 
   check('the flat field list still carries every default',
     Schema.FIELDS.length === Schema.SECTIONS.flatMap(s => s.fields).length
-      && Schema.DEFAULTS.tileShape === 'square' && Schema.DEFAULTS.columns === 0);
+      && Schema.DEFAULTS.tileShape === '3:2' && Schema.DEFAULTS.columns === 0);
 
   // ------------------------------------------------------- the accent picker
 

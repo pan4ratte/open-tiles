@@ -93,11 +93,11 @@ check('every new group setting has a default',
 check('the animation is on out of the box',
   Schema.DEFAULTS.groupAnimate === true);
 
-check('the gesture is not - it takes scrolling away from the page',
-  Schema.DEFAULTS.groupScroll === false);
+check('and so is the gesture, running across the way the groups are laid out',
+  Schema.DEFAULTS.groupScroll === true);
 
 check('a direction it does not know falls back to the default',
-  Schema.coerce({ groupScrollAxis: 'diagonally' }).groupScrollAxis === 'vertical');
+  Schema.coerce({ groupScrollAxis: 'diagonally' }).groupScrollAxis === 'horizontal');
 
 check('all three directions are offered',
   ['vertical', 'horizontal', 'either'].every(value =>
@@ -109,7 +109,10 @@ const container = new El('div');
 const sent = [];
 
 SettingsUI.mount(container, {
-  values: { ...Schema.DEFAULTS, background: null },
+  // The gesture is pinned off rather than taken from the defaults: the
+  // checks below are about a field that appears with its condition, and
+  // they should read the same whichever way the setting ships.
+  values: { ...Schema.DEFAULTS, background: null, groupScroll: false },
   onChange: async (key, value) => {
     sent.push({ key, value });
     return { value };

@@ -114,7 +114,7 @@ check('coerce drops a picture that strays into settings',
   !('background' in Schema.coerce({ background: LOCAL })));
 
 check('the dim and blur sliders are stored settings',
-  Schema.DEFAULTS.bgBlur === 0 && Schema.DEFAULTS.bgDim === 35);
+  Schema.DEFAULTS.bgBlur === 0 && Schema.DEFAULTS.bgDim === 0);
 
 // ------------------------------------------------------------ what is gone
 

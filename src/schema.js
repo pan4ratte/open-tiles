@@ -256,7 +256,7 @@ const Schema = (() => {
           key: 'bgDim',
           label: t('set_dim'),
           type: 'range',
-          default: 35,
+          default: 0,
           min: 0,
           max: 90,
           step: 5,
@@ -306,8 +306,8 @@ const Schema = (() => {
               zeroLabel: t('set_columnsAuto'),
               note: t('set_columnsNote')
             },
-            { key: 'tileSize', label: t('set_tileSize'), type: 'range', default: 116, min: 72, max: 200, step: 4, unit: 'px' },
-            { key: 'gap', label: t('set_gap'), type: 'range', default: 18, min: 4, max: 48, step: 2, unit: 'px' },
+            { key: 'tileSize', label: t('set_tileSize'), type: 'range', default: 152, min: 72, max: 200, step: 4, unit: 'px' },
+            { key: 'gap', label: t('set_gap'), type: 'range', default: 12, min: 4, max: 48, step: 2, unit: 'px' },
             {
               key: 'tileOrder',
               label: t('set_order'),
@@ -327,7 +327,7 @@ const Schema = (() => {
               key: 'tileShape',
               label: t('set_shape'),
               type: 'choice',
-              default: 'square',
+              default: '3:2',
               options: [
                 { value: 'square', label: t('set_shapeSquare') },
                 { value: 'circle', label: t('set_shapeCircle') },
@@ -382,18 +382,18 @@ const Schema = (() => {
               default: true,
               note: t('set_showAddButtonNote')
             },
-            { key: 'openInNewTab', label: t('set_openInNewTab'), type: 'toggle', default: false },
+            { key: 'openInNewTab', label: t('set_openInNewTab'), type: 'toggle', default: true },
             {
               key: 'confirmDelete',
               label: t('set_confirmDelete'),
               type: 'toggle',
-              default: false
+              default: true
             },
             {
               key: 'deepIcons',
               label: t('set_deepIcons'),
               type: 'toggle',
-              default: false,
+              default: true,
               busyText: t('busy_permission'),
               // Firefox only grants permissions.request() while it is handling
               // user input, so this toggle has to act on the click itself.
@@ -462,7 +462,7 @@ const Schema = (() => {
         {
           label: t('group_date'),
           fields: [
-            { key: 'showDate', label: t('set_showDate'), type: 'toggle', default: false },
+            { key: 'showDate', label: t('set_showDate'), type: 'toggle', default: true },
             {
               key: 'dateFormat',
               label: t('set_format'),
@@ -595,14 +595,14 @@ const Schema = (() => {
           key: 'groupScroll',
           label: t('set_groupScroll'),
           type: 'toggle',
-          default: false,
+          default: true,
           note: t('set_groupScrollNote')
         },
         {
           key: 'groupScrollAxis',
           label: t('set_groupAxis'),
           type: 'segmented',
-          default: 'vertical',
+          default: 'horizontal',
           when: { groupScroll: true },
           options: [
             { value: 'vertical', label: t('set_groupAxisVertical') },
