@@ -57,6 +57,7 @@ node test/header.test.js       # the clock and date settings, a sheet per font
 node test/page.test.js         # the loading screen and the page context menu
 node test/hig.test.js          # the guards from the interface audit
 node test/release.test.js      # the version, the changelog, the workflow
+node test/docs.test.js         # the READMEs against the interface they describe
 ```
 
 Everything guarded here is something that fails *quietly* — a permission request
@@ -152,6 +153,11 @@ in `src/` holds a sentence. The code asks for one by key, `t('tile_addTitle')`,
 and the markup asks by attribute, `data-i18n="tile_addTitle"`.
 
 ### Adding a language
+
+`README.ru.md` is the Russian README, and is the authority: a change to what
+the project says about itself is written there first, and `README.md` follows.
+`test/docs.test.js` checks that the two carry the same sections and that neither
+quotes a control the interface no longer has.
 
 1. Copy `_locales/en/messages.json` to `_locales/<code>/messages.json`, where
    `<code>` is the language tag Firefox uses — `de`, `fr`, `pt_BR`.

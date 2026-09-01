@@ -1,5 +1,7 @@
 # OpenTiles
 
+**English** · [Русский](README.ru.md)
+
 A free, open-source visual bookmark manager that replaces your browser's new tab
 page with a grid of tiles for the sites you actually use.
 
@@ -38,7 +40,7 @@ to rename or delete it. Deleting a group leaves its tiles alone.
 
 The group bar can float over the page like a HUD or sit across it like a menu
 bar, at the top or the bottom, and can hide itself until you point at it. Turn on
-**Switch groups by scrolling** to change group with the wheel or a touchpad
+**Switch groups by gesture** to change group with the wheel or a touchpad
 swipe.
 
 ### Backgrounds
@@ -86,9 +88,9 @@ counts and preferences across.
 
 ### Translations
 
-The interface ships in English and is ready to be translated: every word lives
-in one file, and Firefox picks the language from the browser. See
-[CONTRIBUTING.md](CONTRIBUTING.md) if you would like to add one.
+The interface ships in English and Russian: every word lives in one file, and
+Firefox picks the language from the browser itself. See
+[CONTRIBUTING.md](CONTRIBUTING.md) if you would like to add another.
 
 ### Privacy
 
