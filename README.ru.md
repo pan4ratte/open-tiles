@@ -1,9 +1,9 @@
 <div align="center">
    <img src="https://github.com/pan4ratte/open-tiles/blob/main/icons/png/icon-512.png" alt="OpenTiles logo" width="128" height="128">
    <h3>OpenTiles</h3>
-   <a href="https://github.com/pan4ratte/open-tiles/blob/main/README.md">English</a> | <b>Русский</b>
-   <br><br>
+   <br>
    <p>Бесплатный, современный и гибко настраиваемый<br>визуальный менеджер закладок и стартовая страница<br>для вашего браузера с открытым исходным кодом</p>
+   <a href="https://github.com/pan4ratte/open-tiles/blob/main/README.md">English</a> | <b>Русский</b>
 </div>
 
 
