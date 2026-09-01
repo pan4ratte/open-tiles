@@ -2,9 +2,8 @@
    <img src="https://github.com/pan4ratte/open-tiles/blob/main/icons/png/icon-512.png" alt="OpenTiles logo" width="128" height="128">
    <h3>OpenTiles</h3>
    <b>English</b> | <a href="https://github.com/pan4ratte/open-tiles/blob/main/README.ru.md">Русский</a>
-   <br>
-   <p>Free, modern, open-source and highly customizable visual bookmark
-manager and start page plugin for your browser.</p>
+   <br><br>
+   <p>Free, modern, open-source and highly customizable<br>visual bookmark manager and start page plugin<br>for your browser</p>
 </div>
 
 ## Install
