@@ -1091,6 +1091,9 @@
    */
   const cssUrl = url => 'url(' + JSON.stringify(url) + ')';
 
+  /** The schemes a tile's picture may be drawn from - see paintIcon. */
+  const ICON_SCHEMES = /^(?:https?:|data:image\/)/i;
+
   /**
    * The picture each tile is showing, held on to across a redraw.
    *
@@ -1197,6 +1200,12 @@
    * underneath is a better answer than that.
    */
   function paintIcon(el, url, color, keep) {
+    // Favicons refuses these where an address enters, so nothing arriving by
+    // that road can fail here. This is the same rule at the point it is acted
+    // on, for the pictures that came another way - a tile written by an older
+    // build, a restored backup - which have never been past that check.
+    if (!ICON_SCHEMES.test(String(url || ''))) return;
+
     const icon = document.createElement(color ? 'span' : 'img');
     icon.className = color ? 'tile__icon tile__icon--tint' : 'tile__icon';
     icon.hidden = true;

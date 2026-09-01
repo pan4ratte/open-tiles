@@ -195,6 +195,27 @@ const Favicons = (() => {
     }
   }
 
+  /**
+   * An icon's address, or null if it is not one.
+   *
+   * Every candidate is read out of somebody else's page - a link `href`, a
+   * meta `content`, a manifest `src` - and `new URL` keeps whatever scheme it
+   * is handed. An `<img>` runs nothing for the strange ones, so this is not
+   * what stands between a site and a script; it is that an address which
+   * cannot name a picture has no business being fetched, written to storage,
+   * or handed back out in a backup file for something less careful to open.
+   */
+  const ICON_SCHEMES = new Set(['http:', 'https:', 'data:']);
+
+  function iconUrl(value, base) {
+    const url = new URL(value, base);
+    if (!ICON_SCHEMES.has(url.protocol)) return null;
+    // A data URI may carry a picture and nothing else - not markup, which is
+    // what a `data:text/html` icon would smuggle through.
+    if (url.protocol === 'data:' && !/^data:image\//i.test(url.href)) return null;
+    return url.href;
+  }
+
   /** Icons declared in the page markup and in the site's web manifest. */
   async function candidatesFromSite(pageUrl, fresh) {
     const page = await fetchText(pageUrl, fresh);
@@ -207,10 +228,8 @@ const Favicons = (() => {
       const rels = (link.getAttribute('rel') || '').toLowerCase().split(/\s+/);
       if (!rels.some(rel => ICON_RELS.includes(rel))) return;
       try {
-        found.push({
-          url: new URL(link.getAttribute('href'), page.url).href,
-          hint: sizesHint(link.getAttribute('sizes'))
-        });
+        const url = iconUrl(link.getAttribute('href'), page.url);
+        if (url) found.push({ url, hint: sizesHint(link.getAttribute('sizes')) });
       } catch { /* malformed href */ }
     });
 
@@ -221,10 +240,8 @@ const Favicons = (() => {
       const square = name.match(/^msapplication-square(\d+)x\d+logo$/);
       if (name !== 'msapplication-tileimage' && !square) return;
       try {
-        found.push({
-          url: new URL(meta.getAttribute('content'), page.url).href,
-          hint: square ? parseInt(square[1], 10) : 0
-        });
+        const url = iconUrl(meta.getAttribute('content'), page.url);
+        if (url) found.push({ url, hint: square ? parseInt(square[1], 10) : 0 });
       } catch { /* malformed content */ }
     });
 
@@ -237,10 +254,8 @@ const Favicons = (() => {
         icons.forEach(icon => {
           if (!icon || !icon.src) return;
           try {
-            found.push({
-              url: new URL(icon.src, manifestUrl).href,
-              hint: sizesHint(icon.sizes)
-            });
+            const url = iconUrl(icon.src, manifestUrl);
+            if (url) found.push({ url, hint: sizesHint(icon.sizes) });
           } catch { /* malformed src */ }
         });
       } catch { /* manifest missing or not JSON */ }
@@ -620,6 +635,28 @@ const Favicons = (() => {
   const SVG_RUNNING = new Set(['script', 'foreignobject', 'iframe', 'embed', 'object']);
 
   /**
+   * One prolog, doctype or comment, and the whitespace after it.
+   *
+   * Each is written so that only one reading of it can ever match: `[^?]`
+   * with `\?(?!>)` beside it, rather than a lazy `[\s\S]*?`. The lazy form
+   * leaves the end of one prolog and the start of the next interchangeable,
+   * so `<?xml` followed by a few dozen `?><?xml` gives the engine an
+   * exponential number of ways to fail at it - and this is asked on every
+   * paste into the icon field, where the page would simply stop.
+   */
+  const SVG_PROLOG = /(?:<\?xml(?:[^?]|\?(?!>))*\?>|<!--(?:[^-]|-(?!->))*-->)\s*/;
+
+  const SVG_DOCTYPE = /<!doctype[^>]*>\s*/;
+
+  const SVG_HEAD = /^\s*/;
+
+  const SVG_TAIL = /<svg[\s>]/;
+
+  const SVG_OPENING = new RegExp(
+    SVG_HEAD.source + '(?:' + SVG_PROLOG.source + '|' + SVG_DOCTYPE.source + ')*'
+      + SVG_TAIL.source, 'i');
+
+  /**
    * SVG source, as opposed to an address, a data URI or a stray tag.
    *
    * Kept deliberately cheap and certain: it is asked on every paste into the
@@ -628,8 +665,7 @@ const Favicons = (() => {
    * saved by a drawing program.
    */
   function looksLikeSvg(text) {
-    return /^\s*(?:<\?xml[\s\S]*?\?>\s*|<!--[\s\S]*?-->\s*|<!doctype[^>]*>\s*)*<svg[\s>]/i
-      .test(String(text || ''));
+    return SVG_OPENING.test(String(text || ''));
   }
 
   /**
@@ -701,6 +737,19 @@ const Favicons = (() => {
   function fromSvg(source) {
     const text = String(source || '').trim();
     if (!looksLikeSvg(text)) throw new Error(t('icon_svgNotCode'));
+
+    // Measured before the parser is handed it, as well as after serialising.
+    // The cap at the end says whether the picture will fit in storage; this
+    // one is about the parse itself, which is the expensive half and which a
+    // paste of any size at all would otherwise reach first.
+    if (text.length > OWN_SVG_MAX) throw new Error(t('icon_svgTooLong'));
+
+    // An entity that expands into more entities is how a short paste is made
+    // to cost the parser a great deal of memory. Nothing a drawing program
+    // saves needs one, and the doctype that would have to carry them is
+    // already more than `looksLikeSvg` lets past - this says so out loud
+    // rather than leaving it to fall out of the shape of that pattern.
+    if (/<!ENTITY/i.test(text)) throw new Error(t('icon_svgNotCode'));
 
     const svg = parseSvg(text);
     if (!svg) throw new Error(t('icon_svgUnreadable'));

@@ -130,7 +130,8 @@ const SAYS_NO = [
   ['plain words', 'the company logo'],
   ['nothing at all', ''],
   ['a tag that only starts like one', '<svgish>no</svgish>'],
-  ['SVG buried in other markup', '<div><svg><rect/></svg></div>']
+  ['SVG buried in other markup', '<div><svg><rect/></svg></div>'],
+  ['a doctype carrying entity declarations', '<!DOCTYPE svg [<!ENTITY a "b">]><svg/>']
 ];
 
 SAYS_YES.forEach(([what, text]) => {
@@ -140,6 +141,21 @@ SAYS_YES.forEach(([what, text]) => {
 SAYS_NO.forEach(([what, text]) => {
   check(`left for the field to paste: ${what}`, Favicons.looksLikeSvg(text) === false);
 });
+
+/*
+ * A prolog written as `<?xml[\s\S]*?\?>` inside a repetition leaves the end
+ * of one prolog and the start of the next interchangeable, so the engine has
+ * an exponential number of ways to fail on a paste of `<?xml` followed by
+ * `?><?xml` over and over. At around thirty repetitions that is already
+ * seconds, and this runs on every paste into the icon field.
+ */
+const bomb = '<?xml' + '?><?xml'.repeat(400) + '!';
+const startedAt = Date.now();
+const bombVerdict = Favicons.looksLikeSvg(bomb);
+const bombMs = Date.now() - startedAt;
+
+check('a prolog repeated to make the scan backtrack is answered at once',
+  bombVerdict === false && bombMs < 100, `${bombMs}ms for ${bomb.length} characters`);
 
 // ------------------------------------------------------------- fromSvg
 
@@ -238,6 +254,19 @@ const huge = new Node('svg', {}, [new Node('path', { d: 'M0 0 ' + 'L9 9 '.repeat
 const tooBig = refusal(() => convert(huge));
 check('an SVG too long for storage is refused before it can be lost',
   /too long/.test(String(tooBig)), String(tooBig));
+
+// The parse is the expensive half, so the length is read before the parser is
+// handed anything - not only after the picture has been serialised again.
+nextTree = null;
+const longSource = '<svg>' + '<!-- ' + 'x'.repeat(200000) + ' -->' + '</svg>';
+const tooLongToParse = refusal(() => Favicons.fromSvg(longSource));
+check('a source too long to be a logo is refused before it is parsed',
+  /too long/.test(String(tooLongToParse)), String(tooLongToParse));
+
+const entities = '<!DOCTYPE svg [<!ENTITY lol "lol">]><svg><rect/></svg>';
+const bombRefusal = refusal(() => Favicons.fromSvg(entities));
+check('and entity declarations are refused rather than expanded',
+  /does not look like SVG/.test(String(bombRefusal)), String(bombRefusal));
 
 const cap = Number((read('favicons.js').match(/OWN_SVG_MAX = (\d+) \* 1024/) || [])[1]);
 const store = Number((read('storage.js').match(/MAX_ICON = (\d+) \* 1024/) || [])[1]);
