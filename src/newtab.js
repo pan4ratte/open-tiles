@@ -1204,14 +1204,24 @@
     // that road can fail here. This is the same rule at the point it is acted
     // on, for the pictures that came another way - a tile written by an older
     // build, a restored backup - which have never been past that check.
-    if (!ICON_SCHEMES.test(String(url || ''))) return;
+    //
+    // The address is settled into one string here and only that string is
+    // used below. The check and the use being the same name is what makes it
+    // readable - to a person, and to a scanner - that nothing unexamined
+    // reaches an element.
+    const src = String(url || '');
+    if (!ICON_SCHEMES.test(src)) return;
 
-    const icon = document.createElement(color ? 'span' : 'img');
+    // Both tags are written out in full rather than chosen inside the call:
+    // a tint is a mask laid over a span, a plain icon is the picture itself,
+    // and which of the two an address is being handed to should not have to
+    // be worked out from a condition.
+    const icon = color ? document.createElement('span') : document.createElement('img');
     icon.className = color ? 'tile__icon tile__icon--tint' : 'tile__icon';
     icon.hidden = true;
 
     if (color) {
-      icon.style.setProperty('--icon-mask', cssUrl(url));
+      icon.style.setProperty('--icon-mask', cssUrl(src));
       icon.style.setProperty('--icon-tint', color);
     } else {
       icon.alt = '';
@@ -1230,7 +1240,7 @@
       icon.remove();
       if (keep) shownIcons.delete(keep.id);
     });
-    probe.src = url;
+    probe.src = src;
 
     el.prepend(icon);
   }
