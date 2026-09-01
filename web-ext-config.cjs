@@ -20,6 +20,9 @@ module.exports = {
     'web-ext-config.cjs',
     'web-ext-artifacts',
     'README.md',
+    // The release workflow, which runs `tools/release.js` rather than
+    // shipping anything.
+    '.github',
     '.git',
     '.gitignore',
     '**/*.md'

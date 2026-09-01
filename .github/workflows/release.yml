@@ -1,0 +1,71 @@
+# Publishes a GitHub release when the version in manifest.json changes.
+#
+# The manifest is the only thing that decides there is a release to make. Push a
+# bump to main and this runs; the steps themselves live in tools/release.js, so
+# the same code can be rehearsed on a laptop before any of it happens here:
+#
+#   node tools/release.js            check, test, lint and build - publish nothing
+#   node tools/release.js --publish  what this workflow runs
+#
+# A push that touches manifest.json without changing the version finishes green
+# having done nothing: tools/release.js looks for the v<version> tag and stops
+# when it finds one. That also makes the manual run below safe to press twice.
+name: Release
+
+on:
+  push:
+    branches: [main]
+    paths: ['manifest.json']
+  workflow_dispatch:
+    inputs:
+      rehearse:
+        description: 'Check, test, lint and build, but publish nothing'
+        type: boolean
+        default: false
+
+# Only to create the release and its tag. Nothing here needs to read a secret or
+# write to a branch.
+permissions:
+  contents: write
+
+# One release at a time. Two runs racing for the same tag would leave the loser
+# failing on a tag the winner had just made.
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # Tags are how an already-released version is recognised, and a
+          # default checkout fetches none of them.
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+
+      - name: Release
+        id: release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if [ "${{ inputs.rehearse }}" = "true" ]; then
+            node tools/release.js
+          else
+            node tools/release.js --publish
+          fi
+
+      # A rehearsal has no release to attach the package to, so it is kept on the
+      # run itself - which is the whole point of asking for one.
+      - name: Keep the package from a rehearsal
+        if: ${{ inputs.rehearse && steps.release.outputs.released == 'true' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: opentiles-${{ steps.release.outputs.version }}
+          path: ${{ steps.release.outputs.artifact }}
+          if-no-files-found: error

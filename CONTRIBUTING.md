@@ -56,6 +56,7 @@ node test/importers.test.js    # reading a Speed Dial 2 backup
 node test/header.test.js       # the clock and date settings, a sheet per font
 node test/page.test.js         # the loading screen and the page context menu
 node test/hig.test.js          # the guards from the interface audit
+node test/release.test.js      # the version, the changelog, the workflow
 ```
 
 Everything guarded here is something that fails *quietly* — a permission request
@@ -63,6 +64,43 @@ that never opens its window, a token nobody declared, an id that moved between
 the markup and the script. `header.test.js` also checks that every
 `getElementById` in `src/newtab.js` still finds an id in `src/newtab.html`.
 Please add a guard with any change that could go wrong without saying so.
+
+## Releasing
+
+The version in `manifest.json` is the only thing that decides there is a release
+to make. Push a bump to `main` and `.github/workflows/release.yml` tests, lints,
+builds and publishes a GitHub release for it; the notes come from the matching
+`## x.y.z` section of [`CHANGELOG.md`](CHANGELOG.md), and the built zip is
+attached to it. Versions follow [semver](https://semver.org): a stored tile,
+group or setting read differently is major, a feature or a language is minor,
+everything else is patch.
+
+The workflow runs `tools/release.js` and nothing else, so the whole of it can be
+rehearsed here first:
+
+```
+node tools/release.js            # check, test, lint and build - publish nothing
+node tools/release.js --publish  # and then tag it and publish the release
+```
+
+A rehearsal skips only the two steps that would be hard to take back, and says
+so when it finishes. There is also a **Run workflow** button on the Actions tab
+for releasing without a push, with a *rehearse* switch that keeps the package on
+the run instead of publishing it.
+
+So, to cut 1.1.0:
+
+1. Write the section for it in `CHANGELOG.md`, under `## [Unreleased]`. The
+   heading can be `## 1.1.0` or `## [1.1.0]`, dated or not — all four read the
+   same.
+2. Set `"version": "1.1.0"` in `manifest.json`.
+3. `node tools/release.js` and read what it says it would publish.
+4. Push to `main`.
+
+A push that touches `manifest.json` without changing the version finishes green
+having done nothing: the script looks for the `v<version>` tag and stops when it
+finds one. `test/release.test.js` guards the rest — a version with no changelog
+section, a changelog out of order, a workflow naming a script that has moved.
 
 ## Layout
 
@@ -75,6 +113,8 @@ Please add a guard with any change that could go wrong without saying so.
 | `src/i18n.js` | `I18N` — every word the add-on says, and `t()` to ask for one |
 | `_locales/` | One `messages.json` per language, read by Firefox |
 | `tools/build-locales.js` | Writes `_locales/en` from `src/i18n.js` |
+| `tools/release.js` | The release: checks, tests, lints, builds, publishes |
+| `tools/release-notes.js` | One version's section of `CHANGELOG.md` |
 | `src/schema.js` | `Schema` — settings definitions, defaults, validation |
 | `src/settings.js` | `SettingsUI` — renders the settings window from the schema |
 | `src/storage.js` | `Store` — `browser.storage.local` with a localStorage fallback |
