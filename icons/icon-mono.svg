@@ -1,0 +1,30 @@
+<?xml version="1.0"?><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024" role="img" aria-label="OpenTiles">
+  <title>OpenTiles</title>
+  <defs>
+    <filter id="ot-mono-glow" x="-30%" y="-30%" width="160%" height="160%" color-interpolation-filters="sRGB">
+      <feGaussianBlur stdDeviation="26"></feGaussianBlur>
+    </filter>
+    <filter id="ot-mono-ground" x="-30%" y="-30%" width="160%" height="160%" color-interpolation-filters="sRGB">
+      <feGaussianBlur stdDeviation="12"></feGaussianBlur>
+    </filter>
+  </defs>
+  <rect width="1024" height="1024" rx="229" ry="229" fill="#3B6DF5"></rect>
+  <g filter="url(#ot-mono-glow)" opacity="0.5" transform="translate(0 26)">
+    <rect x="202" y="202" width="282" height="282" rx="67" ry="67" fill="#0A1E5C"></rect>
+    <rect x="540" y="202" width="282" height="282" rx="67" ry="67" fill="#0A1E5C"></rect>
+    <rect x="202" y="540" width="282" height="282" rx="67" ry="67" fill="#0A1E5C"></rect>
+    <rect x="540" y="540" width="282" height="282" rx="67" ry="67" fill="#0A1E5C"></rect>
+  </g>
+  <g filter="url(#ot-mono-ground)" fill="#0B1020" opacity="0.14" transform="translate(0 12)">
+    <rect x="202" y="202" width="282" height="282" rx="67" ry="67" fill="#0B1020"></rect>
+    <rect x="540" y="202" width="282" height="282" rx="67" ry="67" fill="#0B1020"></rect>
+    <rect x="202" y="540" width="282" height="282" rx="67" ry="67" fill="#0B1020"></rect>
+    <rect x="540" y="540" width="282" height="282" rx="67" ry="67" fill="#0B1020"></rect>
+  </g>
+  <g>
+    <rect x="202" y="202" width="282" height="282" rx="67" ry="67" fill="#FFFFFF"></rect>
+    <rect x="540" y="202" width="282" height="282" rx="67" ry="67" fill="#FFFFFF"></rect>
+    <rect x="202" y="540" width="282" height="282" rx="67" ry="67" fill="#FFFFFF"></rect>
+    <rect x="540" y="540" width="282" height="282" rx="67" ry="67" fill="#FFFFFF"></rect>
+  </g>
+</svg>

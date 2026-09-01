@@ -20,6 +20,11 @@ module.exports = {
     'web-ext-config.cjs',
     'web-ext-artifacts',
     'README.md',
+    // Rasterised marks, for store listings and anywhere that will not take an
+    // SVG. Nothing in the add-on points at them and they are half a megabyte,
+    // so they stay in the repository rather than in the package. A PNG the
+    // manifest ever names has to move out of here first.
+    'icons/png',
     // The release workflow, which runs `tools/release.js` rather than
     // shipping anything.
     '.github',

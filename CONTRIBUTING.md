@@ -124,7 +124,8 @@ section, a changelog out of order, a workflow naming a script that has moved.
 | `src/backgrounds.js` | `Backgrounds` — encoding, limits, painting |
 | `src/transfer.js` | `Transfer` — backup files: the envelope, reading, writing |
 | `src/importers.js` | `Importers` — backups written by other add-ons |
-| `fonts/`, `icons/` | Bundled Inter, and the add-on icon at each size |
+| `fonts/`, `icons/` | Bundled Inter, and the add-on mark at each size and in each variant |
+| `icons/png/` | The same mark rasterised, for listings — kept here, not packaged |
 
 ## Storage keys
 
