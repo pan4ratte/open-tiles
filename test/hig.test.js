@@ -331,6 +331,17 @@ check('and it is measured off the layout, which no transform touches',
     && !/placeFrost[\s\S]{0,400}?getBoundingClientRect/.test(js),
   'getBoundingClientRect answers with the transform, which is the animation');
 
+/* And placed again whenever a tile has moved. A drag is the one move that
+   changes where every tile stands without the grid being rebuilt - the tiles
+   are reordered where they are and only the order is written afterwards - so a
+   tile that changed place went on painting the piece of the blurred copy that
+   belonged to where it came from, and stayed out of register with the picture
+   behind it until the next resize. */
+check('a reorder tells the tiles where they are standing now',
+  /function moved\(container\) \{\s*if \(container === grid\) placeFrostSoon\(\);/.test(js)
+    && /function slideMove\([\s\S]*?mutate\(\);\s*moved\(container\);/.test(js),
+  'a dragged tile used to keep the frost of the place it came from');
+
 // ----------------------------------------------------- keyboard and focus
 
 check('a dialog going up makes every other layer inert',

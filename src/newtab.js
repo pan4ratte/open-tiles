@@ -1437,6 +1437,25 @@
   const DRAG_SCALE = ' scale(.94)';
 
   /**
+   * The reorder has happened, so whatever the grid holds is standing
+   * somewhere else than it was a moment ago.
+   *
+   * A tile over a picture paints the piece of the blurred copy that lines up
+   * with where it stands, and that piece is worked out in the script - so a
+   * tile that has moved and not been told keeps the piece belonging to the
+   * place it came from, and the frost is out of register with the picture
+   * behind it until the next resize. Nothing redraws the grid after a drag:
+   * the tiles are moved where they stand and only the order is written, which
+   * is why this is the one move that has to say so itself.
+   *
+   * Only for the tiles. The chips are reordered through the same helper and
+   * carry no frost, so there is nothing there to put back in register.
+   */
+  function moved(container) {
+    if (container === grid) placeFrostSoon();
+  }
+
+  /**
    * Runs `mutate` - a move inside `container` - and slides everything it
    * displaced from where it was to where it now is.
    *
@@ -1446,7 +1465,11 @@
    * instead of from a position two moves out of date.
    */
   function slideMove(container, mutate) {
-    if (stillness.matches) return mutate();
+    if (stillness.matches) {
+      mutate();
+      moved(container);
+      return;
+    }
 
     const kids = [...container.children];
     const before = kids.map(el => el.getBoundingClientRect());
@@ -1460,6 +1483,7 @@
     });
 
     mutate();
+    moved(container);
 
     kids.forEach((el, at) => {
       const now = el.getBoundingClientRect();

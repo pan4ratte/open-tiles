@@ -4,7 +4,10 @@
    <p>Бесплатный, современный и гибко настраиваемый<br>визуальный менеджер закладок и стартовая страница<br>для вашего браузера с открытым исходным кодом</p>
    <a href="https://github.com/pan4ratte/open-tiles/blob/main/README.md">English</a> | <b>Русский</b>
 </div>
-
+<br>
+<div align="center">
+<a href="https://addons.mozilla.org/ru/firefox/addon/opentiles/"><picture><source media="(prefers-color-scheme: dark)" srcset="https://shieldcn.dev/badge/download%20for-Firefox.svg?size=lg&amp;logo=firefoxbrowser&amp;mode=dark"><img alt="badge" src="https://shieldcn.dev/badge/download%20for-Firefox.svg?size=lg&amp;logo=firefoxbrowser&amp;mode=light"></picture></a>
+</div>
 
 ## Установка
 
