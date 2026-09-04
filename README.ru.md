@@ -1,5 +1,5 @@
 <div align="center">
-   <img src="https://github.com/pan4ratte/open-tiles/blob/main/icons/png/icon-512.png" alt="OpenTiles logo" width="128" height="128">
+   <img src="https://github.com/pan4ratte/open-tiles/blob/main/icons/png/icon-512.png" alt="OpenTiles logo" width="256" height="256">
    <h2>OpenTiles</h2>
    <p>Бесплатный, современный и гибко настраиваемый<br>визуальный менеджер закладок и стартовая страница<br>для вашего браузера с открытым исходным кодом</p>
    <a href="https://github.com/pan4ratte/open-tiles/blob/main/README.md">English</a> | <b>Русский</b>
@@ -13,16 +13,9 @@
 
 На данный момент поддерживается только Firefox, минимальная версия 140 (142 для Android).
 
-Чтобы попробовать прямо сейчас:
+Дополнение опубликовано на addons.mozilla.org — [установите OpenTiles](https://addons.mozilla.org/ru/firefox/addon/opentiles/) и подтвердите запрос на замену страницы новой вкладки и домашней страницы.
 
-1. Откройте `about:debugging#/runtime/this-firefox`
-2. Нажмите **Загрузить временное дополнение…** и выберите `manifest.json` из
-   этой папки
-3. Откройте новую вкладку и подтвердите запрос на замену страницы новой вкладки
-   и домашней страницы
-
-Временное дополнение исчезает при перезапуске Firefox. О том, как собрать
-подписанный пакет, который останется, — см. [CONTRIBUTING.md](CONTRIBUTING.md).
+О том, как запустить дополнение из исходного кода, — см. [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## Фичи
 
