@@ -194,6 +194,26 @@
                           data-icon="rotate-ccw" data-icon-size="15"></button>
                 </div>
               </div>
+
+              <!-- Whether this one tile carries its name, whatever Show site
+                   names is set to. A checkbox rather than a switch: this is a
+                   sheet, and nothing in it happens until Save - which is the
+                   line macOS draws between the two controls. Its own label,
+                   so there is no heading above it like the rows before.
+
+                   No arrow back to the setting beside it: giving one tile up
+                   is a rare thing to want and a whole button to carry on every
+                   visit to this sheet, so it is done for all of them at once
+                   from Settings - see clearTileLabels in newtab.js. -->
+              <div class="tilefield__group">
+                <div class="tilefield__row">
+                  <label class="check">
+                    <input id="fieldShowLabel" type="checkbox">
+                    <span class="check__box" data-icon="check" data-icon-size="11"></span>
+                    <span class="check__text" data-i18n="tile_showLabel"></span>
+                  </label>
+                </div>
+              </div>
             </div>
           </div>
         </div>

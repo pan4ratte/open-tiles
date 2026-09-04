@@ -29,6 +29,7 @@
   const btnIconColorClear = document.getElementById('btnIconColorClear');
   const btnPadClear = document.getElementById('btnPadClear');
   const btnRoundClear = document.getElementById('btnRoundClear');
+  const fieldShowLabel = document.getElementById('fieldShowLabel');
   const tileIconRow = document.getElementById('tileIconRow');
   const tilePadRow = document.getElementById('tilePadRow');
   const tileRoundRow = document.getElementById('tileRoundRow');
@@ -1062,6 +1063,28 @@
     else el.style.removeProperty('--icon-round');
   }
 
+  /**
+   * Whether this tile carries its name: its own answer, which beats Show site
+   * names in both directions - `has-label` shows one with the setting off,
+   * `no-label` takes one away with the setting on. Neither class is the third
+   * state, and the commonest: nothing said, so the setting decides.
+   *
+   * Classes rather than a property, because each answer is two rules that have
+   * to hold together - the label out of the flow, and the room reserved for it
+   * given back - and the stylesheet already writes that pair for the setting.
+   * Rules rather than a rebuild, too: the setting is a class on the body and
+   * changing it repaints the grid without touching it, which is what keeps a
+   * flick of Show site names from sending fifty icons back to the network.
+   *
+   * The label is still built and only hidden, so the tile is the same shape
+   * whichever way the answer goes and the name is there for anything reading
+   * the page rather than looking at it.
+   */
+  function applyTileLabel(el, showLabel) {
+    el.classList.toggle('has-label', showLabel === true);
+    el.classList.toggle('no-label', showLabel === false);
+  }
+
   /** Monogram shown until the site's real icon arrives, or when there is none. */
   function buildFallback(label, seed) {
     const el = document.createElement('span');
@@ -1275,6 +1298,7 @@
     applyTileBg(el, tile.bg);
     applyTilePad(el, tile.pad);
     applyIconRound(el, tile.round);
+    applyTileLabel(el, tile.showLabel);
 
     const text = document.createElement('span');
     text.className = 'tile__label';
@@ -1828,6 +1852,8 @@
   let previewPad = null;
   /** 0 where the icon keeps its own corners - see applyIconRound. */
   let previewRound = 0;
+  /** The tile's own answer about its name, null where it has none. */
+  let previewShowLabel = null;
   /** Bumped on every repaint, so a slow icon lookup can tell it is stale. */
   let previewToken = 0;
   /**
@@ -1903,6 +1929,7 @@
     applyTileBg(tilePreview, previewBg);
     applyTilePad(tilePreview, previewPad);
     applyIconRound(tilePreview, previewRound);
+    applyTileLabel(tilePreview, previewShowLabel);
     sizePreview();
 
     const text = document.createElement('span');
@@ -2304,6 +2331,31 @@
     mountRoundRange(0);
   });
 
+  // ------------------------------------------------------ the tile's name
+
+  /**
+   * Puts the checkbox where the tile being edited has it.
+   *
+   * A tile with no answer of its own shows the setting's, which is what it is
+   * really doing - a box that read "off" while the name was on screen would be
+   * describing nothing. Ticking it from there is the tile answering for the
+   * first time, and from then on it is the tile's answer that counts.
+   *
+   * Giving that answer up again is Names set on single tiles, in Settings,
+   * which hands every tile back at once - see clearTileLabels.
+   */
+  function mountShowLabel(showLabel) {
+    fieldShowLabel.checked = showLabel === null ? settings.showLabels : showLabel;
+  }
+
+  // Whatever the box now reads is the tile's own answer: a tick that agrees
+  // with the setting is still an answer, and goes on agreeing after the
+  // setting has changed its mind.
+  fieldShowLabel.addEventListener('change', () => {
+    previewShowLabel = fieldShowLabel.checked;
+    applyTileLabel(tilePreview, previewShowLabel);
+  });
+
   // ------------------------------------------------------------ the pipette
 
   /**
@@ -2576,6 +2628,9 @@
     previewIconColor = tile ? tile.iconColor : '';
     previewPad = tile && typeof tile.pad === 'number' ? tile.pad : null;
     previewRound = tile ? tile.round || 0 : 0;
+    // A tile stored before there was a checkbox for this has no answer of its
+    // own, and a tile being added has not been asked; both follow the setting.
+    previewShowLabel = tile ? tile.showLabel : null;
 
     btnBgClear.hidden = !previewBg;
     btnIconColorClear.hidden = !previewIconColor;
@@ -2586,6 +2641,7 @@
     mountIconWell(previewIconColor);
     mountPadRange(previewPad);
     mountRoundRange(previewRound);
+    mountShowLabel(previewShowLabel);
     // Which also starts the icon lookup, so a tile being added has its picture
     // on the way before anything else has been filled in.
     paintPreview();
@@ -2659,7 +2715,8 @@
       iconColor: previewIconColor,
       bg: previewBg,
       pad: previewPad,
-      round: previewRound
+      round: previewRound,
+      showLabel: previewShowLabel
     };
 
     if (editingId) {
@@ -3418,6 +3475,33 @@
   }
 
   /**
+   * Every tile handed back to Show site names.
+   *
+   * A tile can be told in its own editor to carry its name or go without it,
+   * whatever that setting says, and the answer stays with the tile from then
+   * on. This is the way back - all of them at once, from beside the setting
+   * they are being given back to, rather than one arrow per tile sitting in
+   * the tile sheet forever for the sake of the rare visit that wants it.
+   *
+   * Not offered behind a confirmation: what it undoes is a tick in a sheet,
+   * and it says what it did rather than asking first.
+   */
+  async function clearTileLabels() {
+    const own = tiles.filter(tile => tile.showLabel !== null);
+    if (!own.length) {
+      return { value: null, status: { kind: 'ok', text: t('set_tileNamesNone') } };
+    }
+
+    tiles = tiles.map(tile => ({ ...tile, showLabel: null }));
+    await persistTiles();
+    // The answer is a class written as the tile is built, so the grid has to
+    // be built again - unlike the setting itself, which the stylesheet reads.
+    render();
+
+    return { value: null, status: { kind: 'ok', text: t('set_tileNamesDone') } };
+  }
+
+  /**
    * Reset lives in the dialog's "Other" section now, so it comes through as a
    * field change like everything else. It re-mounts the dialog to show every
    * control at its default - which is the confirmation, no status line needed.
@@ -3458,6 +3542,7 @@
   async function onSettingChange(key, value) {
     if (FONT_KEYS.includes(key)) return changeFont(key, value);
     if (key === 'reset') return resetSettings();
+    if (key === 'tileNames') return clearTileLabels();
     if (key === 'deepIcons') return changeDeepIcons(value);
     if (key === 'background') return changeBackground(value);
     if (key === 'backup') return changeTransfer(value);

@@ -144,6 +144,9 @@ const I18N = (() => {
     tile_padClear: 'Back to the default padding',
     tile_round: 'Icon rounding',
     tile_roundClear: 'Reset the rounding',
+    // This tile's own answer to "Show site names" in Settings, which it
+    // overrides either way.
+    tile_showLabel: 'Show site name',
     tile_group: 'Group',
 
     // ------------------------------------------- what the icon lookup reports
@@ -277,6 +280,17 @@ const I18N = (() => {
     set_logoPad: 'Icon padding',
     set_logoPadNote: "The room left clear around a tile's icon.",
     set_showLabels: 'Show site names',
+    // The row under it: a tile can be told to show or hide its name in the
+    // tile editor, and this is the one way back from every one of those.
+    set_tileNames: 'Names set on single tiles',
+    set_tileNamesButton: 'Reset',
+    set_tileNamesNote: 'Tiles told to show or hide their name in their own editor follow this '
+      + 'again.',
+    // After that button, in place of a count: what matters is that it is done,
+    // and "3 tiles" would be a different word in a language that counts in
+    // threes.
+    set_tileNamesDone: 'Every tile follows this setting again.',
+    set_tileNamesNone: 'No tile had a name of its own to give up.',
     set_showVisits: 'Show visit counts',
     set_showVisitsNote: 'Puts the number of times you have opened a site in the corner of its tile.',
     set_showAddButton: 'Show the add button',

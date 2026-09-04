@@ -342,6 +342,43 @@ check('a reorder tells the tiles where they are standing now',
     && /function slideMove\([\s\S]*?mutate\(\);\s*moved\(container\);/.test(js),
   'a dragged tile used to keep the frost of the place it came from');
 
+/* A tile's own answer about its name is two rules whichever way it goes: the
+   label out of the flow *and* the room reserved for it given back, or put back.
+   With only the first, a tile without its name draws its icon high with a blank
+   line under it; with only the second, a tile keeping its name under Show site
+   names off has the room and nothing in it. */
+check('a tile that hides its name gives back the room the name had',
+  /\.tile\.no-label \.tile__label \{ display: none; \}/.test(css)
+    && /\.tile\.no-label \{ --label-room: 0px; \}/.test(css),
+  'the icon would sit high with an empty line under it');
+
+check('and one that keeps it against the setting takes that room back',
+  /body\.no-labels \.tile\.has-label \.tile__label \{ display: block; \}/.test(css)
+    && /body\.no-labels \.tile\.has-label \{ --label-room: var\(--label-room-full\); \}/
+      .test(css),
+  'the name would be drawn into a tile with no room for it');
+
+/* macOS keeps the switch for a settings window, where the change happens as it
+   is made, and uses a checkbox wherever one waits to be confirmed. The tile
+   sheet is the second kind - nothing in it happens until Save - so the switch
+   the settings window builds must not turn up in this markup. */
+const sheet = read('newtab.html');
+check('the one boolean in the tile sheet is a checkbox, not a switch',
+  sheet.includes('class="check"') && !sheet.includes('class="switch"'),
+  'a switch says the change has already happened');
+
+/* And it is aimed at like a control rather than read like a heading: the box
+   alone is under the minimum, so the label is part of the target. */
+const checkHeight = Number(/\.check \{[\s\S]*?min-height: (\d+)px/.exec(css)[1]);
+check('the checkbox and its label are one target big enough to hit',
+  checkHeight >= MIN && /\.check \{[\s\S]*?cursor: pointer/.test(css),
+  checkHeight + 'px tall');
+
+check('its label is a control label, not a group heading',
+  /\.check__text \{[\s\S]*?font-size: var\(--t-body\)[\s\S]*?color: var\(--label\);/
+    .test(css),
+  '.tilefield__sub is the caption-sized secondary style the groups use');
+
 // ----------------------------------------------------- keyboard and focus
 
 check('a dialog going up makes every other layer inert',

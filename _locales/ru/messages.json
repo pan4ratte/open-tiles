@@ -188,6 +188,10 @@
   "tile_roundClear": {
     "message": "Сбросить скругление"
   },
+  "tile_showLabel": {
+    "message": "Показывать название сайта",
+    "description": "This tile's own answer to \"Show site names\" in Settings, which it overrides either way."
+  },
   "tile_group": {
     "message": "Группа"
   },
@@ -511,6 +515,23 @@
   },
   "set_showLabels": {
     "message": "Показывать названия сайтов"
+  },
+  "set_tileNames": {
+    "message": "Названия у отдельных плиток",
+    "description": "The row under it: a tile can be told to show or hide its name in the tile editor, and this is the one way back from every one of those."
+  },
+  "set_tileNamesButton": {
+    "message": "Сбросить"
+  },
+  "set_tileNamesNote": {
+    "message": "Плитки с отдельно заданным названием снова будут следовать этой настройке."
+  },
+  "set_tileNamesDone": {
+    "message": "Все плитки снова следуют этой настройке.",
+    "description": "After that button, in place of a count: what matters is that it is done, and \"3 tiles\" would be a different word in a language that counts in threes."
+  },
+  "set_tileNamesNone": {
+    "message": "Ни у одной плитки нет своего названия."
   },
   "set_showVisits": {
     "message": "Показывать число посещений"

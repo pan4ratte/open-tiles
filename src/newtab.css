@@ -418,6 +418,7 @@ body {
 .segmented__item:focus-visible,
 .range input:focus-visible,
 .switch input:focus-visible + .switch__track,
+.check input:focus-visible + .check__box,
 .bgfield__chip:focus-visible,
 .bgfield__forget:focus-visible,
 .fontcard:focus-visible,
@@ -445,6 +446,7 @@ body {
   .segmented__item:focus-visible,
   .range input:focus-visible,
   .switch input:focus-visible + .switch__track,
+  .check input:focus-visible + .check__box,
   .bgfield__chip:focus-visible,
   .bgfield__forget:focus-visible,
   .fontcard:focus-visible,
@@ -592,7 +594,8 @@ body {
   .select,
   .field__input,
   .segmented,
-  .switch__track {
+  .switch__track,
+  .check__box {
     box-shadow: inset 0 0 0 1px var(--separator-opaque);
   }
 }
@@ -1432,7 +1435,10 @@ body.is-loading .toolbar {
   /* The same expression .tile__label sets its own size from, times a line
      height with a hair of slack, plus the gap above it. */
   --label-line: clamp(10px, calc(var(--tile-size) * .1), 13px);
-  --label-room: calc(var(--label-line) * 1.4 + var(--logo-gap));
+  /* Named, because a tile that carries its name while the setting says not to
+     has to be able to ask for that room back - see .tile.has-label. */
+  --label-room-full: calc(var(--label-line) * 1.4 + var(--logo-gap));
+  --label-room: var(--label-room-full);
   --logo-room: min(
     calc(var(--tile-size) - var(--tile-inset) * 2),
     calc(var(--tile-h) - var(--tile-inset) * 2 - var(--label-room))
@@ -1631,6 +1637,21 @@ body.is-loading .toolbar {
 
 body.no-labels .tile__label { display: none; }
 body.no-labels .tile { --label-room: 0px; }
+
+/* A tile with an answer of its own, which beats the setting in both
+   directions - the checkbox in the tile sheet. Each answer is two rules, and
+   they have to hold together: the label out of the flow *and* the room that
+   was reserved for it given back, or the icon is drawn against the top of the
+   tile with a blank line under it.
+
+   `no-label` needs no help against the setting being on, which sets nothing
+   here; `has-label` is written against `body.no-labels` because that is the
+   only thing it has to beat. */
+.tile.no-label .tile__label { display: none; }
+.tile.no-label { --label-room: 0px; }
+
+body.no-labels .tile.has-label .tile__label { display: block; }
+body.no-labels .tile.has-label { --label-room: var(--label-room-full); }
 
 /* A circle cuts its own corners off, so what stands inside has to keep
    further from the edge than a rounded square would need. */
@@ -2256,6 +2277,80 @@ body.tile-round .tile {
 }
 
 .switch input:checked + .switch__track::after { transform: translateX(16px); }
+
+/* -- checkbox --
+
+   macOS keeps the switch for a settings window, where a change takes effect
+   the moment it is made, and uses a checkbox everywhere a change waits to be
+   confirmed. The tile sheet is the second kind - nothing in it happens until
+   Save - so the one boolean in it is a checkbox.
+
+   14pt square with the label beside it, which is the size and the layout Apple
+   draws it at. The <label> wraps both, so the words are part of the target;
+   the box on its own is under the 20pt minimum and the words are what a
+   pointer actually goes for. */
+.check {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 20px;
+  cursor: pointer;
+}
+
+/* Over the box, and invisible: the box below is the drawing. Sized to the box
+   rather than to the whole label so a press on the words goes through the
+   label, which is the same press. */
+.check input {
+  position: absolute;
+  left: 0;
+  width: 14px;
+  height: 100%;
+  margin: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.check__box {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  height: 14px;
+  /* Worked out from the control corner rather than picked: this is a control
+     nested in the sheet's own vocabulary, at half its size. */
+  border-radius: calc(var(--r-control) - 2px);
+  background: var(--control-bg);
+  box-shadow: inset 0 0 0 .5px var(--separator-opaque),
+              inset 0 1px 2px rgba(0, 0, 0, .05);
+  /* What the tick is drawn in - white on the accent, once there is one. */
+  color: var(--knob);
+  transition: background var(--t-fast) var(--ease),
+              box-shadow var(--t-fast) var(--ease);
+}
+
+/* The tick is always there and only revealed, so ticking the box changes
+   nothing about its size and nothing on the row moves. */
+.check__box .icon {
+  opacity: 0;
+  transition: opacity var(--t-fast) var(--ease);
+}
+
+.check input:checked + .check__box {
+  background: var(--accent-fill);
+  box-shadow: inset 0 0 0 .5px rgba(0, 0, 0, .06);
+}
+
+.check input:checked + .check__box .icon { opacity: 1; }
+
+/* Body size and the primary ink: this is a control's own label, not a heading
+   over a group of them - which is what .tilefield__sub is for. */
+.check__text {
+  font-size: var(--t-body);
+  letter-spacing: var(--tr-body);
+  color: var(--label);
+}
 
 /* -- pop-up button (a select, dressed as one) -- */
 

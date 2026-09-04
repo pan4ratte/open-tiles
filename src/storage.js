@@ -7,13 +7,15 @@
  *
  * Keys
  *   tiles      - [{ id, url, title, groupId, icon, iconColor, bg, pad, round,
- *                visits }]
+ *                showLabel, visits }]
  *                groupId is null when loose; icon is '' when the site's own
  *                is to be looked up; iconColor is '' when it keeps its own
  *                colours; bg is '' for the usual frosted tile; pad is null
  *                when the tile follows the logo padding set for every tile;
  *                round is how far the icon's own corners are taken off, 0 for
- *                the picture as it comes; visits counts opens from this add-on
+ *                the picture as it comes; showLabel is the tile's own answer
+ *                about its name and null where it follows the setting; visits
+ *                counts opens from this add-on
  *   groups     - [{ id, name }]                 the bar across the top
  *   settings   - see schema.js
  *   activeGroup- id of the group last shown, or null for "All"
@@ -200,6 +202,25 @@ const Store = (() => {
     return Math.min(MAX_ROUND, Math.max(0, n));
   }
 
+  /**
+   * Whether this tile shows its name under the icon: its own answer, which
+   * beats Show site names either way - on with the setting off, off with the
+   * setting on.
+   *
+   * Null is the third state and the important one: no answer of its own, so
+   * the tile follows the setting. It is what a tile that has never been asked
+   * holds, which is what makes the field free to arrive missing - every tile
+   * stored before there was a checkbox for this, and every tile in a backup
+   * written by an older version, goes on doing what the setting says.
+   *
+   * So the test is for a boolean rather than for truth: `false` is an answer
+   * and has to survive, and anything that is not one of the two is nothing
+   * having been said.
+   */
+  function sanitizeShowLabel(raw) {
+    return typeof raw === 'boolean' ? raw : null;
+  }
+
   /** Opens counted by this add-on. Never negative, never a fraction. */
   function sanitizeVisits(raw) {
     const n = Math.floor(Number(raw));
@@ -222,6 +243,7 @@ const Store = (() => {
         bg: sanitizeColor(t.bg),
         pad: sanitizePad(t.pad),
         round: sanitizeRound(t.round),
+        showLabel: sanitizeShowLabel(t.showLabel),
         visits: sanitizeVisits(t.visits)
       }));
   }

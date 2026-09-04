@@ -369,6 +369,18 @@ const Schema = (() => {
             },
             { key: 'showLabels', label: t('set_showLabels'), type: 'toggle', default: true },
             {
+              key: 'tileNames',
+              label: t('set_tileNames'),
+              // Nothing to store: a tile's own answer about its name lives on
+              // the tile, and this hands every one of them back - see
+              // `external`, and clearTileLabels in newtab.js.
+              type: 'action',
+              external: true,
+              buttonLabel: t('set_tileNamesButton'),
+              buttonIcon: 'rotate-ccw',
+              note: t('set_tileNamesNote')
+            },
+            {
               key: 'showVisits',
               label: t('set_showVisits'),
               type: 'toggle',

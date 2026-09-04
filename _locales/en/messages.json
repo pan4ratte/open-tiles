@@ -188,6 +188,10 @@
   "tile_roundClear": {
     "message": "Reset the rounding"
   },
+  "tile_showLabel": {
+    "message": "Show site name",
+    "description": "This tile's own answer to \"Show site names\" in Settings, which it overrides either way."
+  },
   "tile_group": {
     "message": "Group"
   },
@@ -511,6 +515,23 @@
   },
   "set_showLabels": {
     "message": "Show site names"
+  },
+  "set_tileNames": {
+    "message": "Names set on single tiles",
+    "description": "The row under it: a tile can be told to show or hide its name in the tile editor, and this is the one way back from every one of those."
+  },
+  "set_tileNamesButton": {
+    "message": "Reset"
+  },
+  "set_tileNamesNote": {
+    "message": "Tiles told to show or hide their name in their own editor follow this again."
+  },
+  "set_tileNamesDone": {
+    "message": "Every tile follows this setting again.",
+    "description": "After that button, in place of a count: what matters is that it is done, and \"3 tiles\" would be a different word in a language that counts in threes."
+  },
+  "set_tileNamesNone": {
+    "message": "No tile had a name of its own to give up."
   },
   "set_showVisits": {
     "message": "Show visit counts"

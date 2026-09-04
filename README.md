@@ -1,8 +1,12 @@
 <div align="center">
    <img src="https://github.com/pan4ratte/open-tiles/blob/main/icons/png/icon-512.png" alt="OpenTiles logo" width="128" height="128">
-   <h3>OpenTiles</h3>
+   <h2>OpenTiles</h2>
    <p>Free, modern, open-source and highly customizable<br>visual bookmark manager and start page plugin for your browser</p>
    <b>English</b> | <a href="https://github.com/pan4ratte/open-tiles/blob/main/README.ru.md">Русский</a>
+</div>
+<br>
+<div align="center">
+<a href="https://addons.mozilla.org/ru/firefox/addon/opentiles/"><picture><source media="(prefers-color-scheme: dark)" srcset="https://shieldcn.dev/badge/download%20for-Firefox.svg?size=lg&amp;logo=firefoxbrowser&amp;mode=dark"><img alt="badge" src="https://shieldcn.dev/badge/download%20for-Firefox.svg?size=lg&amp;logo=firefoxbrowser&amp;mode=light"></picture></a>
 </div>
 
 ## Install

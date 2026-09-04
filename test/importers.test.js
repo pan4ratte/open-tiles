@@ -275,6 +275,23 @@ check('group colours are reported as dropped', out.dropped.colours === 0,
   check('a fractional count is floored', await visitsOf(3.7) === 3);
   check('a count that is not a number reads as none', await visitsOf('lots') === 0);
 
+  /* The tile's own answer to Show site names, which beats it either way. Three
+     states, and null is the one that matters here: every tile stored before
+     there was a checkbox for this, and every tile in a backup written by an
+     older version, arrives without the field and has to go on following the
+     setting. A falsy check would collapse `false` into it; a truthy one would
+     turn every one of them into an answer nobody gave. */
+  const namedOf = async raw => (await Store.save([
+    { id: 'x', url: 'https://x.example', showLabel: raw }
+  ]))[0].showLabel;
+
+  check('a tile told to go without its name keeps that', await namedOf(false) === false);
+  check('a tile told to keep it keeps that too', await namedOf(true) === true);
+  check('a tile that was never asked follows the setting',
+    await namedOf(undefined) === null);
+  check('and so does one carrying something that is not an answer',
+    await namedOf('no') === null && await namedOf(0) === null && await namedOf(1) === null);
+
   const savedSettings = await Store.saveSettings(out.sections.settings);
   check('a merged import leaves settings it never mentioned alone',
     savedSettings.accent === Schema.DEFAULTS.accent
