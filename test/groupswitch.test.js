@@ -354,8 +354,10 @@ check('the two toggles are always on show',
   let handler = null;
   const steps = [];
 
+  let onSearch = false;
+
   const build = new Function('document', 'settings', 'stepGroup', 'setTimeout', 'clearTimeout',
-    'scroller',
+    'scroller', 'searching',
     block + '\n; return { wheelDelta };');
 
   let settings = { groupScroll: true, groupScrollAxis: 'vertical' };
@@ -381,7 +383,9 @@ check('the two toggles are always on show',
     setTimeout,
     clearTimeout,
     // The page's own scrolling, which the gesture asks about before it acts.
-    () => scroller
+    () => scroller,
+    // Whether the block has given its place over to the search field.
+    () => onSearch
   );
 
   check('the handler listens for wheel events', typeof handler === 'function');
@@ -433,6 +437,23 @@ check('the two toggles are always on show',
   handler(wheel({ deltaY: 4 }));
   check('a nudge too small to mean anything turns nothing',
     steps.length === 0, JSON.stringify(steps));
+
+  /* With the search field up there is no block of chips to walk along, and the
+     grid on screen is its answer rather than a group. A gesture that turned a
+     group under it would swap the grid for one nothing on screen explains. */
+  await rest();
+  steps.length = 0;
+  onSearch = true;
+  flick({ dy: 20 });
+  check('a search takes the groups off the gesture while it is up',
+    steps.length === 0, JSON.stringify(steps));
+
+  await rest();
+  steps.length = 0;
+  onSearch = false;
+  flick({ dy: 20 });
+  check('and gives them back when it closes',
+    steps.length === 1, JSON.stringify(steps));
 
   // ------------------------------------------------------ scrolling on and on
 

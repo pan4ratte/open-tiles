@@ -18,6 +18,9 @@
   "page_settings": {
     "message": "Settings"
   },
+  "page_search": {
+    "message": "Search"
+  },
   "empty_inGroup": {
     "message": "Nothing in this group yet - drag a tile onto its name to put it here."
   },
@@ -26,6 +29,22 @@
   },
   "empty_noTilesNoAdd": {
     "message": "No tiles yet. Right-click anywhere to add your first bookmark."
+  },
+  "empty_noMatches": {
+    "message": "Nothing here matches “$1”.",
+    "description": "$1 is what was typed into the search field.",
+    "placeholders": {
+      "n1": {
+        "content": "$1"
+      }
+    }
+  },
+  "search_placeholder": {
+    "message": "Search every group",
+    "description": "The field that takes the block of group chips' place. It looks through every group, which is what the placeholder is there to say - a field sitting where a group filter was would otherwise read as searching the group being shown."
+  },
+  "search_close": {
+    "message": "Close search"
   },
   "tile_add": {
     "message": "Add a tile"
@@ -51,6 +70,9 @@
   },
   "menu_settings": {
     "message": "Settings"
+  },
+  "menu_search": {
+    "message": "Search tiles"
   },
   "menu_openInNewTab": {
     "message": "Open in new tab"
@@ -421,6 +443,12 @@
         "content": "$1"
       }
     }
+  },
+  "set_searchButton": {
+    "message": "Show the search button"
+  },
+  "set_searchButtonNote": {
+    "message": "Search can still be started from the right-click menu."
   },
   "set_backup": {
     "message": "Backup and restore"

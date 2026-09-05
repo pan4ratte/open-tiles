@@ -22,9 +22,29 @@
        window. Chips are built in newtab.js from the saved groups. -->
   <nav class="groupbar" id="groupBar" data-i18n-label="page_groupbar">
     <div class="groupbar__inner" id="groupChips"></div>
+
+    <!-- The search field, which takes the chips' place while it is up. Inside
+         the block rather than beside it, because the block is what knows where
+         it stands - floating pill, status bar, or set in the page above the
+         tiles - and the field is meant to arrive exactly there. Both are
+         .groupbar__inner, so both are given that placement's own material. -->
+    <div class="groupbar__inner groupbar__search" id="search" hidden>
+      <span class="search__glyph" data-icon="search" data-icon-size="14"></span>
+      <input class="search__field" id="searchField" type="text"
+             data-i18n-placeholder="search_placeholder"
+             data-i18n-label="search_placeholder"
+             autocomplete="off" spellcheck="false">
+      <button class="search__close" type="button" id="btnSearchClose"
+              data-i18n-title="search_close" data-i18n-label="search_close"
+              data-icon="x" data-icon-size="13"></button>
+    </div>
   </nav>
 
   <div class="toolbar">
+    <button class="toolbtn" id="btnSearch" type="button"
+            data-i18n-title="page_search" data-i18n-label="page_search"
+            aria-pressed="false"
+            data-icon="search" data-icon-size="18"></button>
     <button class="toolbtn" id="btnSettings" type="button"
             data-i18n-title="page_settings" data-i18n-label="page_settings"
             data-icon="settings" data-icon-size="18"></button>

@@ -18,6 +18,9 @@
   "page_settings": {
     "message": "Настройки"
   },
+  "page_search": {
+    "message": "Поиск"
+  },
   "empty_inGroup": {
     "message": "В этой группе пока ничего нет — перетащите плитку на её название, чтобы добавить её сюда."
   },
@@ -26,6 +29,22 @@
   },
   "empty_noTilesNoAdd": {
     "message": "Плиток пока нет. Нажмите правой кнопкой в любом месте, чтобы добавить первую закладку."
+  },
+  "empty_noMatches": {
+    "message": "Ничего не найдено по запросу «$1».",
+    "description": "$1 is what was typed into the search field.",
+    "placeholders": {
+      "n1": {
+        "content": "$1"
+      }
+    }
+  },
+  "search_placeholder": {
+    "message": "Поиск по всем группам",
+    "description": "The field that takes the block of group chips' place. It looks through every group, which is what the placeholder is there to say - a field sitting where a group filter was would otherwise read as searching the group being shown."
+  },
+  "search_close": {
+    "message": "Закрыть поиск"
   },
   "tile_add": {
     "message": "Добавить плитку"
@@ -51,6 +70,9 @@
   },
   "menu_settings": {
     "message": "Настройки"
+  },
+  "menu_search": {
+    "message": "Искать плитки"
   },
   "menu_openInNewTab": {
     "message": "Открыть в новой вкладке"
@@ -421,6 +443,12 @@
         "content": "$1"
       }
     }
+  },
+  "set_searchButton": {
+    "message": "Показывать кнопку поиска"
+  },
+  "set_searchButtonNote": {
+    "message": "Поиск останется доступен из контекстного меню."
   },
   "set_backup": {
     "message": "Резервное копирование и восстановление"

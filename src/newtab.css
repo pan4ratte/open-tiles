@@ -422,7 +422,8 @@ body {
 .bgfield__chip:focus-visible,
 .bgfield__forget:focus-visible,
 .fontcard:focus-visible,
-.color__well:focus-visible {
+.color__well:focus-visible,
+.search__close:focus-visible {
   outline: none;
   box-shadow: 0 0 0 3.5px var(--accent-ring);
 }
@@ -451,7 +452,9 @@ body {
   .bgfield__forget:focus-visible,
   .fontcard:focus-visible,
   .color__well:focus-visible,
+  .search__close:focus-visible,
   .field__input:focus,
+  .search__field:focus,
   .menu__item:focus-visible {
     outline: 2px solid Highlight;
     outline-offset: 2px;
@@ -844,6 +847,11 @@ body.has-bg.has-tile-mat .tile__visits {
 
 .groupbar__inner::-webkit-scrollbar { display: none; }
 
+/* The block holds two rows and shows one: the chips, or the search field that
+   takes their place. `display: flex` above outranks the browser's own rule for
+   [hidden], so the one being put away has to be told again. */
+.groupbar__inner[hidden] { display: none; }
+
 /* -- floating: a HUD pill -- */
 
 body.gb-floating .groupbar {
@@ -940,9 +948,11 @@ body.gb-bar.gb-bottom .groupbar {
 body.gb-bar .groupbar__inner {
   flex: 1;
   justify-content: var(--groupbar-align);
-  /* Both ends are held clear of the settings button, so chips set to centre
-     stay centred and chips set to the right do not slide under it. */
-  padding: 0 40px;
+  /* Both ends are held clear of the buttons in the corner, so chips set to
+     centre stay centred and chips set to the right do not slide under one.
+     Room for both of them; the rules by the toolbar below take back what a
+     button that has been turned off was holding. */
+  padding: 0 68px;
 }
 
 /* A menu bar is where macOS keeps its status items, so the settings button
@@ -971,7 +981,8 @@ body.gb-bar .toolbar .toolbtn {
   border-radius: var(--r-control);
 }
 
-body.gb-bar .toolbar .toolbtn:hover {
+body.gb-bar .toolbar .toolbtn:hover,
+body.gb-bar .toolbar .toolbtn[aria-pressed="true"] {
   background: var(--fill-tertiary);
   -webkit-backdrop-filter: none;
   backdrop-filter: none;
@@ -999,6 +1010,10 @@ body.gb-hover .groupbar:focus-within,
    group does not: on hover means on hover, and a block that let itself out
    whenever the grid changed was the thing that made the setting look broken. */
 body.gb-hover.is-dragging .groupbar { opacity: 1; }
+
+/* And so is a search: the field is the block, and a field that faded out from
+   under the pointer while it was being typed into would be unusable. */
+body.gb-hover.is-searching .groupbar { opacity: 1; }
 
 /* -- chips -- */
 
@@ -1071,6 +1086,90 @@ body.gb-bar .chip { border-radius: var(--r-control); }
   transform: scale(1.06);
 }
 
+/* -- the search field -- */
+
+/* It stands where the chips stood, so it is drawn the way they were: the row
+   is a .groupbar__inner and takes that placement's own material, its shape and
+   its arrival. Only what sits inside the row is written here.
+
+   The field itself carries no box - the pill around it is the box, which is
+   what Spotlight does and what a search field filling its container looks like
+   on macOS. */
+.groupbar__search {
+  gap: 6px;
+  /* The chips scroll and are clipped to the strip; a field neither scrolls nor
+     has anything to hide, and the ring it draws must not be cut off. */
+  overflow: visible;
+}
+
+/* A chip carries its own padding and the pill's 4px is right for it; the glyph
+   and the x do not, so the row takes a little more. Said against the placement
+   rather than on the row, because that is where the 4px is written. */
+body.gb-floating .groupbar__search { padding: 4px 6px 4px 10px; }
+
+.search__glyph {
+  display: flex;
+  flex: none;
+  color: var(--label-tertiary);
+}
+
+/* Wide enough for an address rather than for a word: what is being typed is
+   very often the front of a domain. It gives on a narrow window - the block is
+   capped at 70vw - rather than pushing the pill past it, and it never grows: a
+   status bar hands its row the whole window, and a field stretched across a
+   window is a bar of its own rather than the block's own control. */
+.search__field {
+  flex: 0 1 220px;
+  min-width: 0;
+  padding: 4px 0;
+  border: 0;
+  background: transparent;
+  color: var(--label);
+  font: inherit;
+  font-size: var(--t-body);
+  letter-spacing: var(--tr-body);
+}
+
+.search__field::placeholder { color: var(--label-tertiary); }
+
+/* The pill takes the ring for it - see below. A second one around the text
+   would be a box inside a box. */
+.search__field:focus { outline: none; }
+
+/* The x ends the search rather than only emptying the field: the field is the
+   block, and a block showing an empty search is a block showing nothing. */
+.search__close {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--r-pill);
+  background: transparent;
+  color: var(--label-tertiary);
+  cursor: pointer;
+  transition: background var(--t-fast) var(--ease),
+              color var(--t-fast) var(--ease);
+}
+
+.search__close:hover {
+  background: var(--fill-quaternary);
+  color: var(--label);
+}
+
+/* No ring around the pill, deliberately. Apple rings the control that has the
+   keyboard, and a ring is worth drawing only where there is a question about
+   which control that is - but this pill exists only while a search is on, and
+   the field takes the keyboard the moment it appears, so a ring here would be
+   lit from the first frame and never go out. That is chrome, not an
+   indicator; Spotlight, which is the same HUD with the same single field
+   focused on arrival, draws none either.
+   The caret is the field's own indicator, the x keeps the ring every other
+   control here gets, and forced colours still outlines both - see the focus
+   ring lists at the top of this file. */
+
 
 /* ---------------------------------------------------------------------------
    7. Icons and toolbar buttons
@@ -1109,12 +1208,16 @@ body.gb-bar .chip { border-radius: var(--r-control); }
 }
 
 /* The one on the page floats over the desktop, so it carries its own material
-   instead of borrowing a toolbar's. */
+   instead of borrowing a toolbar's. Search sits inboard of the gear, which
+   keeps the gear in the corner it has always been in. */
 .toolbar {
   position: fixed;
   top: 14px;
   right: 16px;
   z-index: 5;
+  display: flex;
+  align-items: center;
+  gap: 2px;
   transition: top var(--t-base) var(--ease);
 }
 
@@ -1131,17 +1234,41 @@ body.gb-bar .chip { border-radius: var(--r-control); }
   box-shadow: var(--rim), var(--shadow-raised);
 }
 
-/* The gear can be taken off the page altogether — see Show the settings button
-   under Other. Hidden rather than removed: the group block is placed against
-   this element when it floats, so the page still needs it to be there.
+/* The search button is on while the field is up. A fill under the glyph rather
+   than nothing, which is how macOS draws a toolbar button that has been
+   switched on - and over a picture it is the same material a hover gets, since
+   there is no plain fill there for one to read against. */
+.toolbar .toolbtn[aria-pressed="true"] {
+  background: var(--fill-secondary);
+  color: var(--label);
+}
 
-   Right-clicking the page and the keyboard shortcut are the two ways in that
-   are left, and neither of them can be turned off. */
-body.no-toolbar .toolbar { display: none; }
+body.has-bg .toolbar .toolbtn[aria-pressed="true"] {
+  background: var(--mat-over-picture);
+  -webkit-backdrop-filter: var(--mat-filter);
+  backdrop-filter: var(--mat-filter);
+  box-shadow: var(--rim), var(--shadow-raised);
+  color: var(--label);
+}
 
-/* With no button to keep clear of, the bar's chips take a menu bar's own inset
-   rather than the wide margin that was holding a place for one. */
-body.no-toolbar.gb-bar .groupbar__inner { padding: 0 12px; }
+/* Either button can be taken off the page altogether — see Show the settings
+   button and Show the search button under Appearance. Hidden rather than
+   removed: the group block is placed against this element when it floats, so
+   the page still needs it to be there, and one button going does not take the
+   other with it.
+
+   Right-clicking the page is the way in that is left to both, and the settings
+   window has the keyboard shortcut besides. Neither of those can be turned
+   off. */
+body.no-toolbar #btnSettings { display: none; }
+body.no-search #btnSearch { display: none; }
+
+/* With one button fewer to keep clear of, the bar's chips take back the room
+   it was holding; with none, a menu bar's own inset. */
+body.no-toolbar.gb-bar .groupbar__inner,
+body.no-search.gb-bar .groupbar__inner { padding: 0 40px; }
+
+body.no-toolbar.no-search.gb-bar .groupbar__inner { padding: 0 12px; }
 
 
 /* ---------------------------------------------------------------------------

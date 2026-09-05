@@ -77,10 +77,21 @@ const I18N = (() => {
     page_groupbar: 'Tile groups',
     page_grid: 'Quick access tiles',
     page_settings: 'Settings',
+    page_search: 'Search',
 
     empty_inGroup: 'Nothing in this group yet - drag a tile onto its name to put it here.',
     empty_noTiles: 'No tiles yet. Hit + to add your first bookmark.',
     empty_noTilesNoAdd: 'No tiles yet. Right-click anywhere to add your first bookmark.',
+    // $1 is what was typed into the search field.
+    empty_noMatches: 'Nothing here matches “$1”.',
+
+    // ------------------------------------------------------------ the search
+    // The field that takes the block of group chips' place. It looks through
+    // every group, which is what the placeholder is there to say - a field
+    // sitting where a group filter was would otherwise read as searching the
+    // group being shown.
+    search_placeholder: 'Search every group',
+    search_close: 'Close search',
 
     // ------------------------------------------------------------- the tiles
     tile_add: 'Add a tile',
@@ -93,6 +104,7 @@ const I18N = (() => {
     menu_addTile: 'Add tile',
     menu_newGroup: 'New group',
     menu_settings: 'Settings',
+    menu_search: 'Search tiles',
     menu_openInNewTab: 'Open in new tab',
     menu_editTile: 'Edit tile',
     menu_deleteTile: 'Delete tile',
@@ -242,6 +254,8 @@ const I18N = (() => {
     set_settingsButton: 'Show the settings button',
     // $1 is the keyboard shortcut that opens this window.
     set_settingsButtonNote: 'It can still be opened with $1 and from the right-click menu.',
+    set_searchButton: 'Show the search button',
+    set_searchButtonNote: 'Search can still be started from the right-click menu.',
 
     set_backup: 'Backup and restore',
     set_backupNote: 'Export and import your tiles, groups and settings.',

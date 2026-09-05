@@ -103,16 +103,20 @@ const TILES = [
   { id: 'b', url: 'https://example.com/two', title: 'Two', visits: 0 }
 ];
 
+const searched = [];
+
 const build = new Function(
   'tiles', 'window', 'countVisit', 'openTileModal', 'openGroupModal',
-  'openSettings', 'deleteTile', 'SEPARATOR', 't',
+  'openSettings', 'openSearch', 'deleteTile', 'SEPARATOR', 't',
   block + '\n; return { pageItems, tileItems, openTileInNewTab };');
 
 const { pageItems, tileItems, openTileInNewTab } = build(
   TILES,
   { open: (url, target, features) => opened.push({ url, target, features }) },
   id => counted.push(id),
-  () => {}, () => {}, () => {}, () => {},
+  () => {}, () => {}, () => {},
+  () => searched.push(true),
+  () => {},
   SEPARATOR,
   // The menu's labels come out of the message table, so the real one answers
   // here: a stub would let a label be renamed in one place and not the other.
@@ -142,6 +146,23 @@ check('everything the menu offered before is still there',
   ['Edit tile', 'Delete tile', 'Add tile', 'New group', 'Settings']
     .every(label => labels.includes(label)),
   labels.join(', '));
+
+/* The button in the corner can be turned off, so the menu is the way in that
+   is always there - which is the same reason Settings sits on it. */
+const searchItem = () => pageItems()
+  .find(item => item !== SEPARATOR && item.label === 'Search tiles');
+
+check('the menu offers the search, whether or not its button is on the page',
+  labels.includes('Search tiles'), labels.join(', '));
+
+check('it is drawn with the glyph the button in the corner wears',
+  Boolean(searchItem()) && searchItem().icon === 'search');
+
+searched.length = 0;
+searchItem().run();
+
+check('running it opens the search rather than a dialog',
+  searched.length === 1, searched.length + ' opened');
 
 // -------------------------------------------------------------- opening one
 

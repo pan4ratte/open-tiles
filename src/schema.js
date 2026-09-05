@@ -204,6 +204,17 @@ const Schema = (() => {
               type: 'toggle',
               default: true,
               note: t('set_settingsButtonNote', SETTINGS_SHORTCUT.label)
+            },
+            {
+              // Its own switch rather than a share of the one above: the two
+              // buttons stand together, but one of them is the way into this
+              // window and the other is a way through the tiles, and a reader
+              // turning the gear off is not asking to lose the search.
+              key: 'showSearchButton',
+              label: t('set_searchButton'),
+              type: 'toggle',
+              default: true,
+              note: t('set_searchButtonNote')
             }
           ]
         },

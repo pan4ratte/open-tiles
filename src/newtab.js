@@ -43,6 +43,9 @@
 
   const groupBar = document.getElementById('groupBar');
   const groupChips = document.getElementById('groupChips');
+  const searchBar = document.getElementById('search');
+  const searchField = document.getElementById('searchField');
+  const btnSearchClose = document.getElementById('btnSearchClose');
   const groupModal = document.getElementById('groupModal');
   const groupForm = document.getElementById('groupForm');
   const groupModalTitle = document.getElementById('groupModalTitle');
@@ -57,6 +60,7 @@
   const settingsTitle = document.getElementById('settingsTitle');
   const btnSettings = document.getElementById('btnSettings');
   const btnSettingsClose = document.getElementById('btnSettingsClose');
+  const btnSearch = document.getElementById('btnSearch');
 
   /** @type {{id:string,url:string,title:string,groupId:?string,icon:string,
    *   iconColor:string,bg:string,pad:?number,round:number,visits:number}[]} */
@@ -65,6 +69,9 @@
   let groups = [];
   /** id of the group being shown, or null for all of them */
   let activeGroup = null;
+  /** what is being searched for, folded the way a tile's words are folded to
+   *  be compared with it - '' whenever the grid is not a search's answer */
+  let query = '';
   /** @type {object} see schema.js */
   let settings = { ...Schema.DEFAULTS };
   /** @type {?{src:string,name:string,type:string,savedAt:number}} page background */
@@ -168,6 +175,7 @@
 
     document.body.classList.toggle('no-labels', !settings.showLabels);
     document.body.classList.toggle('no-toolbar', !settings.showSettingsButton);
+    document.body.classList.toggle('no-search', !settings.showSearchButton);
 
     const bar = settings.groupStyle === 'bar';
     document.body.classList.toggle('gb-bar', bar);
@@ -337,16 +345,24 @@
   }
 
   /**
-   * The tiles on screen: the group filter, then the order.
+   * The tiles on screen: what is being looked for, then the order.
+   *
+   * A search is asked before the group is, and reaches past it: the whole
+   * point of typing is that the tile is somewhere and you do not have to
+   * remember which group somewhere was. With nothing typed the block's own
+   * filter is back in charge, so emptying the field puts the group that was
+   * being read straight back on screen.
    *
    * Sorting by visits is a view of the list, not a rewrite of it - the stored
    * order stays the one that was dragged, so turning "Most visited" back off
    * puts the grid back exactly as it was rather than baked into a new order.
    */
   function tilesInView() {
-    const shown = activeGroup
-      ? tiles.filter(tile => groupOf(tile) === activeGroup)
-      : tiles;
+    const shown = query
+      ? tiles.filter(matchesQuery)
+      : activeGroup
+        ? tiles.filter(tile => groupOf(tile) === activeGroup)
+        : tiles;
 
     if (settings.tileOrder !== 'visits') return shown;
 
@@ -458,9 +474,7 @@
     groups.forEach(group => groupChips.append(buildChip(group)));
     if (settings.showGroupAdd) groupChips.append(buildAddChip(any));
 
-    // With no groups and the + turned off there is nothing in the block, and
-    // an empty pill floating over the page is just a smudge.
-    groupBar.hidden = !any && !settings.showGroupAdd;
+    settleGroupBar();
 
     // Once there are more chips than the block can show, the strip scrolls -
     // and the group being looked at has to be one of the chips on show. A
@@ -833,6 +847,9 @@
 
   document.addEventListener('wheel', e => {
     if (!settings.groupScroll) return;
+    // The chips are away and the grid is a search's answer, so there is no
+    // line of groups to walk along. The page keeps the event and scrolls.
+    if (searching()) return;
     // A pinch to zoom arrives as a wheel event holding Ctrl, and belongs to
     // the browser.
     if (e.ctrlKey) return;
@@ -965,6 +982,154 @@
     groups = next;
     await persistGroups();
     renderGroups();
+  });
+
+  // ------------------------------------------------------------------ search
+
+  /*
+   * A field in the block's place rather than a bar of its own.
+   *
+   * The block across the top is what says which tiles are on screen, and a
+   * search says the same thing a different way - so it is shown in the same
+   * place, and only one of the two is ever up. That is also what keeps the
+   * page from growing a second strip of chrome nobody asked for: the tiles
+   * never move to make room, whichever of the two is being used.
+   *
+   * It reaches across every group, because the reason to type at all is not
+   * remembering where a tile was filed. The group that was being read is not
+   * lost while this is going on - the chips come straight back with it, and
+   * emptying the field puts that group back on screen without closing
+   * anything.
+   */
+
+  /**
+   * A string cut down to what a search should actually compare.
+   *
+   * Case goes, and so do the marks over letters: somebody looking for a site
+   * they think of as "cafe" should find the one that writes itself Café, and
+   * on a keyboard that cannot easily make the accent it is the only way they
+   * will. NFD splits a letter from its mark so the mark can be dropped on its
+   * own, which leaves the letter behind.
+   */
+  const fold = text => String(text)
+    .normalize('NFD')
+    .replace(/\p{Diacritic}/gu, '')
+    .toLowerCase();
+
+  /**
+   * Whether a tile answers what is being typed.
+   *
+   * Every word has to be found, and each of them may be found in either the
+   * name or the address - "git hub" finds GitHub, and "news bbc" finds the
+   * BBC's news page whichever order the two words come in the tile. Nothing
+   * has to match from the start of a word: an address is mostly one long word,
+   * and a search of it that only looked at the front would never find a path.
+   *
+   * The name searched is the one the tile is actually showing, so a tile with
+   * no name of its own is still found by the host standing in for it.
+   */
+  function matchesQuery(tile) {
+    const hay = fold((tile.title || defaultTitle(tile.url)) + '\n' + tile.url);
+    return query.split(/\s+/).every(word => hay.includes(word));
+  }
+
+  /** Whether the field is up. The chips and the field trade places, so this is
+   *  read off whichever of the two the block is showing. */
+  const searching = () => !searchBar.hidden;
+
+  /**
+   * Whether there is anything in the block to show.
+   *
+   * With no groups and the + turned off there is nothing in it, and an empty
+   * pill floating over the page is just a smudge - but a search puts something
+   * in it, and that is true whether or not a single group has ever been made.
+   */
+  function settleGroupBar() {
+    groupBar.hidden = !searching() && !groups.length && !settings.showGroupAdd;
+  }
+
+  /**
+   * Reads the field and redraws the grid from it.
+   *
+   * Called on every keystroke: the grid is cheap to rebuild - a tile keeps the
+   * picture it is already showing across a redraw, see keptIcon - and a search
+   * that answered a beat after the typing would be a search you had to wait
+   * for.
+   */
+  function runSearch() {
+    const typed = fold(searchField.value.trim());
+    if (typed === query) return;
+
+    query = typed;
+    render();
+  }
+
+  function openSearch() {
+    // Asked for while it is already up - from the right-click menu, say. There
+    // is nothing to open, but the keyboard belongs in the field, and what is
+    // sitting in it is picked out so the next thing typed replaces it.
+    if (searching()) {
+      searchField.focus();
+      searchField.select();
+      return;
+    }
+
+    groupChips.hidden = true;
+    searchBar.hidden = false;
+    settleGroupBar();
+    document.body.classList.add('is-searching');
+    btnSearch.setAttribute('aria-pressed', 'true');
+
+    // Whatever was left in it last time is gone: a search is a question asked
+    // now, and one still on screen from the last tab would be answering a
+    // question nobody had asked.
+    searchField.value = '';
+    searchField.focus();
+  }
+
+  /**
+   * Puts the chips back and the grid with them.
+   *
+   * The grid is redrawn only where a search was actually filtering it, so
+   * closing an empty field costs nothing and cannot blink the group that is
+   * already on screen.
+   */
+  function closeSearch() {
+    if (!searching()) return;
+
+    const was = query;
+    query = '';
+    searchField.value = '';
+    searchBar.hidden = true;
+    groupChips.hidden = false;
+    settleGroupBar();
+    document.body.classList.remove('is-searching');
+    btnSearch.setAttribute('aria-pressed', 'false');
+
+    if (was) render();
+
+    // Back to the button that opened it, where the keyboard was - but only
+    // when there is one on the page to go back to.
+    if (settings.showSearchButton) btnSearch.focus();
+  }
+
+  function toggleSearch() {
+    if (searching()) closeSearch();
+    else openSearch();
+  }
+
+  btnSearch.addEventListener('click', toggleSearch);
+  btnSearchClose.addEventListener('click', closeSearch);
+  searchField.addEventListener('input', runSearch);
+
+  searchField.addEventListener('keydown', e => {
+    // Return opens the first tile found, which is what a field with a list
+    // under it does everywhere else. Nothing found, nothing to open.
+    if (e.key !== 'Enter' || e.altKey || e.ctrlKey || e.metaKey || e.shiftKey) return;
+    e.preventDefault();
+
+    const first = grid.querySelector('.tile[data-id]');
+    if (first) first.click();
   });
 
   // ---------------------------------------------------------------- rendering
@@ -1378,9 +1543,13 @@
 
     empty.hidden = shown.length > 0;
     if (!shown.length) {
+      // A search that found nothing says so in the words that were typed, not
+      // the folded ones it compared with - what is quoted back has to be what
+      // is still sitting in the field.
+      if (query) empty.textContent = t('empty_noMatches', searchField.value.trim());
       // With the + turned off there is no + to hit, and the only way in is
       // the one the menu offers.
-      empty.textContent = t(activeGroup
+      else empty.textContent = t(activeGroup
         ? 'empty_inGroup'
         : settings.showAddButton ? 'empty_noTiles' : 'empty_noTilesNoAdd');
     }
@@ -1715,6 +1884,10 @@
     else if (!settingsModal.hidden) closeDialog(settingsModal);
     else if (!groupModal.hidden) closeDialog(groupModal);
     else if (!modal.hidden) closeDialog(modal);
+    // Last, because it is not a dialog: a search is what the page is showing
+    // rather than something standing in front of it, so anything actually in
+    // front is cancelled first.
+    else closeSearch();
   });
 
   /**
@@ -2959,6 +3132,7 @@
     return [
       { icon: 'plus', label: t('menu_addTile'), run: () => openTileModal(null) },
       { icon: 'tag', label: t('menu_newGroup'), run: () => openGroupModal(null) },
+      { icon: 'search', label: t('menu_search'), run: openSearch },
       SEPARATOR,
       { icon: 'settings', label: t('menu_settings'), run: openSettings }
     ];
