@@ -287,6 +287,8 @@ const I18N = (() => {
     set_settingsButtonNote: 'It can still be opened with $1 and from the right-click menu.',
     set_searchButton: 'Show the search button',
     set_searchButtonNote: 'Search can still be started from the right-click menu.',
+    set_favicon: 'Show the add-on icon in the tab',
+    set_faviconNote: 'The tab wears the OpenTiles mark, on the theme the page is set to.',
 
     set_backup: 'Backup and restore',
     set_backupNote: 'Export and import your tiles, groups and settings.',

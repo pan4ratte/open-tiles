@@ -394,17 +394,18 @@ Store.onExternalChange((key, value) => heard.push({ key, value }));
 
   check('it opens with the mark, the name and the version',
     Boolean(masthead)
-      && marks.length === 2
+      && marks.length === 1
       && masthead.find(el => el.className === 'about__name').textContent === 'OpenTiles'
       && /^Version \d/.test(masthead.find(el => el.className === 'about__version').textContent),
     masthead ? masthead.textContent : 'no masthead');
 
-  check('the mark is laid down once per theme, for CSS to choose between',
-    marks.length === 2
-      && marks[0].className.includes('about__logo--light')
+  // The emblem, not a piece of the interface: one mark in both palettes, and
+  // the light one - the same file the store listing and about:addons show.
+  check('the mark is the light one whatever palette the page is wearing',
+    marks.length === 1
+      && marks[0].className === 'about__logo'
       && marks[0].src.endsWith('icon.svg')
-      && marks[1].className.includes('about__logo--dark')
-      && marks[1].src.endsWith('icon-dark.svg'),
+      && !read('newtab.css').includes('about__logo--'),
     marks.map(m => m.className + ' ' + m.src).join(' | ') || 'no marks');
 
   check('the masthead is not dressed as a setting - no box, no label column',

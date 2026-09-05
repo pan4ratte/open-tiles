@@ -215,6 +215,16 @@ const Schema = (() => {
               type: 'toggle',
               default: true,
               note: t('set_searchButtonNote')
+            },
+            {
+              // Off to begin with: a new tab is the browser's own furniture,
+              // and a reader who has not asked for it should go on seeing the
+              // tab Firefox has always drawn there.
+              key: 'showFavicon',
+              label: t('set_favicon'),
+              type: 'toggle',
+              default: false,
+              note: t('set_faviconNote')
             }
           ]
         },
@@ -703,8 +713,10 @@ const Schema = (() => {
               type: 'about',
               external: true,
               label: APP.name,
+              // One mark in both palettes, and the light one: it is the
+              // add-on's emblem rather than a piece of this interface, and it
+              // carries its own ground, so it reads on a dark page too.
               logo: '../icons/icon.svg',
-              logoDark: '../icons/icon-dark.svg',
               version: APP.version,
               note: APP.blurb
             }

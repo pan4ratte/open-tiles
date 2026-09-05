@@ -666,20 +666,18 @@ const SettingsUI = (() => {
     wrap.className = 'about';
 
     /**
-     * The mark is laid down once per theme and CSS shows whichever the page
-     * is wearing. An <img> cannot swap its own source, and a media query
-     * inside the file would only ever hear the system - never the explicit
-     * light or dark a reader has chosen here.
+     * One mark, whatever palette the page is wearing. It is the add-on's own
+     * emblem rather than a piece of this interface, and an emblem redrawn for
+     * the dark theme is a second logo rather than the same one - so the mark
+     * here is the one on the store listing and in about:addons. It carries
+     * its own ground, so it reads on a dark page as well as a light one.
      */
-    const mark = variant => {
-      const logo = document.createElement('img');
-      logo.className = 'about__logo about__logo--' + variant;
-      logo.src = variant === 'dark' ? field.logoDark : field.logo;
-      logo.alt = '';
-      logo.width = 64;
-      logo.height = 64;
-      return logo;
-    };
+    const logo = document.createElement('img');
+    logo.className = 'about__logo';
+    logo.src = field.logo;
+    logo.alt = '';
+    logo.width = 64;
+    logo.height = 64;
 
     const name = document.createElement('h4');
     name.className = 'about__name';
@@ -689,9 +687,7 @@ const SettingsUI = (() => {
     version.className = 'about__version';
     version.textContent = t('settings_version', field.version);
 
-    wrap.append(mark('light'));
-    if (field.logoDark) wrap.append(mark('dark'));
-    wrap.append(name, version);
+    wrap.append(logo, name, version);
 
     if (field.note) {
       const blurb = document.createElement('p');

@@ -516,6 +516,12 @@
   "set_searchButtonNote": {
     "message": "Search can still be started from the right-click menu."
   },
+  "set_favicon": {
+    "message": "Show the add-on icon in the tab"
+  },
+  "set_faviconNote": {
+    "message": "The tab wears the OpenTiles mark, on the theme the page is set to."
+  },
   "set_backup": {
     "message": "Backup and restore"
   },

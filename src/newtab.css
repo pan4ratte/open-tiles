@@ -3605,31 +3605,6 @@ body.tile-round .tile {
   box-shadow: var(--shadow-control);
 }
 
-/* The mark ships light and dark. Both are in the page and one is shown, the
-   same two ways the palette picks a side: the system's default, and the
-   explicit choice that overrules it. */
-.about__logo--dark {
-  display: none;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) .about__logo--light {
-    display: none;
-  }
-
-  :root:not([data-theme="light"]) .about__logo--dark {
-    display: block;
-  }
-}
-
-:root[data-theme="dark"] .about__logo--light {
-  display: none;
-}
-
-:root[data-theme="dark"] .about__logo--dark {
-  display: block;
-}
-
 .about__name {
   margin: 12px 0 0;
   font-size: var(--t-title1);

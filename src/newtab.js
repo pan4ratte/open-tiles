@@ -174,6 +174,7 @@
     root.style.setProperty('--logo-pad', settings.logoPad / 100);
     document.body.classList.toggle('tile-round', settings.tileShape === 'circle');
     applyTileMaterial(root);
+    applyFavicon();
     root.style.setProperty('--bg-blur', settings.bgBlur + 'px');
     root.style.setProperty('--bg-dim', settings.bgDim / 100);
     // Where a picture taller than the window is cut. The same property drives
@@ -278,6 +279,56 @@
     root.style.setProperty('--tile-mat-ink-dim', dim);
     root.style.setProperty('--tile-mat-ink-plate', plate);
   }
+
+  /**
+   * Whether the machine is set to a dark palette. Read for the mark in the
+   * tab, and listened to below, because "System" is an answer that can change
+   * while the tab is open.
+   */
+  const DARK_SYSTEM = window.matchMedia('(prefers-color-scheme: dark)');
+
+  /** The <link> the tab's mark hangs on, made the first time it is wanted. */
+  let faviconLink = null;
+
+  /**
+   * The add-on's mark in the tab strip, on the palette the page is wearing.
+   *
+   * A new tab has no icon of its own - Firefox draws the blank page one there
+   * - so this is nothing at all until it is asked for, and taking the setting
+   * back off takes the <link> out of the page rather than leaving an empty one
+   * behind. The mark cannot be written into `newtab.html`: which of the two
+   * goes up depends on a setting, and a media query in an SVG would only ever
+   * hear the system, never the light or dark chosen here.
+   */
+  function applyFavicon() {
+    if (!settings.showFavicon) {
+      if (faviconLink) faviconLink.remove();
+      faviconLink = null;
+      return;
+    }
+
+    const dark = settings.theme === 'dark'
+      || (settings.theme === 'system' && DARK_SYSTEM.matches);
+    const href = dark ? '../icons/icon-dark.svg' : '../icons/icon.svg';
+
+    if (!faviconLink) {
+      faviconLink = document.createElement('link');
+      faviconLink.rel = 'icon';
+      faviconLink.type = 'image/svg+xml';
+      document.head.append(faviconLink);
+    }
+
+    // Written only where it has actually changed: handing a <link> the address
+    // it already carries fetches the file again and redraws the tab for it.
+    if (faviconLink.getAttribute('href') !== href) faviconLink.setAttribute('href', href);
+  }
+
+  // The palette moving under a page set to "System" is the one theme change
+  // nothing else has to be told about - CSS hears it by itself, and the mark
+  // is the only piece of this that is chosen in the script.
+  DARK_SYSTEM.addEventListener('change', () => {
+    if (settings.theme === 'system') applyFavicon();
+  });
 
   /** The three fields that name a family, and so need one downloading. */
   const FONT_KEYS = ['font', 'clockFont', 'dateFont'];
