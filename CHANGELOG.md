@@ -12,6 +12,7 @@
 ### Changed
 
 - A tile shrinks away as it is archived or deleted, instead of vanishing between redraws.
+- The `.xpi` on a GitHub release is now signed by Mozilla, so release Firefox will install it.
 
 ### Fixed
 

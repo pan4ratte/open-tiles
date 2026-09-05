@@ -1,5 +1,5 @@
 <div align="center">
-   <img src="https://github.com/pan4ratte/open-tiles/blob/main/icons/png/icon-512.png" alt="OpenTiles logo" width="256" height="256">
+   <img src="https://github.com/pan4ratte/open-tiles/blob/main/icons/png/icon-512.png" alt="OpenTiles logo" width="128" height="128">
    <h2>OpenTiles</h2>
    <p>Free, modern, open-source and highly customizable<br>visual bookmark manager and start page plugin for your browser</p>
    <b>English</b> | <a href="https://github.com/pan4ratte/open-tiles/blob/main/README.ru.md">Русский</a>
@@ -26,6 +26,14 @@ Add a site you like to the page, and reorder your bookmarks by dragging. Site ic
 ### Collect your bookmarks into groups
 
 Use groups to sort your sites; to add a tile to a group, it is enough to drag it onto the group's name. Groups can be reordered by dragging too, and the navigation bar comes two ways: as a floating panel or as a status bar. Either can be placed wherever on the screen suits you. Groups can also be changed with a touchpad gesture or the scroll of a mouse wheel.
+
+### Quick bookmark search
+
+The search button on the start page opens a search bar that filters tiles by name and address. Search opens from the page's right-click menu as well, and the button itself can be hidden in the settings if you have no use for it.
+
+### Archive your bookmarks
+
+A tile you have no use for right now can be taken off the page without deleting it — choose **Archive tile** in the tile's right-click menu. The **Archive** section shows what you have archived, and restores or deletes it.
 
 ### Animated and static backgrounds
 

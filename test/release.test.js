@@ -23,6 +23,11 @@
  *     renamed. Nothing checks a YAML file until it runs.
  *   - `.github` is packaged into the add-on, which ships CI configuration to
  *     every reader and gives an add-on review something to ask about.
+ *   - a rehearsal reaches addons.mozilla.org. A version number is spent the
+ *     moment it is uploaded there - AMO takes each one once, on either channel -
+ *     so a rehearsal that submitted would burn the release it was rehearsing.
+ *   - the store credentials end up on a command line, where every other process
+ *     on the runner can read them.
  *
  *   node test/release.test.js
  */
@@ -162,6 +167,44 @@ check('and a rehearsal keeps both',
     && upload.includes('steps.release.outputs.artifact')
     && upload.includes('steps.release.outputs.xpi'),
   upload.split('\n').filter(l => l.includes('outputs.')).join(' | ').trim());
+
+// ------------------------------------------------------ and to the store
+
+check('the workflow hands the script the addons.mozilla.org key',
+  WORKFLOW.includes('AMO_JWT_ISSUER: ${{ secrets.AMO_JWT_ISSUER }}')
+    && WORKFLOW.includes('AMO_JWT_SECRET: ${{ secrets.AMO_JWT_SECRET }}'));
+
+check('the script submits on the listed channel, which is the public listing',
+  /'--channel', 'listed'/.test(RELEASE_JS));
+
+/* A secret in an argument list is readable by every other process on the
+   machine. web-ext reads both from the environment instead. */
+check('and never puts the key on a command line',
+  !RELEASE_JS.includes("'--api-key'") && !RELEASE_JS.includes("'--api-secret'")
+    && RELEASE_JS.includes('WEB_EXT_API_KEY')
+    && RELEASE_JS.includes('WEB_EXT_API_SECRET'));
+
+/* The one thing here that cannot be taken back at all: a tag can be deleted and
+   a release unpublished, but a version number AMO has seen is gone for good. So
+   the upload sits past the point a rehearsal has already returned from. */
+check('a rehearsal submits nothing, since AMO takes a version number only once',
+  RELEASE_JS.indexOf('await signOnAmo(') > RELEASE_JS.indexOf('if (!PUBLISH) {'));
+
+check('and signing comes before the tag, so a refusal leaves nothing behind',
+  RELEASE_JS.indexOf('await signOnAmo(') < RELEASE_JS.indexOf("'release', 'create', tag"));
+
+check('there is a way to publish without the store, for a release held up by a review',
+  RELEASE_JS.includes("--no-sign"));
+
+/* The gecko id is the add-on's identity on the store - every version ever
+   published is filed under it, and a listing cannot be moved to another one.
+   Written down twice, one copy drifts. */
+const AMO_JS = read('tools/amo.js');
+check('the store is asked by the id in the manifest, rather than one written out again',
+  AMO_JS.includes('gecko') && !AMO_JS.includes('open-tiles@'));
+
+check('the release module and the store module are the same two files the workflow runs',
+  RELEASE_JS.includes("require('./amo.js')"));
 
 // ------------------------------------------------- and what is not shipped
 

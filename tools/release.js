@@ -7,11 +7,30 @@
  * against the same code that will run in CI:
  *
  *   node tools/release.js              rehearse: check, test, lint, build
- *   node tools/release.js --publish    and then tag and publish it
+ *   node tools/release.js --publish    and then sign, tag and publish it
  *
  * Without `--publish` nothing leaves the machine and nothing is written to the
- * repository; the only steps a rehearsal skips are the two that would be hard
+ * repository; the only steps a rehearsal skips are the three that would be hard
  * to take back, and it says so when it finishes.
+ *
+ * ## Signing, which is the same thing as submitting to the store
+ *
+ * A publish uploads the package to addons.mozilla.org on the listed channel -
+ * which is to say, as the next version of the public listing - waits for it to
+ * be approved, and attaches the signed .xpi that comes back to the GitHub
+ * release. There is no separate signing step to run and no second file to
+ * build: signing is what AMO does to a submission, and what it hands back is
+ * the package Firefox will install.
+ *
+ * That needs an API key - AMO_JWT_ISSUER and AMO_JWT_SECRET, from
+ * https://addons.mozilla.org/developers/addon/api/key/ - and the version
+ * number has to be one AMO has never seen, since it takes each one once.
+ *
+ *   node tools/release.js --publish --no-sign
+ *
+ * skips the store and publishes the GitHub release with an unsigned copy of the
+ * zip beside it, for the release that has to go out while a review still sits
+ * on AMO.
  *
  * ## What decides that there is anything to release
  *
@@ -28,9 +47,11 @@ const path = require('path');
 const { spawnSync } = require('child_process');
 
 const { SEMVER, manifestVersion, isPrerelease, notesFor } = require('./release-notes.js');
+const amo = require('./amo.js');
 
 const ROOT = path.join(__dirname, '..');
 const PUBLISH = process.argv.includes('--publish');
+const SIGN = !process.argv.includes('--no-sign');
 
 let step = 0;
 const say = text => console.log('\n── ' + text);
@@ -52,10 +73,13 @@ function run(command, args, options) {
  * it was made an argument-injection hazard; a shell is the way it is reached
  * there, and the arguments go with it as one string rather than as a list node
  * would concatenate unescaped anyway. None of them carry a space.
+ *
+ * Nor does any of them carry a secret: what `web-ext sign` needs is passed to it
+ * in `options.env`, out of reach of every other process on the machine.
  */
-const npx = args => (process.platform === 'win32'
-  ? run(['npx', ...args].join(' '), [], { shell: true })
-  : run('npx', args));
+const npx = (args, options) => (process.platform === 'win32'
+  ? run(['npx', ...args].join(' '), [], { shell: true, ...options })
+  : run('npx', args, options));
 
 /** Runs a command for its output rather than for its effect. */
 function output(command, args) {
@@ -70,7 +94,65 @@ function emit(name, value) {
   }
 }
 
-function main() {
+/**
+ * Submits the built add-on to addons.mozilla.org, and leaves what comes back
+ * signed at `dest`.
+ *
+ * The question asked first is whether AMO already holds this version, and it is
+ * asked because a version number is spent the moment it is uploaded: a run that
+ * signed and then fell over on the GitHub half of the release would otherwise
+ * be unrepeatable, the store holding a version the release never got. Finding
+ * it already up there is the ordinary answer on a second run, and the signed
+ * package is fetched rather than sent again.
+ */
+async function signOnAmo(version, artifacts, dest) {
+  const creds = amo.credentials();
+  const xpis = () => fs.readdirSync(artifacts).filter(name => name.endsWith('.xpi'));
+
+  say(++step + '. addons.mozilla.org: submit ' + version + ' to the listing');
+
+  const already = await amo.versionOnAmo(version, creds);
+  if (already) {
+    if (!amo.isPublished(already)) {
+      throw new Error('addons.mozilla.org already has ' + version + ' on the '
+        + already.channel + ' channel but has not published it: its package is "'
+        + ((amo.fileOf(already) || {}).status || 'missing') + '", so it is waiting on a '
+        + 'review. Run this again once that clears and it will pick the signed package '
+        + 'up, or go out without the store for now with --no-sign.');
+    }
+    console.log('Already published there, so the signed package is fetched rather than '
+      + 'sent a second time - which AMO would refuse.');
+    await amo.download(amo.fileOf(already).url, dest, creds);
+    return;
+  }
+
+  /* `web-ext sign` builds its own package to send - from this same tree, and
+     through the same web-ext-config.cjs the zip came from - then waits for AMO
+     to approve it, which for an add-on carrying no minified code is usually
+     seconds. The credentials reach it through the environment, which is where
+     web-ext looks for --api-key and --api-secret of its own accord. */
+  const before = xpis();
+  npx(['web-ext', 'sign', '--channel', 'listed'], {
+    env: {
+      ...process.env,
+      WEB_EXT_API_KEY: creds.issuer,
+      WEB_EXT_API_SECRET: creds.secret
+    }
+  });
+
+  /* Looked for rather than assumed: the signed package is named by AMO, which
+     spells the add-on's name its own way. */
+  const signed = xpis().filter(name => !before.includes(name));
+  if (signed.length !== 1) {
+    throw new Error('web-ext sign left ' + signed.length + ' new .xpi in '
+      + 'web-ext-artifacts/' + (signed.length ? ': ' + signed.join(', ')
+        : ', so there is nothing signed to publish.'));
+  }
+  fs.renameSync(path.join(artifacts, signed[0]), dest);
+  say('addons.mozilla.org signed ' + version + ', and the listing now carries it');
+}
+
+async function main() {
   const version = manifestVersion();
   const tag = 'v' + version;
 
@@ -83,6 +165,14 @@ function main() {
   // and build have run.
   if (PUBLISH && !process.env.GH_TOKEN && !process.env.GITHUB_TOKEN) {
     throw new Error('--publish needs GH_TOKEN (or GITHUB_TOKEN) set for the GitHub CLI.');
+  }
+
+  if (PUBLISH && SIGN && !amo.credentials()) {
+    throw new Error('--publish needs AMO_JWT_ISSUER and AMO_JWT_SECRET set to an '
+      + 'addons.mozilla.org API key, from '
+      + 'https://addons.mozilla.org/developers/addon/api/key/ - submitting the version '
+      + 'to the store is what signs it. Pass --no-sign to publish a GitHub release '
+      + 'without one.');
   }
 
   if (!SEMVER.test(version)) {
@@ -134,19 +224,25 @@ function main() {
     throw new Error('web-ext built nothing ending in "-' + version + '.zip" in '
       + 'web-ext-artifacts/. Did the manifest version change under it?');
   }
-  /* An XPI is a zip under the name Firefox knows it by, so the second file is
-     a copy rather than a second build: two packages built one after the other
-     could differ, and a release whose two downloads are not the same add-on is
-     worse than a release with one.
+  /* An XPI is a zip under the name Firefox knows it by, and where the release
+     is signed this is the name the signed package takes when it arrives back
+     from addons.mozilla.org further down - so the two files on a release are
+     plainly the same version, whatever AMO called its own copy of it.
 
-     It is unsigned, which is what addons.mozilla.org does to a package and not
-     something that can be done here. Release Firefox will refuse to install it
-     from a file; it is for Developer Edition, for an unbranded build, and for
-     anyone loading it through about:debugging. The installable copy is the one
-     addons.mozilla.org hands out. */
+     Where it is not signed - a rehearsal, or --no-sign - the second file is a
+     copy of the zip rather than a second build: two packages built one after
+     the other could differ, and a release whose two downloads are not the same
+     add-on is worse than a release with one. That copy is unsigned, and release
+     Firefox refuses to install one from a file; it is for Developer Edition,
+     for an unbranded build, and for anyone loading it through about:debugging. */
   const xpi = zip.replace(/\.zip$/, '.xpi');
-  fs.copyFileSync(path.join(artifacts, zip), path.join(artifacts, xpi));
-  say('Built ' + zip + ', and ' + xpi + ' beside it');
+  const xpiPath = path.join(artifacts, xpi);
+  if (PUBLISH && SIGN) {
+    say('Built ' + zip + '; ' + xpi + ' will be the copy addons.mozilla.org signs');
+  } else {
+    fs.copyFileSync(path.join(artifacts, zip), xpiPath);
+    say('Built ' + zip + ', and an unsigned ' + xpi + ' beside it');
+  }
 
   // ------------------------------------------------------------ publish it
 
@@ -160,12 +256,20 @@ function main() {
 
   if (!PUBLISH) {
     say('Rehearsal finished. Everything passed.');
-    console.log('Publishing would now create the tag ' + tag + ' and a GitHub release');
-    console.log('titled "OpenTiles ' + version + '", with the notes above and '
-      + zip + ' and ' + xpi + ' attached.');
+    console.log('Publishing would now submit ' + version + ' to addons.mozilla.org as the');
+    console.log('next version of the listing, wait for it to be signed, then create the tag');
+    console.log(tag + ' and a GitHub release titled "OpenTiles ' + version + '", with the');
+    console.log('notes above and ' + zip + ' and the signed ' + xpi + ' attached.');
     console.log('\nRun it for real with:  node tools/release.js --publish');
+    console.log('Leave the store out of it with:  node tools/release.js --publish --no-sign');
     return;
   }
+
+  /* Before the tag rather than after it. A tag is public the moment it exists,
+     and a release tagged for a version the store then refused would have to be
+     taken back by hand; a signing that fails here leaves nothing behind but a
+     run to read. */
+  if (SIGN) await signOnAmo(version, artifacts, xpiPath);
 
   const notesFile = path.join(artifacts, 'release-notes.md');
   fs.writeFileSync(notesFile, notes + '\n', 'utf8');
@@ -186,9 +290,7 @@ function main() {
   say('Published ' + tag + '.');
 }
 
-try {
-  main();
-} catch (why) {
+main().catch(why => {
   console.error('\nRelease stopped: ' + why.message);
   process.exit(1);
-}
+});

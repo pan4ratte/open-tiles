@@ -10,6 +10,16 @@
 # A push that touches manifest.json without changing the version finishes green
 # having done nothing: tools/release.js looks for the v<version> tag and stops
 # when it finds one. That also makes the manual run below safe to press twice.
+#
+# Publishing also submits the version to addons.mozilla.org, which is what signs
+# the .xpi the release carries. That needs two repository secrets, from
+# https://addons.mozilla.org/developers/addon/api/key/:
+#
+#   AMO_JWT_ISSUER   the "JWT issuer" on that page
+#   AMO_JWT_SECRET   the "JWT secret", which is shown once
+#
+# A rehearsal never reaches them: AMO takes a version number once and refuses it
+# ever after, so nothing is uploaded until a release is meant.
 name: Release
 
 on:
@@ -23,8 +33,9 @@ on:
         type: boolean
         default: false
 
-# Only to create the release and its tag. Nothing here needs to read a secret or
-# write to a branch.
+# Only to create the release and its tag - nothing here writes to a branch. The
+# addons.mozilla.org key is a repository secret rather than anything this token
+# reaches.
 permissions:
   contents: write
 
@@ -53,6 +64,8 @@ jobs:
         id: release
         env:
           GH_TOKEN: ${{ github.token }}
+          AMO_JWT_ISSUER: ${{ secrets.AMO_JWT_ISSUER }}
+          AMO_JWT_SECRET: ${{ secrets.AMO_JWT_SECRET }}
         run: |
           if [ "${{ inputs.rehearse }}" = "true" ]; then
             node tools/release.js
