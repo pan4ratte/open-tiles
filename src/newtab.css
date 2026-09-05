@@ -3207,6 +3207,93 @@ body.tile-round .tile {
 
 .backupfield .btn { flex: 1; }
 
+/* The archive: the tiles taken off the page, one to a row.
+
+   A list rather than a grid of little tiles. What is being done here is
+   finding one tile among however many have been put away over a year, and a
+   name beside an address is what that is read from - a wall of thumbnails is
+   for choosing something to look at, which a picture can answer and a
+   bookmark cannot. macOS lists its own stored things the same way. */
+.archive__list {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  /* Long archives scroll inside the row rather than stretching the pane, so
+     the label above them stays put and the sections either side keep their
+     length. Ten rows or so before it gives. */
+  max-height: 296px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.archive__list[hidden] { display: none; }
+
+.archive__item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 0;
+  box-shadow: inset 0 -.5px 0 var(--separator);
+}
+
+/* The last row's rule would be a line under the list with nothing below it. */
+.archive__item:last-child { box-shadow: none; }
+
+/* The name over the address, and both cut off rather than wrapped: a row per
+   tile is what makes the list countable at a glance, and one tile with a long
+   name should not be three rows tall. */
+.archive__text {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+  flex: 1;
+}
+
+.archive__name,
+.archive__url {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.archive__name {
+  font-size: var(--t-body);
+  letter-spacing: var(--tr-body);
+}
+
+.archive__url {
+  color: var(--label-secondary);
+  font-size: var(--t-subhead);
+  letter-spacing: var(--tr-subhead);
+}
+
+.archive__item .btn { flex: none; }
+
+/* Square, because it carries a glyph and no words. Wider than the 22px a
+   small button is tall so it is still something to aim at - macOS asks for
+   20x20pt at the very least, and this is the one control in the row that
+   cannot be taken back. */
+.archive__delete {
+  width: 28px;
+  min-height: 28px;
+  padding: 0;
+}
+
+/* Said in the row's own voice rather than as a heading: an empty archive is
+   not a list of nothing, it is a note about how one is filled. */
+.archive__empty {
+  margin: 0;
+  color: var(--label-secondary);
+  font-size: var(--t-subhead);
+  letter-spacing: var(--tr-subhead);
+  line-height: 1.36;
+}
+
+.archive__empty[hidden] { display: none; }
+
 /* The appearance field: the tile as it will be, with the things that shape it
    underneath. The preview is a real .tile, so it is already the right size -
    the stage only has to give it somewhere to stand.

@@ -1332,6 +1332,100 @@ const SettingsUI = (() => {
     return { control: wrap, wide: true };
   }
 
+  /**
+   * The archive: the tiles taken off the page, and the button that puts one
+   * back.
+   *
+   * Names and addresses rather than pictures. A tile's icon is very often one
+   * the page had to go and look up, and looking up a hundred of them because
+   * a settings pane was opened would be a real cost for a list whose job is to
+   * be read - the address is what tells two tiles of the same name apart, and
+   * it is already here.
+   *
+   * The list redraws from whatever the commit hands back, the way the
+   * background's strips do: restoring one is a change to the tiles, and the
+   * page is the only thing that knows what is left afterwards.
+   */
+  function buildArchive(field, value, commit) {
+    const wrap = document.createElement('div');
+    wrap.className = 'archive';
+
+    const empty = document.createElement('p');
+    empty.className = 'archive__empty';
+    empty.textContent = t('archive_empty');
+
+    const list = document.createElement('ul');
+    list.className = 'archive__list';
+
+    function buildItem(entry) {
+      const item = document.createElement('li');
+      item.className = 'archive__item';
+
+      const text = document.createElement('span');
+      text.className = 'archive__text';
+
+      const name = document.createElement('span');
+      name.className = 'archive__name';
+      name.textContent = entry.name;
+
+      const url = document.createElement('span');
+      url.className = 'archive__url';
+      url.textContent = entry.url;
+
+      text.append(name, url);
+
+      const restore = document.createElement('button');
+      restore.type = 'button';
+      restore.className = 'btn btn--sm';
+      // The name is in the button's label but not on its face: forty buttons
+      // each reading "Restore GitHub" is forty different widths down one
+      // column, and the row already says which tile it is.
+      restore.setAttribute('aria-label', t('archive_restoreLabel', entry.name));
+      restore.append(
+        Icons.create('archive-restore', { size: 15 }),
+        document.createTextNode(t('btn_restore'))
+      );
+      restore.addEventListener('click', () => send({ action: 'restore', id: entry.id }));
+
+      // Icon only, and last: the archive is the last place a tile is kept, so
+      // this is the one control here that cannot be taken back. Spelling it
+      // out beside a spelt-out Restore would give two buttons the same weight
+      // when only one of them is what the row is for - and the page asks
+      // before it acts, unless that has been turned off.
+      const remove = document.createElement('button');
+      remove.type = 'button';
+      remove.className = 'btn btn--sm btn--danger archive__delete';
+      remove.title = t('btn_delete');
+      remove.setAttribute('aria-label', t('archive_deleteLabel', entry.name));
+      remove.append(Icons.create('trash-2', { size: 15 }));
+      remove.addEventListener('click', () => send({ action: 'delete', id: entry.id }));
+
+      item.append(text, restore, remove);
+      return item;
+    }
+
+    function show(entries) {
+      list.textContent = '';
+      list.hidden = entries.length === 0;
+      empty.hidden = entries.length > 0;
+      entries.forEach(entry => list.append(buildItem(entry)));
+    }
+
+    async function send(payload) {
+      const left = await commit(payload);
+      // Either one called off - the sheet asking which group, or the alert
+      // asking whether to delete - hands back nothing, and the list is
+      // already right.
+      if (Array.isArray(left)) show(left);
+    }
+
+    show(Array.isArray(value) ? value : []);
+    wrap.append(empty, list);
+
+    // No `focusId`: a <label for> only reaches a control that holds a value.
+    return { control: wrap, wide: true };
+  }
+
   /** The "everything" segment of either font filter. */
   const FONT_ALL = 'all';
 
@@ -1678,6 +1772,7 @@ const SettingsUI = (() => {
     font: buildFont,
     background: buildBackground,
     backup: buildBackup,
+    archive: buildArchive,
     action: buildAction,
     link: buildLink,
     info: buildInfo,

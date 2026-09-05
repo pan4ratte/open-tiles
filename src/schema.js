@@ -671,6 +671,23 @@ const Schema = (() => {
       ]
     },
     {
+      id: 'archive',
+      label: t('section_archive'),
+      icon: 'archive',
+      tint: 'var(--system-yellow)',
+      fields: [
+        {
+          key: 'archive',
+          label: t('archive_title'),
+          // A view of the tiles rather than a setting: what it lists lives in
+          // its own storage key and the page hands it in - see `external`.
+          type: 'archive',
+          external: true,
+          note: t('archive_note')
+        }
+      ]
+    },
+    {
       id: 'about',
       label: t('section_about'),
       icon: 'info',

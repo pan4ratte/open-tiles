@@ -308,6 +308,34 @@
     </form>
   </div>
 
+  <!-- Which group a tile put back from the archive should go to, asked only
+       when the one it was filed under has been deleted while it was away.
+       After the settings window in the file, because that is what it is
+       raised from and every dialog here is stacked by document order. -->
+  <div class="modal sheet" id="archiveGroup" tabindex="-1" role="dialog" aria-modal="true"
+       aria-labelledby="archiveGroupTitle" hidden>
+    <form class="sheet__box" id="archiveGroupForm">
+      <h2 class="sheet__title" id="archiveGroupTitle" data-i18n="archive_pickTitle"></h2>
+      <p class="sheet__subtitle" id="archiveGroupNote"></p>
+
+      <div class="sheet__body">
+        <label class="field">
+          <span class="field__label" data-i18n="archive_pickGroup"></span>
+          <span class="popup">
+            <select class="select" id="fieldArchiveGroup"></select>
+            <span class="popup__chevron" data-icon="chevrons-up-down" data-icon-size="13"></span>
+          </span>
+        </label>
+      </div>
+
+      <div class="sheet__actions">
+        <span class="sheet__spacer"></span>
+        <button class="btn" type="button" id="btnArchiveGroupCancel" data-i18n="btn_cancel"></button>
+        <button class="btn btn--primary" type="submit" data-i18n="btn_restore"></button>
+      </div>
+    </form>
+  </div>
+
   <!-- The alert that stands in front of something that cannot be undone. It
        has no title bar and no close button: an alert is answered, not
        dismissed. Last in the file, so it stands over every other dialog. -->

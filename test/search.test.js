@@ -121,8 +121,15 @@ check('runs of space between words are not words of their own',
 const view = js.slice(js.indexOf('function tilesInView()'));
 
 check('a search is asked before the group is',
-  /const shown = query\s*\n\s*\? tiles\.filter\(matchesQuery\)/.test(view),
+  /const shown = query\s*\n\s*\? here\.filter\(matchesQuery\)/.test(view),
   'and the group filter is the else');
+
+/* An archived tile is not on the page, so a search of the page must not turn
+   one up - and taking the archive off after the search would do exactly that. */
+check('and the archive comes off before either of them',
+  /const here = tiles\.filter\(onPage\);/.test(view)
+    && view.indexOf('const here =') < view.indexOf('const shown ='),
+  'a tile that has been put away is not something a search can find');
 
 check('the field emptying puts the group that was being read back',
   view.includes(': activeGroup'),

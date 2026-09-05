@@ -74,6 +74,9 @@
   "menu_search": {
     "message": "Искать плитки"
   },
+  "menu_archiveTile": {
+    "message": "В архив"
+  },
   "menu_openInNewTab": {
     "message": "Открыть в новой вкладке"
   },
@@ -312,6 +315,63 @@
       }
     }
   },
+  "archive_title": {
+    "message": "Архив",
+    "description": "A tile taken off the page without being deleted. It waits in Settings until it is put back; \"restore\" is what putting it back is called throughout, on the button and in the sheet alike."
+  },
+  "archive_note": {
+    "message": "Плитки, убранные со страницы, но не удалённые. При восстановлении плитка вернётся такой же, как была."
+  },
+  "archive_empty": {
+    "message": "Архив пуст. Нажмите правой кнопкой на плитке и выберите «В архив», чтобы убрать её сюда."
+  },
+  "archive_restoreLabel": {
+    "message": "Восстановить «$1»",
+    "description": "$1 is the tile's name.",
+    "placeholders": {
+      "n1": {
+        "content": "$1"
+      }
+    }
+  },
+  "archive_deleteLabel": {
+    "message": "Удалить «$1» навсегда",
+    "description": "The same, for the button that takes a tile out of the archive for good.",
+    "placeholders": {
+      "n1": {
+        "content": "$1"
+      }
+    }
+  },
+  "archive_pickTitle": {
+    "message": "В какую группу?",
+    "description": "The sheet that comes up when a tile is put back and the group it was filed under has been deleted in the meantime."
+  },
+  "archive_pickNote": {
+    "message": "Группа, в которой была «$1», удалена. Выберите, куда поместить её теперь.",
+    "description": "$1 is the tile's name.",
+    "placeholders": {
+      "n1": {
+        "content": "$1"
+      }
+    }
+  },
+  "archive_pickGroup": {
+    "message": "Группа"
+  },
+  "archive_noGroup": {
+    "message": "Без группы",
+    "description": "The option that puts a tile back without filing it in any group - where it shows under \"All\" and nowhere else. Offered only while there is an \"All\" chip to find it on."
+  },
+  "confirm_deleteArchivedText": {
+    "message": "«$1» будет навсегда удалена из архива.",
+    "description": "The same, for a tile being deleted out of the archive - which is not on the page to be taken off it, and has nowhere further to go.",
+    "placeholders": {
+      "n1": {
+        "content": "$1"
+      }
+    }
+  },
   "btn_save": {
     "message": "Сохранить"
   },
@@ -320,6 +380,9 @@
   },
   "btn_delete": {
     "message": "Удалить"
+  },
+  "btn_restore": {
+    "message": "Восстановить"
   },
   "btn_close": {
     "message": "Закрыть"
@@ -383,6 +446,9 @@
   },
   "section_groups": {
     "message": "Группы"
+  },
+  "section_archive": {
+    "message": "Архив"
   },
   "section_about": {
     "message": "О плагине"

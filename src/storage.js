@@ -7,7 +7,7 @@
  *
  * Keys
  *   tiles      - [{ id, url, title, groupId, icon, iconColor, bg, pad, round,
- *                showLabel, visits }]
+ *                showLabel, visits, archivedAt }]
  *                groupId is null when loose; icon is '' when the site's own
  *                is to be looked up; iconColor is '' when it keeps its own
  *                colours; bg is '' for the usual frosted tile; pad is null
@@ -15,7 +15,11 @@
  *                round is how far the icon's own corners are taken off, 0 for
  *                the picture as it comes; showLabel is the tile's own answer
  *                about its name and null where it follows the setting; visits
- *                counts opens from this add-on
+ *                counts opens from this add-on; archivedAt is when the tile
+ *                was put away and 0 while it is on the page - an archived
+ *                tile keeps the groupId it was filed under even after that
+ *                group has gone, which is what the archive asks about when it
+ *                is put back
  *   groups     - [{ id, name }]                 the bar across the top
  *   settings   - see schema.js
  *   activeGroup- id of the group last shown, or null for "All"
@@ -227,6 +231,20 @@ const Store = (() => {
     return Number.isFinite(n) && n > 0 ? n : 0;
   }
 
+  /**
+   * When the tile was put away, and 0 while it is on the page.
+   *
+   * A time rather than a flag, because it is asked two questions and answers
+   * both: whether the tile is archived at all, and - since an archive is read
+   * newest first - where it comes in the list. A tile stored before there was
+   * an archive has no field here, which reads as 0, which is a tile on the
+   * page: exactly what it was.
+   */
+  function sanitizeArchivedAt(raw) {
+    const n = Math.floor(Number(raw));
+    return Number.isFinite(n) && n > 0 ? n : 0;
+  }
+
   function sanitizeTiles(list) {
     if (!Array.isArray(list)) return [];
     return list
@@ -244,7 +262,8 @@ const Store = (() => {
         pad: sanitizePad(t.pad),
         round: sanitizeRound(t.round),
         showLabel: sanitizeShowLabel(t.showLabel),
-        visits: sanitizeVisits(t.visits)
+        visits: sanitizeVisits(t.visits),
+        archivedAt: sanitizeArchivedAt(t.archivedAt)
       }));
   }
 

@@ -56,6 +56,7 @@ node test/importers.test.js    # reading a Speed Dial 2 backup
 node test/header.test.js       # the clock and date settings, a sheet per font
 node test/page.test.js         # the loading screen and the page context menu
 node test/search.test.js       # what the search matches, and where it sits
+node test/archive.test.js     # archiving a tile, and the group it goes back to
 node test/hig.test.js          # the guards from the interface audit
 node test/release.test.js      # the version, the changelog, the workflow
 ```

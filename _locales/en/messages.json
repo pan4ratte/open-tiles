@@ -74,6 +74,9 @@
   "menu_search": {
     "message": "Search tiles"
   },
+  "menu_archiveTile": {
+    "message": "Archive tile"
+  },
   "menu_openInNewTab": {
     "message": "Open in new tab"
   },
@@ -312,6 +315,63 @@
       }
     }
   },
+  "confirm_deleteArchivedText": {
+    "message": "“$1” will be deleted from the archive for good.",
+    "description": "The same, for a tile being deleted out of the archive - which is not on the page to be taken off it, and has nowhere further to go.",
+    "placeholders": {
+      "n1": {
+        "content": "$1"
+      }
+    }
+  },
+  "archive_title": {
+    "message": "Archive",
+    "description": "A tile taken off the page without being deleted. It waits in Settings until it is put back; \"restore\" is what putting it back is called throughout, on the button and in the sheet alike."
+  },
+  "archive_note": {
+    "message": "Tiles taken off the page but not deleted. Restoring one puts it back as it was."
+  },
+  "archive_empty": {
+    "message": "Nothing archived. Right-click a tile and choose “Archive tile” to put it here."
+  },
+  "archive_restoreLabel": {
+    "message": "Restore “$1”",
+    "description": "$1 is the tile's name.",
+    "placeholders": {
+      "n1": {
+        "content": "$1"
+      }
+    }
+  },
+  "archive_deleteLabel": {
+    "message": "Delete “$1” for good",
+    "description": "The same, for the button that takes a tile out of the archive for good.",
+    "placeholders": {
+      "n1": {
+        "content": "$1"
+      }
+    }
+  },
+  "archive_pickTitle": {
+    "message": "Which group?",
+    "description": "The sheet that comes up when a tile is put back and the group it was filed under has been deleted in the meantime."
+  },
+  "archive_pickNote": {
+    "message": "“$1” was in a group that has since been deleted. Choose where it goes now.",
+    "description": "$1 is the tile's name.",
+    "placeholders": {
+      "n1": {
+        "content": "$1"
+      }
+    }
+  },
+  "archive_pickGroup": {
+    "message": "Group"
+  },
+  "archive_noGroup": {
+    "message": "No group",
+    "description": "The option that puts a tile back without filing it in any group - where it shows under \"All\" and nowhere else. Offered only while there is an \"All\" chip to find it on."
+  },
   "btn_save": {
     "message": "Save"
   },
@@ -320,6 +380,9 @@
   },
   "btn_delete": {
     "message": "Delete"
+  },
+  "btn_restore": {
+    "message": "Restore"
   },
   "btn_close": {
     "message": "Close"
@@ -383,6 +446,9 @@
   },
   "section_groups": {
     "message": "Groups"
+  },
+  "section_archive": {
+    "message": "Archive"
   },
   "section_about": {
     "message": "About"

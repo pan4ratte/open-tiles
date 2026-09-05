@@ -105,6 +105,7 @@ const I18N = (() => {
     menu_newGroup: 'New group',
     menu_settings: 'Settings',
     menu_search: 'Search tiles',
+    menu_archiveTile: 'Archive tile',
     menu_openInNewTab: 'Open in new tab',
     menu_editTile: 'Edit tile',
     menu_deleteTile: 'Delete tile',
@@ -197,11 +198,40 @@ const I18N = (() => {
     confirm_deleteTitle: 'Delete this tile?',
     // $1 is the tile's name.
     confirm_deleteText: '“$1” will be deleted from the page.',
+    // The same, for a tile being deleted out of the archive - which is not on
+    // the page to be taken off it, and has nowhere further to go.
+    confirm_deleteArchivedText: '“$1” will be deleted from the archive for good.',
+
+    // ----------------------------------------------------------- the archive
+    // A tile taken off the page without being deleted. It waits in Settings
+    // until it is put back; "restore" is what putting it back is called
+    // throughout, on the button and in the sheet alike.
+    archive_title: 'Archive',
+    archive_note: 'Tiles taken off the page but not deleted. Restoring one puts it back as it was.',
+    archive_empty: 'Nothing archived. Right-click a tile and choose '
+      + '“Archive tile” to put it here.',
+    // $1 is the tile's name.
+    archive_restoreLabel: 'Restore “$1”',
+    // The same, for the button that takes a tile out of the archive for good.
+    archive_deleteLabel: 'Delete “$1” for good',
+
+    // The sheet that comes up when a tile is put back and the group it was
+    // filed under has been deleted in the meantime.
+    archive_pickTitle: 'Which group?',
+    // $1 is the tile's name.
+    archive_pickNote: '“$1” was in a group that has since been deleted. '
+      + 'Choose where it goes now.',
+    archive_pickGroup: 'Group',
+    // The option that puts a tile back without filing it in any group - where
+    // it shows under "All" and nowhere else. Offered only while there is an
+    // "All" chip to find it on.
+    archive_noGroup: 'No group',
 
     // ------------------------------------------------------------- the buttons
     btn_save: 'Save',
     btn_cancel: 'Cancel',
     btn_delete: 'Delete',
+    btn_restore: 'Restore',
     btn_close: 'Close',
     btn_use: 'Use',
     // The pair on the Backup row: one writes the file, the other reads one back.
@@ -232,6 +262,7 @@ const I18N = (() => {
     section_layout: 'Layout',
     section_header: 'Date and time',
     section_groups: 'Groups',
+    section_archive: 'Archive',
     section_about: 'About',
 
     group_appearance: 'Appearance',

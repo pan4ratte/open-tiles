@@ -54,6 +54,12 @@
   const btnGroupCancel = document.getElementById('btnGroupCancel');
   const btnGroupDelete = document.getElementById('btnGroupDelete');
 
+  const archiveGroupModal = document.getElementById('archiveGroup');
+  const archiveGroupForm = document.getElementById('archiveGroupForm');
+  const archiveGroupNote = document.getElementById('archiveGroupNote');
+  const fieldArchiveGroup = document.getElementById('fieldArchiveGroup');
+  const btnArchiveGroupCancel = document.getElementById('btnArchiveGroupCancel');
+
   const settingsModal = document.getElementById('settings');
   const settingsForm = document.getElementById('settingsForm');
   const settingsBody = document.getElementById('settingsBody');
@@ -62,8 +68,10 @@
   const btnSettingsClose = document.getElementById('btnSettingsClose');
   const btnSearch = document.getElementById('btnSearch');
 
-  /** @type {{id:string,url:string,title:string,groupId:?string,icon:string,
-   *   iconColor:string,bg:string,pad:?number,round:number,visits:number}[]} */
+  /** Every tile there is, the archived ones among them - see onPage.
+   *  @type {{id:string,url:string,title:string,groupId:?string,icon:string,
+   *   iconColor:string,bg:string,pad:?number,round:number,visits:number,
+   *   archivedAt:number}[]} */
   let tiles = [];
   /** @type {{id:string,name:string}[]} the chips across the top */
   let groups = [];
@@ -344,6 +352,9 @@
     return groups.some(group => group.id === tile.groupId) ? tile.groupId : null;
   }
 
+  /** Whether this tile is one the page shows at all - see the archive. */
+  const onPage = tile => !tile.archivedAt;
+
   /**
    * The tiles on screen: what is being looked for, then the order.
    *
@@ -358,11 +369,16 @@
    * puts the grid back exactly as it was rather than baked into a new order.
    */
   function tilesInView() {
+    // The archive comes off first, and off both roads: a tile that has been
+    // put away is not on the page, so it is not in a group and not something
+    // a search of the page can turn up either.
+    const here = tiles.filter(onPage);
+
     const shown = query
-      ? tiles.filter(matchesQuery)
+      ? here.filter(matchesQuery)
       : activeGroup
-        ? tiles.filter(tile => groupOf(tile) === activeGroup)
-        : tiles;
+        ? here.filter(tile => groupOf(tile) === activeGroup)
+        : here;
 
     if (settings.tileOrder !== 'visits') return shown;
 
@@ -1711,14 +1727,29 @@
   }
 
   /**
-   * A tile dropped on a chip belongs to another group now, so it is about to
-   * be redrawn out of this view. It sees itself out first - a redraw that
-   * simply loses a tile reads as the drag having gone wrong.
+   * A tile is about to be redrawn out of this view, so it sees itself out
+   * first: it shrinks away and fades. A redraw that simply loses a tile reads
+   * as something having gone wrong.
+   *
+   * Three ways out share it, because they are one thing as far as the grid is
+   * concerned - the tile was here and now it is not. A tile dropped on a group
+   * chip belongs to another view; an archived one has gone to the shelf; a
+   * deleted one has gone for good. Where it went is said by what is on screen
+   * afterwards, and by whether it can be got back; the leaving itself is the
+   * same movement, and giving each its own would be three ways of saying one
+   * thing.
+   *
+   * One keyframe, not two: with no `from` written down the browser takes the
+   * tile's own computed style as the start, so it leaves from wherever it
+   * actually stands. Mid-drag that is the faded, shrunken state .is-dragging
+   * put it in and the movement carries straight on from there; from the menu
+   * it is a tile at rest, which is where the other two start. A `from` written
+   * out would have been the drag's state, and a tile archived from the menu
+   * would have snapped down to 40% before it began.
    */
   function leaveView(el) {
-    if (stillness.matches || !el.isConnected) return Promise.resolve();
+    if (!el || stillness.matches || !el.isConnected) return Promise.resolve();
     return el.animate([
-      { opacity: .4, transform: 'scale(.94)' },
       { opacity: 0, transform: 'scale(.7)' }
     ], {
       duration: 200,
@@ -1727,6 +1758,13 @@
       // animation finishing and the redraw taking it away.
       fill: 'forwards'
     }).finished.catch(() => {});
+  }
+
+  /** The element showing this tile, or null when it is not on screen at all -
+   *  which is every archived tile, and any tile a group filter is hiding. */
+  function tileElement(id) {
+    return [...grid.querySelectorAll('.tile[data-id]')]
+      .find(el => el.dataset.id === id) || null;
   }
 
   grid.addEventListener('dragstart', e => {
@@ -1810,7 +1848,7 @@
    * order and out of the accessibility tree in one attribute.
    */
   const LAYERS = [groupBar, toolbar, document.querySelector('.page'),
-                  modal, groupModal, settingsModal, confirmAlert];
+                  modal, groupModal, settingsModal, archiveGroupModal, confirmAlert];
 
   /**
    * What is up, innermost last, and what had the focus when each went up. A
@@ -1881,6 +1919,9 @@
     // The alert stands over every other dialog, so it is the one that answers -
     // and the answer Escape gives is the safe one.
     if (settleAlert) settleAlert(false);
+    // Innermost first: this sheet is raised from the settings window and
+    // stands over it, so Escape has to reach it before the window under it.
+    else if (settleArchiveGroup) settleArchiveGroup(undefined);
     else if (!settingsModal.hidden) closeDialog(settingsModal);
     else if (!groupModal.hidden) closeDialog(groupModal);
     else if (!modal.hidden) closeDialog(modal);
@@ -2938,14 +2979,25 @@
 
     if (settings.confirmDelete) {
       const name = tile.title || defaultTitle(tile.url);
-      if (!(await askAlert(t('confirm_deleteText', name)))) return false;
+      // An archived tile is not on the page, so it cannot be taken off it -
+      // and the archive is the last place it was being kept.
+      const said = tile.archivedAt ? 'confirm_deleteArchivedText' : 'confirm_deleteText';
+      if (!(await askAlert(t(said, name)))) return false;
     }
+
+    // Held before the tile leaves the list, because that is what says which
+    // element on screen is this one.
+    const going = tileElement(id);
 
     tiles = tiles.filter(t => t.id !== id);
     // Nothing points at it any more, so nothing kept about its picture is
     // worth the room - in memory or in the lookup cache.
     await forgetTileIcon(tile);
-    await persistTiles();
+    // It goes the way an archived one goes: the grid loses a tile either way,
+    // and only what is left afterwards says which of the two happened. A tile
+    // deleted from the archive has no element here at all, and leaveView says
+    // so by finishing at once.
+    await Promise.all([persistTiles(), leaveView(going)]);
     render();
     return true;
   }
@@ -2967,6 +3019,149 @@
     const el = e.target.closest('.tile[data-id]');
     if (el) countVisit(el.dataset.id);
   });
+
+  // ------------------------------------------------------------- the archive
+
+  /*
+   * Somewhere between the page and the bin.
+   *
+   * A tile is a bookmark, and the two things done to one that are not editing
+   * it are "I am finished with this" and "not now". Delete has always been the
+   * first; this is the second. Nothing is asked before a tile is archived,
+   * because nothing is lost by it - the tile keeps its name, its picture, its
+   * colours, its padding, its count of visits and the group it was filed
+   * under, and putting it back puts all of that back with it. That is what
+   * makes it the safe half of the pair: an alert guards what cannot be undone,
+   * and this can.
+   */
+
+  /** The archive as the settings dialog draws it, most recently put away
+   *  first - which is the order an archive is read in. */
+  function archivedTiles() {
+    return tiles
+      .filter(tile => tile.archivedAt)
+      .sort((a, b) => b.archivedAt - a.archivedAt)
+      .map(tile => ({
+        id: tile.id,
+        name: tile.title || defaultTitle(tile.url),
+        url: tile.url
+      }));
+  }
+
+  async function archiveTile(id) {
+    const tile = tiles.find(t => t.id === id);
+    if (!tile || tile.archivedAt) return;
+
+    // The time it went, which is both the fact that it is away and where it
+    // comes in the list - see sanitizeArchivedAt in storage.js.
+    tile.archivedAt = Date.now();
+    // The tile sees itself out while the write goes on underneath it, so the
+    // redraw is the last thing that happens rather than a cut in the middle of
+    // it going. The same pair of lines a tile dropped on a group chip runs.
+    await Promise.all([persistTiles(), leaveView(tileElement(id))]);
+    render();
+  }
+
+  /**
+   * Asks which group a tile coming back should go to.
+   *
+   * A promise for the answer, the way the alert is: the caller is already an
+   * await, and this is one question with one sheet, so the way to settle the
+   * one that is up is a single variable - which is also how the Escape
+   * handler can tell there is one up at all.
+   *
+   * @returns {Promise<?string|undefined>} the group's id, null for no group,
+   *   or undefined where the sheet was called off
+   */
+  let settleArchiveGroup = null;
+
+  function askArchiveGroup(tile) {
+    if (settleArchiveGroup) settleArchiveGroup(undefined);
+
+    archiveGroupNote.textContent =
+      t('archive_pickNote', tile.title || defaultTitle(tile.url));
+
+    fieldArchiveGroup.textContent = '';
+    groups.forEach(group => {
+      const option = document.createElement('option');
+      option.value = group.id;
+      option.textContent = group.name;
+      fieldArchiveGroup.append(option);
+    });
+
+    // "No group" is only offered where a tile left in one can actually be
+    // found: loose tiles show under "All" and nowhere else, so with that chip
+    // turned off it would be a way of putting a tile back out of sight.
+    if (settings.showAllGroup) {
+      const loose = document.createElement('option');
+      loose.value = '';
+      loose.textContent = t('archive_noGroup');
+      fieldArchiveGroup.append(loose);
+    }
+
+    fieldArchiveGroup.value = groups[0].id;
+
+    // No focus element handed in: openDialog calls select() on whatever it is
+    // given, and a pop-up button has nothing to select. It is focused here
+    // instead, which is where the keyboard belongs - there is one control.
+    openDialog(archiveGroupModal);
+    fieldArchiveGroup.focus();
+
+    return new Promise(resolve => {
+      settleArchiveGroup = answer => {
+        settleArchiveGroup = null;
+        closeDialog(archiveGroupModal);
+        resolve(answer);
+      };
+    });
+  }
+
+  archiveGroupForm.addEventListener('submit', e => {
+    e.preventDefault();
+    if (settleArchiveGroup) settleArchiveGroup(fieldArchiveGroup.value || null);
+  });
+
+  btnArchiveGroupCancel.addEventListener('click',
+    () => settleArchiveGroup && settleArchiveGroup(undefined));
+
+  archiveGroupModal.addEventListener('mousedown', e => {
+    if (e.target === archiveGroupModal && settleArchiveGroup) settleArchiveGroup(undefined);
+  });
+
+  /**
+   * Puts a tile back on the page.
+   *
+   * The group it was filed under is kept while it is away, even through that
+   * group being deleted - see the delete button in the group sheet - so the
+   * usual answer is that it goes back exactly where it came from and nothing
+   * is asked at all.
+   *
+   * @returns {Promise<boolean>} whether the tile actually came back
+   */
+  async function restoreTile(id) {
+    const tile = tiles.find(t => t.id === id);
+    if (!tile || !tile.archivedAt) return false;
+
+    // Loose is not lost: a tile that was in no group goes back into no group.
+    // Only one naming a group that has since gone has anywhere to be asked
+    // about.
+    const gone = Boolean(tile.groupId)
+      && !groups.some(group => group.id === tile.groupId);
+
+    if (gone) {
+      // With every group deleted there is nothing to choose between, and a
+      // page with no groups shows every tile there is - so it simply comes
+      // back, and the id of the group that is not there any more goes.
+      const chosen = groups.length ? await askArchiveGroup(tile) : null;
+      if (chosen === undefined) return false;
+      tile.groupId = chosen;
+    }
+
+    tile.archivedAt = 0;
+    await persistTiles();
+    render();
+    return true;
+  }
 
   // --------------------------------------------------------- context menu
 
@@ -3165,6 +3360,9 @@
     return [
       { icon: 'external-link', label: t('menu_openInNewTab'), run: () => openTileInNewTab(id) },
       { icon: 'pencil', label: t('menu_editTile'), run: () => openTileModal(id) },
+      // Above Delete and not marked destructive, because that is exactly what
+      // it is: the same shelf, reached without losing anything.
+      { icon: 'archive', label: t('menu_archiveTile'), run: () => archiveTile(id) },
       { icon: 'trash-2', label: t('menu_deleteTile'), danger: true, run: () => deleteTile(id) },
       SEPARATOR,
       ...pageItems()
@@ -3240,8 +3438,14 @@
   btnGroupDelete.addEventListener('click', async () => {
     const id = editingGroupId;
     groups = groups.filter(g => g.id !== id);
-    // The group goes; its tiles stay, loose.
-    tiles.forEach(tile => { if (tile.groupId === id) tile.groupId = null; });
+    // The group goes; its tiles stay, loose. Not the archived ones: what they
+    // remember is where they are to go back to, and a tile put away from this
+    // group is meant to notice on the way back that the group has gone. It
+    // holds the dead id until then, which every reader already takes for
+    // loose - see groupOf - and restoreTile is what finally settles it.
+    tiles.forEach(tile => {
+      if (tile.groupId === id && onPage(tile)) tile.groupId = null;
+    });
     if (activeGroup === id) activeGroup = null;
 
     await persistGroups();
@@ -3530,6 +3734,31 @@
    * as anything else is - and the value that comes back is the cleaned one to
    * carry on with. A section the file does not carry is left alone.
    */
+  /**
+   * The archive row asking for a tile back, or asking to be rid of it.
+   *
+   * Deleting from here is the one way a tile actually goes: everywhere else
+   * on this page, delete takes a tile off the grid, and a tile taken off the
+   * grid could have been archived instead. There is no shelf under the shelf,
+   * which is what the alert says.
+   *
+   * What either wants in return is the list that is left, which is what the
+   * row redraws itself from. One that was called off - the sheet asking which
+   * group, or the alert asking whether to delete - hands back nothing instead:
+   * the list has not changed, and a redraw would only rebuild the rows it is
+   * already showing.
+   */
+  async function changeArchive(payload) {
+    const act = payload && payload.action;
+    if (act !== 'restore' && act !== 'delete') return { value: null };
+
+    const done = act === 'restore'
+      ? await restoreTile(payload.id)
+      : await deleteTile(payload.id);
+
+    return { value: done ? archivedTiles() : null };
+  }
+
   async function changeTransfer(payload) {
     if (payload.action === 'export') {
       try {
@@ -3720,6 +3949,7 @@
     if (key === 'deepIcons') return changeDeepIcons(value);
     if (key === 'background') return changeBackground(value);
     if (key === 'backup') return changeTransfer(value);
+    if (key === 'archive') return changeArchive(value);
 
     const effective = updateSetting(key, value);
     // The chips first: renderGroups is what settles which group the page is
@@ -3739,7 +3969,11 @@
     // is handed to the dialog on the side - the picture on screen and the last
     // few, which are the two things its picker draws.
     SettingsUI.mount(settingsBody, {
-      values: { ...settings, background: { record: background, recent: recentBackgrounds } },
+      values: {
+        ...settings,
+        background: { record: background, recent: recentBackgrounds },
+        archive: archivedTiles()
+      },
       status,
       onChange: onSettingChange,
       // macOS titles a settings window with the pane it is showing.
@@ -3990,6 +4224,9 @@
       if (key === 'tiles' && !dragEl) {
         tiles = value;
         render();
+        // The archive is a view of these, so a tile put away or put back in
+        // another tab changes what this one's list should be showing.
+        if (!settingsModal.hidden) mountSettings();
       } else if (key === 'groups' && !dragChip) {
         groups = value;
         // The group being shown may be the one that just went.
