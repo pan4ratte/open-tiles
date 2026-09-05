@@ -64,6 +64,16 @@ const base64url = value => Buffer.from(value).toString('base64url');
  * `jti` of what it has seen and refuses a repeat, and it will not accept a
  * token good for more than five minutes. Both of those make a cached token a
  * puzzling 401 halfway through a release.
+ *
+ * HS256, which is the algorithm AMO's API documents and the one it accepts.
+ * The HMAC below is a signature over the two halves above it, not a stored
+ * hash of anything: the secret is a machine credential the store issues and
+ * shows once, and the token it signs is thrown away five minutes later. CodeQL
+ * reads `createHmac('sha256', secret)` beside an environment variable with KEY
+ * in its name as a password being hashed with too little effort, and raises
+ * `js/insufficient-password-hash` here on every scan. There is no password in
+ * this file and nothing to strengthen; the alert is dismissed rather than
+ * worked around.
  */
 function token({ issuer, secret }) {
   const now = Math.floor(Date.now() / 1000);
