@@ -31,7 +31,7 @@
     "message": "Плиток пока нет. Нажмите правой кнопкой в любом месте, чтобы добавить первую закладку."
   },
   "empty_noMatches": {
-    "message": "Ничего не найдено по запросу «$1».",
+    "message": "Ничего не найдено по запросу \"$1\".",
     "description": "$1 is what was typed into the search field.",
     "placeholders": {
       "n1": {
@@ -72,10 +72,10 @@
     "message": "Настройки"
   },
   "menu_search": {
-    "message": "Искать плитки"
+    "message": "Поиск закладок"
   },
   "menu_archiveTile": {
-    "message": "В архив"
+    "message": "Переместить в архив"
   },
   "menu_openInNewTab": {
     "message": "Открыть в новой вкладке"
@@ -307,8 +307,17 @@
     "message": "Удалить эту плитку?"
   },
   "confirm_deleteText": {
-    "message": "«$1» будет удалена со страницы.",
+    "message": "\"$1\" будет удалена со страницы.",
     "description": "$1 is the tile's name.",
+    "placeholders": {
+      "n1": {
+        "content": "$1"
+      }
+    }
+  },
+  "confirm_deleteArchivedText": {
+    "message": "\"$1\" будет навсегда удалена из архива.",
+    "description": "The same, for a tile being deleted out of the archive - which is not on the page to be taken off it, and has nowhere further to go.",
     "placeholders": {
       "n1": {
         "content": "$1"
@@ -323,10 +332,10 @@
     "message": "Плитки, убранные со страницы, но не удалённые. При восстановлении плитка вернётся такой же, как была."
   },
   "archive_empty": {
-    "message": "Архив пуст. Нажмите правой кнопкой на плитке и выберите «В архив», чтобы убрать её сюда."
+    "message": "Архив пуст. Нажмите правой кнопкой на плитке и выберите \"Переместить в архив\", чтобы убрать её сюда."
   },
   "archive_restoreLabel": {
-    "message": "Восстановить «$1»",
+    "message": "Восстановить \"$1\"",
     "description": "$1 is the tile's name.",
     "placeholders": {
       "n1": {
@@ -335,7 +344,7 @@
     }
   },
   "archive_deleteLabel": {
-    "message": "Удалить «$1» навсегда",
+    "message": "Удалить \"$1\" навсегда",
     "description": "The same, for the button that takes a tile out of the archive for good.",
     "placeholders": {
       "n1": {
@@ -348,7 +357,7 @@
     "description": "The sheet that comes up when a tile is put back and the group it was filed under has been deleted in the meantime."
   },
   "archive_pickNote": {
-    "message": "Группа, в которой была «$1», удалена. Выберите, куда поместить её теперь.",
+    "message": "Группа, в которой была \"$1\", удалена. Выберите, куда поместить её теперь.",
     "description": "$1 is the tile's name.",
     "placeholders": {
       "n1": {
@@ -362,15 +371,6 @@
   "archive_noGroup": {
     "message": "Без группы",
     "description": "The option that puts a tile back without filing it in any group - where it shows under \"All\" and nowhere else. Offered only while there is an \"All\" chip to find it on."
-  },
-  "confirm_deleteArchivedText": {
-    "message": "«$1» будет навсегда удалена из архива.",
-    "description": "The same, for a tile being deleted out of the archive - which is not on the page to be taken off it, and has nowhere further to go.",
-    "placeholders": {
-      "n1": {
-        "content": "$1"
-      }
-    }
   },
   "btn_save": {
     "message": "Сохранить"
@@ -557,7 +557,7 @@
     "description": "Names the bottom of the Columns slider, where a count would be nothing."
   },
   "set_columnsNote": {
-    "message": "«Авто» размещает в строке столько плиток, сколько позволяет окно."
+    "message": "\"Авто\" размещает в строке столько плиток, сколько позволяет окно."
   },
   "set_tileSize": {
     "message": "Размер плитки"
@@ -611,14 +611,14 @@
     "message": "Показывать названия сайтов"
   },
   "set_tileNames": {
-    "message": "Названия у отдельных плиток",
+    "message": "Сброс индивидуальных настроек названий плиток",
     "description": "The row under it: a tile can be told to show or hide its name in the tile editor, and this is the one way back from every one of those."
   },
   "set_tileNamesButton": {
     "message": "Сбросить"
   },
   "set_tileNamesNote": {
-    "message": "Плитки с отдельно заданным названием снова будут следовать этой настройке."
+    "message": "Плитки с отдельно заданным отображением названия снова будут следовать общей настройке."
   },
   "set_tileNamesDone": {
     "message": "Все плитки снова следуют этой настройке.",
@@ -668,7 +668,7 @@
     "description": "The card at the head of the clock's and the date's font pickers: no family of their own, follow the one the page is set in."
   },
   "set_clockFontNote": {
-    "message": "«По умолчанию» следует настройке «Основные → Шрифт»."
+    "message": "\"По умолчанию\" следует настройке \"Основные → Шрифт\"."
   },
   "set_weight": {
     "message": "Вес шрифта"
@@ -683,7 +683,7 @@
     "message": "Показывать дату"
   },
   "set_dateFontNote": {
-    "message": "«По умолчанию» следует настройке «Основные → Шрифт»."
+    "message": "\"По умолчанию\" следует настройке \"Основные → Шрифт\"."
   },
   "set_headerTint": {
     "message": "Свой цвет"
@@ -716,7 +716,7 @@
     "message": "При наведении"
   },
   "set_showAllGroup": {
-    "message": "Показывать группу «Все»"
+    "message": "Показывать группу \"Все\""
   },
   "set_showAllGroupNote": {
     "message": "В группе собраны все сохранённые страницы во всех группах."
@@ -792,6 +792,46 @@
   },
   "about_sourceNote": {
     "message": "Исходный код, сообщество и форум для сообщения о багах."
+  },
+  "about_changelog": {
+    "message": "Список изменений"
+  },
+  "about_changelogButton": {
+    "message": "Открыть"
+  },
+  "about_changelogNote": {
+    "message": "Всё, что изменилось, от версии к версии."
+  },
+  "notice_updatedTitle": {
+    "message": "OpenTiles обновлён",
+    "description": "The card that comes up once after an update, and the window it opens."
+  },
+  "notice_updatedText": {
+    "message": "Вышла версия $1. Посмотрите, что изменилось.",
+    "description": "$1 is the version number.",
+    "placeholders": {
+      "n1": {
+        "content": "$1"
+      }
+    }
+  },
+  "btn_whatsNew": {
+    "message": "Что нового"
+  },
+  "btn_later": {
+    "message": "Позже"
+  },
+  "changelog_title": {
+    "message": "Что нового"
+  },
+  "changelog_version": {
+    "message": "Версия $1",
+    "description": "$1 is the version number.",
+    "placeholders": {
+      "n1": {
+        "content": "$1"
+      }
+    }
   },
   "weight_100": {
     "message": "Тончайший"
@@ -1135,7 +1175,7 @@
     }
   },
   "font_noSuchFamily": {
-    "message": "В Google Fonts нет шрифта с названием «$1».",
+    "message": "В Google Fonts нет шрифта с названием \"$1\".",
     "description": "$1 is the family that was asked for.",
     "placeholders": {
       "n1": {
@@ -1159,7 +1199,7 @@
     "message": "Доступно только после установки плагина в Firefox."
   },
   "perm_hint": {
-    "message": "Также можно включить «Доступ к вашим данным для всех веб-сайтов» в about:addons → Tiles → Разрешения.",
+    "message": "Также можно включить \"Доступ к вашим данным для всех веб-сайтов\" в about:addons → Tiles → Разрешения.",
     "description": "The way in that does not go through this toggle. Added to both refusals below, so it is written once."
   },
   "perm_refused": {

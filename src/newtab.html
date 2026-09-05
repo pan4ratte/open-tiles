@@ -87,6 +87,27 @@
     <p class="empty" id="empty" data-i18n="empty_noTiles" hidden></p>
   </main>
 
+  <!-- The card that comes up once after an update. Not a dialog: it interrupts
+       nothing, takes no focus and can be left alone, which is what a passive
+       suggestion should do. It answers either way - Later and See what's new
+       both count as read, so it does not come back until the next release.
+       See offerChangelog in newtab.js. -->
+  <aside class="notice" id="updateNotice" role="status" aria-live="polite" hidden>
+    <div class="notice__box">
+      <span class="notice__glyph" data-icon="sparkles" data-icon-size="17"></span>
+      <div class="notice__text">
+        <p class="notice__title" data-i18n="notice_updatedTitle"></p>
+        <p class="notice__body" id="noticeBody"></p>
+      </div>
+      <div class="notice__actions">
+        <button class="btn btn--sm" type="button" id="btnNoticeLater"
+                data-i18n="btn_later"></button>
+        <button class="btn btn--sm btn--primary" type="button" id="btnNoticeOpen"
+                data-i18n="btn_whatsNew"></button>
+      </div>
+    </div>
+  </aside>
+
   <!-- Add / edit tile. A sheet: it belongs to the page it interrupts, so it
        comes down from the top edge and is dismissed by its own buttons. -->
   <div class="modal sheet" id="modal" tabindex="-1" role="dialog" aria-modal="true"
@@ -336,6 +357,29 @@
     </form>
   </div>
 
+  <!-- What's new. A window rather than a sheet: it interrupts nothing, it is
+       read rather than answered, and it is opened from two different places -
+       the notice near the top of this file and the About page - so it stands
+       on its own.
+
+       After the settings window, because the About page is one of those two
+       doors: every dialog here carries the same z-index, so the one written
+       later is the one that stands in front. -->
+  <div class="modal window window--fit" id="changelog" tabindex="-1" role="dialog" aria-modal="true"
+       data-i18n-label="changelog_title" hidden>
+    <div class="window__box">
+      <div class="window__toolbar">
+        <h2 class="window__title" data-i18n="changelog_title"></h2>
+        <span class="window__spacer"></span>
+        <button class="toolbtn" type="button" id="btnChangelogClose"
+                data-i18n-title="btn_close" data-i18n-label="btn_close"
+                data-icon="x" data-icon-size="16"></button>
+      </div>
+
+      <div class="window__body changelog" id="changelogBody"></div>
+    </div>
+  </div>
+
   <!-- The alert that stands in front of something that cannot be undone. It
        has no title bar and no close button: an alert is answered, not
        dismissed. Last in the file, so it stands over every other dialog. -->
@@ -355,6 +399,8 @@
 
   <script src="i18n.js"></script>
   <script src="icons.js"></script>
+  <script src="changelog-data.js"></script>
+  <script src="changelog.js"></script>
   <script src="schema.js"></script>
   <script src="storage.js"></script>
   <script src="fonts.js"></script>

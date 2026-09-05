@@ -372,7 +372,7 @@ check('and a button to put it back', Boolean(restoreBtn));
 /* The name is in the label but not on the face: forty buttons each reading
    "Restore <something>" is forty different widths down one column. */
 check('whose label names the tile, for anyone who cannot see the row it is in',
-  restoreBtn.attrs['aria-label'] === 'Restore “Figma”',
+  restoreBtn.attrs['aria-label'] === 'Restore "Figma"',
   restoreBtn.attrs['aria-label']);
 
 restoreBtn.fire('click');
@@ -398,7 +398,7 @@ check('after Restore, which is what the row is for',
 check('carrying a glyph rather than a word', remove.textContent.trim() === '');
 
 check('so it says which tile it is for in its label, and what it will do',
-  remove.attrs['aria-label'] === 'Delete “Figma” for good',
+  remove.attrs['aria-label'] === 'Delete "Figma" for good',
   remove.attrs['aria-label']);
 
 check('and names itself on hover for anyone who cannot place the glyph',

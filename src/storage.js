@@ -23,6 +23,8 @@
  *   groups     - [{ id, name }]                 the bar across the top
  *   settings   - see schema.js
  *   activeGroup- id of the group last shown, or null for "All"
+ *   changelogSeen - the newest version whose changelog has been offered, or
+ *                '' on a profile that has never been offered one
  *   background - { src, name, type, savedAt }      the page background
  *                type is 'image' or 'video'; src is a data: URI or an address
  *   bgRecent   - [background & { effects }]  the last few, newest first, so one
@@ -44,6 +46,7 @@ const Store = (() => {
   const TILES = 'tiles';
   const GROUPS = 'groups';
   const ACTIVE_GROUP = 'activeGroup';
+  const CHANGELOG_SEEN = 'changelogSeen';
   const SETTINGS = 'settings';
   const BACKGROUND = 'background';
   const BG_RECENT = 'bgRecent';
@@ -316,6 +319,46 @@ const Store = (() => {
   }
 
   const saveActiveGroup = id => set(ACTIVE_GROUP, typeof id === 'string' && id ? id : null);
+
+  // -------------------------------------------------------- what is new
+
+  /**
+   * The newest version whose changelog has been offered. Its own key for the
+   * same reason the active group has one: it is something the page remembers,
+   * not something anybody set - and it should outlive "Reset all settings",
+   * which would otherwise offer the same release a second time.
+   *
+   * The empty string is a profile that has never been offered one, which is
+   * how a fresh install is told apart from an update - see offerChangelog in
+   * newtab.js.
+   */
+  async function loadChangelogSeen() {
+    const version = await get(CHANGELOG_SEEN);
+    return typeof version === 'string' ? version.slice(0, 32) : '';
+  }
+
+  const saveChangelogSeen = version =>
+    set(CHANGELOG_SEEN, typeof version === 'string' ? version.slice(0, 32) : '');
+
+  /**
+   * Whether this profile has run the add-on before.
+   *
+   * Asked because an empty `changelogSeen` means two different things: a
+   * profile that has just installed the add-on, which has nothing to catch up
+   * on, and a profile that has been using it since before there was a
+   * changelog to read - which is every existing user the first time this ships,
+   * and exactly who the notice is for.
+   *
+   * Nothing at all in storage is the first of those. It has to be asked before
+   * the page writes anything, which is why it goes in the same breath as the
+   * rest of what boot loads.
+   */
+  async function usedBefore() {
+    const [tiles, groups, settings] = await Promise.all(
+      [TILES, GROUPS, SETTINGS].map(key => get(key))
+    );
+    return [tiles, groups, settings].some(value => value !== undefined);
+  }
 
   // --------------------------------------------------------------- settings
 
@@ -718,7 +761,8 @@ const Store = (() => {
       [SETTINGS, Schema.coerce],
       [BACKGROUND, sanitizeBackground],
       [BG_RECENT, sanitizeRecent],
-      [ACTIVE_GROUP, id => (typeof id === 'string' && id ? id : null)]
+      [ACTIVE_GROUP, id => (typeof id === 'string' && id ? id : null)],
+      [CHANGELOG_SEEN, version => (typeof version === 'string' ? version : '')]
     ];
 
     runtime.onChanged.addListener((changes, area) => {
@@ -735,6 +779,7 @@ const Store = (() => {
     load, save,
     loadGroups, saveGroups, MAX_GROUPS,
     loadActiveGroup, saveActiveGroup,
+    loadChangelogSeen, saveChangelogSeen, usedBefore,
     loadSettings, saveSettings, resetSettings,
     loadBackground, saveBackground, clearBackground, backgroundUntouched,
     loadRecentBackgrounds, rememberBackground, noteRecentEffects,

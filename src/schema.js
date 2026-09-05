@@ -727,6 +727,18 @@ const Schema = (() => {
               value: APP.licence
             },
             {
+              key: 'changelog',
+              label: t('about_changelog'),
+              // Nothing to store: the button raises the window that lists
+              // every release - the same one the notice after an update opens.
+              // See openChangelog in newtab.js.
+              type: 'action',
+              external: true,
+              buttonLabel: t('about_changelogButton'),
+              buttonIcon: 'scroll-text',
+              note: t('about_changelogNote')
+            },
+            {
               key: 'source',
               label: t('about_source'),
               type: 'link',

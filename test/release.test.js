@@ -78,9 +78,13 @@ if (notes !== null) {
 
 const marks = headings(CHANGELOG);
 
-check('the changelog has an Unreleased heading to write the next one under',
-  marks.length > 0 && marks[0].version === 'Unreleased',
-  marks.map(m => m.version).join(', '));
+/* A release is written up under its own number straight away here, rather
+   than parked under an Unreleased heading first. One is allowed all the same -
+   plenty of changelogs work that way - but it belongs at the top: written
+   under a version, its lines would be published as part of that release. */
+const parked = marks.findIndex(mark => mark.version === 'Unreleased');
+check('an Unreleased heading, where there is one, sits above every version',
+  parked <= 0, marks.map(m => m.version).join(', '));
 
 const released = marks.filter(m => m.version !== 'Unreleased');
 

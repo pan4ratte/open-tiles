@@ -68,6 +68,15 @@
   const btnSettingsClose = document.getElementById('btnSettingsClose');
   const btnSearch = document.getElementById('btnSearch');
 
+  const updateNotice = document.getElementById('updateNotice');
+  const noticeBody = document.getElementById('noticeBody');
+  const btnNoticeLater = document.getElementById('btnNoticeLater');
+  const btnNoticeOpen = document.getElementById('btnNoticeOpen');
+
+  const changelogModal = document.getElementById('changelog');
+  const changelogBody = document.getElementById('changelogBody');
+  const btnChangelogClose = document.getElementById('btnChangelogClose');
+
   /** Every tile there is, the archived ones among them - see onPage.
    *  @type {{id:string,url:string,title:string,groupId:?string,icon:string,
    *   iconColor:string,bg:string,pad:?number,round:number,visits:number,
@@ -1847,8 +1856,9 @@
    * it claims, `inert` actually does - it takes a subtree out of the tab
    * order and out of the accessibility tree in one attribute.
    */
-  const LAYERS = [groupBar, toolbar, document.querySelector('.page'),
-                  modal, groupModal, settingsModal, archiveGroupModal, confirmAlert];
+  const LAYERS = [groupBar, toolbar, document.querySelector('.page'), updateNotice,
+                  modal, groupModal, settingsModal, archiveGroupModal, confirmAlert,
+                  changelogModal];
 
   /**
    * What is up, innermost last, and what had the focus when each went up. A
@@ -1922,6 +1932,9 @@
     // Innermost first: this sheet is raised from the settings window and
     // stands over it, so Escape has to reach it before the window under it.
     else if (settleArchiveGroup) settleArchiveGroup(undefined);
+    // Over the settings window when it was opened from the About page, so it
+    // is asked before the window it is standing on.
+    else if (!changelogModal.hidden) closeDialog(changelogModal);
     else if (!settingsModal.hidden) closeDialog(settingsModal);
     else if (!groupModal.hidden) closeDialog(groupModal);
     else if (!modal.hidden) closeDialog(modal);
@@ -1966,7 +1979,8 @@
     // A dialog on screen is a conversation of its own and the shortcut waits
     // for it. The settings window being the one that is up means there is
     // nothing to do, which is what a second press does everywhere else too.
-    if (settleAlert || !settingsModal.hidden || !modal.hidden || !groupModal.hidden) return;
+    if (settleAlert || !settingsModal.hidden || !modal.hidden || !groupModal.hidden
+        || !changelogModal.hidden) return;
 
     // A menu is not a conversation - it is a list of ways on, and this is one
     // of them, so it gets out of the way rather than swallowing the press.
@@ -3950,6 +3964,7 @@
     if (key === 'background') return changeBackground(value);
     if (key === 'backup') return changeTransfer(value);
     if (key === 'archive') return changeArchive(value);
+    if (key === 'changelog') return openChangelog();
 
     const effective = updateSetting(key, value);
     // The chips first: renderGroups is what settles which group the page is
@@ -4019,6 +4034,73 @@
   settingsForm.addEventListener('submit', e => {
     e.preventDefault();
     closeDialog(settingsModal);
+  });
+
+  // ----------------------------------------------------------- what is new
+
+  /**
+   * Offers the changelog, once per release.
+   *
+   * An empty marker means one of two things, and they want opposite answers.
+   * On a profile that has never held anything it is a fresh install: there is
+   * nothing to catch up on, so the version is written down without a word and
+   * the release after it is the first one to speak. On a profile that has been
+   * in use it is somebody who was already here before any of this existed -
+   * which is every existing user the first time it ships, and precisely who
+   * the card is for. `usedBefore` is what tells the two apart; it is read at
+   * boot, before the page writes anything of its own.
+   *
+   * Both buttons answer the card, Later included: one that comes back on the
+   * next new tab is one nobody can put down, and the About page keeps the
+   * changelog reachable for anyone who meant to read it later.
+   */
+  async function offerChangelog(usedBefore) {
+    const now = Changelog.latest();
+    if (!now) return;
+
+    const seen = await Store.loadChangelogSeen();
+    if (seen === now) return;
+
+    if (!seen && !usedBefore) {
+      Store.saveChangelogSeen(now);
+      return;
+    }
+
+    noticeBody.textContent = t('notice_updatedText', now);
+    updateNotice.hidden = false;
+  }
+
+  /** Takes the card away, and writes down that this release has been offered. */
+  function closeNotice() {
+    updateNotice.hidden = true;
+    Store.saveChangelogSeen(Changelog.latest());
+  }
+
+  /**
+   * Raises the window listing every release - the card is one door to it and
+   * the About page is the other, and this is the room behind both.
+   */
+  function openChangelog() {
+    Changelog.render(changelogBody);
+    openDialog(changelogModal);
+  }
+
+  btnNoticeLater.addEventListener('click', closeNotice);
+
+  // Put away as it opens the window: the card has been answered, and leaving
+  // it standing behind the window it just opened would be one thing too many
+  // to close.
+  btnNoticeOpen.addEventListener('click', () => {
+    closeNotice();
+    openChangelog();
+  });
+
+  btnChangelogClose.addEventListener('click', () => closeDialog(changelogModal));
+
+  changelogModal.addEventListener('mousedown', e => {
+    // A click on the scrim closes it, the way it closes every window here:
+    // nothing in it is answered, so there is nothing to lose by leaving.
+    if (e.target === changelogModal) closeDialog(changelogModal);
   });
 
   // ---------------------------------------------------------------- frost
@@ -4181,10 +4263,15 @@
     Icons.hydrate();
 
     let remembered;
-    [tiles, groups, settings, background, recentBackgrounds, remembered] = await Promise.all([
-      Store.load(), Store.loadGroups(), Store.loadSettings(), Backgrounds.first(),
-      Store.loadRecentBackgrounds(), Store.loadActiveGroup()
-    ]);
+    // `usedBefore` is asked here rather than where it is used: it answers
+    // "was there anything in storage?", and by the time the page has drawn
+    // itself there is.
+    let usedBefore;
+    [tiles, groups, settings, background, recentBackgrounds, remembered, usedBefore] =
+      await Promise.all([
+        Store.load(), Store.loadGroups(), Store.loadSettings(), Backgrounds.first(),
+        Store.loadRecentBackgrounds(), Store.loadActiveGroup(), Store.usedBefore()
+      ]);
 
     // A group that has since been deleted is no group at all, and starting on
     // it would show an empty grid with no way to tell why.
@@ -4219,6 +4306,10 @@
 
     syncSiteAccess();
     Favicons.onAccessChange(() => syncSiteAccess());
+
+    // After the page, never before it: the first thing somebody should see on
+    // a new tab is their own tiles.
+    offerChangelog(usedBefore);
 
     Store.onExternalChange((key, value) => {
       if (key === 'tiles' && !dragEl) {

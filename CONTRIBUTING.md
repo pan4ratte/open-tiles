@@ -48,6 +48,7 @@ node test/search.test.js       # what the search matches, and where it sits
 node test/archive.test.js     # archiving a tile, and the group it goes back to
 node test/hig.test.js          # the guards from the interface audit
 node test/release.test.js      # the version, the changelog, the workflow
+node test/changelog.test.js    # the changelog in the add-on, against the files
 ```
 
 Everything guarded here is something that fails *quietly* — a permission request that never opens its window, a token nobody declared, an id that moved between the markup and the script. `header.test.js` also checks that every `getElementById` in `src/newtab.js` still finds an id in `src/newtab.html`. Please add a guard with any change that could go wrong without saying so.
@@ -67,12 +68,26 @@ A rehearsal skips only the three steps that would be hard to take back, and says
 
 So, to cut 1.1.0:
 
-1. Write the section for it in `CHANGELOG.md`, under `## [Unreleased]`. The heading can be `## 1.1.0` or `## [1.1.0]`, dated or not — all four read the same.
-2. Set `"version": "1.1.0"` in `manifest.json`.
-3. `node tools/release.js` and read what it says it would publish.
-4. Push to `main`.
+1. Write the section for it at the top of [`CHANGELOG.ru.md`](CHANGELOG.ru.md), which is the authority — see **How a release is written up** below.
+2. Follow it in [`CHANGELOG.md`](CHANGELOG.md), then run `node tools/build-changelog.js`. That reads both changelogs into `src/changelog-data.js`, which is what the **What's new** window inside the add-on draws and what the card after an update offers. The tool refuses a translation that has fallen behind, and `test/changelog.test.js` fails if the generated file is out of date.
+3. Set `"version": "1.1.0"` in `manifest.json`.
+4. `node tools/release.js` and read what it says it would publish.
+5. Push to `main`.
 
-A push that touches `manifest.json` without changing the version finishes green having done nothing: the script looks for the `v<version>` tag and stops when it finds one. `test/release.test.js` guards the rest — a version with no changelog section, a changelog out of order, a workflow naming a script that has moved.
+A push that touches `manifest.json` without changing the version finishes green having done nothing: the script looks for the `v<version>` tag and stops when it finds one. `test/release.test.js` guards the rest — a version with no changelog section, a changelog out of order, a workflow naming a script that has moved. `test/changelog.test.js` guards the copy of the changelog that ships inside the add-on: it regenerates `src/changelog-data.js` from the changelogs and fails if what is committed differs, so a release written up for the project page and never built into the add-on fails before it ships.
+
+### How a release is written up
+
+`CHANGELOG.ru.md` is the authority, the way `README.ru.md` is: the section is written there first and `CHANGELOG.md` follows it — the same headings, the same bullets in the same order, saying the same things.
+
+Newest release first, under a bare `## 2.0.0` — no brackets, no date. Two blank lines before each version heading, so the releases are easy to find scrolling. There is no `## [Unreleased]` section: a release is written up under its own number when it is written.
+
+Under the version, two headings, either of which can be left out where a release has nothing under it:
+
+- **Новые возможности** / **New features** — one bullet per feature, opening with its **name in bold** and then a sentence or two: what it does, and where to reach it. This is the part people read to find out whether to update, so it is written for them rather than as a note to the next maintainer.
+- **UI/UX улучшения и исправления багов** / **UI/UX improvements and bug fixes** — plain sentences, no bold lead. Polish, and what was broken.
+
+Bullets are `*`. Interface labels are named in quotes — "Переместить в архив" — and `code` is for things that are typed rather than read, like a file extension. Whatever the reasoning behind a change was, it belongs in a comment in the code, not here.
 
 ### The store, which is also the signing
 
@@ -95,8 +110,11 @@ node tools/release.js --publish --no-sign   # a GitHub release, with an unsigned
 | `src/newtab.css` | The design system: tokens, materials, controls, motion |
 | `src/newtab.js` | Rendering, drag & drop reordering, wiring |
 | `src/i18n.js` | `I18N` — every word the add-on says, and `t()` to ask for one |
+| `src/changelog.js` | `Changelog` — picks the reader's changelog and draws it |
+| `src/changelog-data.js` | Generated: every release, in every language it is written in |
 | `_locales/` | One `messages.json` per language, read by Firefox |
 | `tools/build-locales.js` | Writes `_locales/en` from `src/i18n.js` |
+| `tools/build-changelog.js` | Writes `src/changelog-data.js` from the changelogs |
 | `tools/release.js` | The release: checks, tests, lints, builds, signs, publishes |
 | `tools/release-notes.js` | One version's section of `CHANGELOG.md` |
 | `tools/amo.js` | addons.mozilla.org: what a release asks it, and the signed package back |
@@ -134,7 +152,7 @@ Every word the add-on says lives in [`src/i18n.js`](src/i18n.js) — nothing els
 
 ### Adding a language
 
-`README.ru.md` is the Russian README, and is the authority: a change to what the project says about itself is written there first, and `README.md` follows it — its sections, their order, and what it does and does not say.
+`README.ru.md` is the Russian README, and is the authority: a change to what the project says about itself is written there first, and `README.md` follows it — its sections, their order, and what it does and does not say. `CHANGELOG.ru.md` is the same document in Russian and is kept beside `CHANGELOG.md`; both are read by `tools/build-changelog.js`, which refuses to build if one of them is a release behind the other.
 
 Each one opens with a switcher naming every language, the current one in bold and the rest linked. Those links are written out in full — `https://github.com/pan4ratte/open-tiles/blob/main/README.ru.md`, not `README.ru.md` — because a README is read on addons.mozilla.org and wherever else the description is reproduced, and a relative link resolves to nothing at all outside the repository.
 

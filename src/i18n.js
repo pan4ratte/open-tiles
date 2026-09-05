@@ -83,7 +83,7 @@ const I18N = (() => {
     empty_noTiles: 'No tiles yet. Hit + to add your first bookmark.',
     empty_noTilesNoAdd: 'No tiles yet. Right-click anywhere to add your first bookmark.',
     // $1 is what was typed into the search field.
-    empty_noMatches: 'Nothing here matches “$1”.',
+    empty_noMatches: 'Nothing here matches "$1".',
 
     // ------------------------------------------------------------ the search
     // The field that takes the block of group chips' place. It looks through
@@ -197,10 +197,10 @@ const I18N = (() => {
     // ------------------------------------------------------------- the alert
     confirm_deleteTitle: 'Delete this tile?',
     // $1 is the tile's name.
-    confirm_deleteText: '“$1” will be deleted from the page.',
+    confirm_deleteText: '"$1" will be deleted from the page.',
     // The same, for a tile being deleted out of the archive - which is not on
     // the page to be taken off it, and has nowhere further to go.
-    confirm_deleteArchivedText: '“$1” will be deleted from the archive for good.',
+    confirm_deleteArchivedText: '"$1" will be deleted from the archive for good.',
 
     // ----------------------------------------------------------- the archive
     // A tile taken off the page without being deleted. It waits in Settings
@@ -209,17 +209,17 @@ const I18N = (() => {
     archive_title: 'Archive',
     archive_note: 'Tiles taken off the page but not deleted. Restoring one puts it back as it was.',
     archive_empty: 'Nothing archived. Right-click a tile and choose '
-      + '“Archive tile” to put it here.',
+      + '"Archive tile" to put it here.',
     // $1 is the tile's name.
-    archive_restoreLabel: 'Restore “$1”',
+    archive_restoreLabel: 'Restore "$1"',
     // The same, for the button that takes a tile out of the archive for good.
-    archive_deleteLabel: 'Delete “$1” for good',
+    archive_deleteLabel: 'Delete "$1" for good',
 
     // The sheet that comes up when a tile is put back and the group it was
     // filed under has been deleted in the meantime.
     archive_pickTitle: 'Which group?',
     // $1 is the tile's name.
-    archive_pickNote: '“$1” was in a group that has since been deleted. '
+    archive_pickNote: '"$1" was in a group that has since been deleted. '
       + 'Choose where it goes now.',
     archive_pickGroup: 'Group',
     // The option that puts a tile back without filing it in any group - where
@@ -403,6 +403,21 @@ const I18N = (() => {
     about_licence: 'Licence',
     about_source: 'Project page',
     about_sourceNote: 'The source code, the community, and where to report bugs.',
+    about_changelog: 'Changelog',
+    about_changelogButton: 'View',
+    about_changelogNote: 'Everything that has changed, release by release.',
+
+    // ------------------------------------------------------------ what is new
+    // The card that comes up once after an update, and the window it opens.
+    notice_updatedTitle: 'OpenTiles has been updated',
+    // $1 is the version number.
+    notice_updatedText: 'Version $1 is here. Have a look at what has changed.',
+    btn_whatsNew: 'See what\'s new',
+    btn_later: 'Later',
+
+    changelog_title: 'What\'s new',
+    // $1 is the version number.
+    changelog_version: 'Version $1',
 
     // ------------------------------------------------------- the type weights
     weight_100: 'Thin',

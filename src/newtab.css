@@ -606,7 +606,7 @@ body {
 /* "Reduce transparency" is an accessibility setting, and it means it. */
 @media (prefers-reduced-transparency: reduce) {
   .mat-thick, .mat-regular, .mat-thin, .mat-ultrathin,
-  .tile, .groupbar__inner, .sheet__box, .window__toolbar, .tabs,
+  .tile, .groupbar__inner, .sheet__box, .window__toolbar, .tabs, .notice__box,
   body.gb-bar .groupbar {
     -webkit-backdrop-filter: none;
     backdrop-filter: none;
@@ -3791,7 +3791,164 @@ body.tile-round .tile {
 
 
 /* ---------------------------------------------------------------------------
-   16. Reduced motion
+   16. What is new — the notice, and the changelog it opens
+
+   The card is a notification, not an alert: it interrupts nothing, dims
+   nothing and takes no focus, so it sits in the bottom trailing corner the way
+   a macOS notification does and waits to be answered. The window it opens is
+   an ordinary window from section 10; only what is inside it is here.
+   --------------------------------------------------------------------------- */
+
+.notice {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 18px;
+  /* Over the page and under every dialog. A card floating on top of a scrim
+     would be the one lit thing on a dimmed page and unclickable with it, which
+     is the worst of both. */
+  z-index: 8;
+  display: flex;
+  justify-content: center;
+  /* The strip runs the width of the page so the card can be centred in it, and
+     lets every click through: an invisible band across the foot of the page
+     would otherwise swallow the ones meant for the tiles under it. The card
+     itself takes them back. */
+  pointer-events: none;
+}
+
+.notice[hidden] { display: none; }
+
+.notice__box {
+  pointer-events: auto;
+  max-width: min(360px, calc(100vw - 36px));
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 4px 10px;
+  padding: 13px 14px 11px;
+  border-radius: var(--r-window);
+  background: var(--mat-thick);
+  -webkit-backdrop-filter: var(--mat-filter);
+  backdrop-filter: var(--mat-filter);
+  box-shadow: var(--shadow-window);
+  animation: notice-in var(--t-slow) var(--ease-out) both;
+}
+
+/* It arrives from the edge it sits against, the way everything here arrives
+   from somewhere. */
+@keyframes notice-in {
+  from { opacity: 0; transform: translateY(12px) scale(.98); }
+  to   { opacity: 1; transform: none; }
+}
+
+/* The accent, because this is the one thing on the page asking to be read. */
+.notice__glyph {
+  display: flex;
+  color: var(--accent);
+}
+
+.notice__text { min-width: 0; }
+
+.notice__title {
+  margin: 0;
+  font-size: var(--t-body);
+  font-weight: 590;
+  letter-spacing: var(--tr-body);
+}
+
+.notice__body {
+  margin: 2px 0 0;
+  color: var(--label-secondary);
+  font-size: var(--t-callout);
+  letter-spacing: var(--tr-callout);
+}
+
+/* Under the words and hard right, which is where macOS puts the answer to
+   anything: the one being suggested is last. */
+.notice__actions {
+  display: flex;
+  grid-column: 2;
+  gap: 8px;
+  justify-content: flex-end;
+  margin-top: 11px;
+}
+
+/* The settings window is a fixed 620px because its panes vary and a window
+   that resized as you moved between them would be unusable. This one holds one
+   thing, so it takes the height of what it says and stops growing at the same
+   ceiling. */
+.window--fit .window__box {
+  width: min(560px, calc(100% - 48px));
+  height: auto;
+  max-height: min(80vh, 620px);
+}
+
+/* -- the changelog itself ------------------------------------------------- */
+
+/* One column of prose rather than the sidebar-and-pane the settings window
+   puts in this same box: there is nothing to navigate, only something to
+   read. */
+.changelog {
+  display: block;
+  padding: 20px 24px 24px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--label-tertiary) transparent;
+}
+
+.changelog__release + .changelog__release {
+  margin-top: 22px;
+  padding-top: 20px;
+  border-top: 1px solid var(--separator);
+}
+
+.changelog__version {
+  margin: 0;
+  font-size: var(--t-title3);
+  font-weight: 620;
+  letter-spacing: var(--tr-title3);
+}
+
+/* The Added / Changed / Fixed headings, set the way macOS sets a group header:
+   small, upper case and quiet, so the lines under it lead. */
+.changelog__kind {
+  margin: 16px 0 0;
+  color: var(--label-secondary);
+  font-size: var(--t-subhead);
+  font-weight: 590;
+  letter-spacing: .05em;
+  text-transform: uppercase;
+}
+
+.changelog__list {
+  margin: 8px 0 0;
+  padding-left: 18px;
+}
+
+.changelog__line {
+  font-size: var(--t-body);
+  letter-spacing: var(--tr-body);
+  line-height: 1.45;
+}
+
+.changelog__line + .changelog__line { margin-top: 5px; }
+
+/* The two runs of markup a changelog line is allowed - see `inline` in
+   changelog.js. Bold picks a name out of a sentence; code is for the things
+   that are typed rather than read, like a file extension. */
+.changelog__line strong { font-weight: 620; }
+
+.changelog__line code {
+  padding: 1px 4px;
+  border-radius: var(--r-control);
+  background: var(--fill-quaternary);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: .92em;
+}
+
+
+/* ---------------------------------------------------------------------------
+   17. Reduced motion
    --------------------------------------------------------------------------- */
 
 @media (prefers-reduced-motion: reduce) {
