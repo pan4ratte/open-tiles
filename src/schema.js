@@ -26,7 +26,8 @@
  *               this computer or from a web address, and the last few of them
  *   backup      export and import, as a pair of buttons
  *   action      a button that does something once, storing nothing
- *   info        a fact rather than a setting: `value` read off to the right
+ *   info        a fact rather than a setting: `value` read off to the right,
+ *               or the one the page hands in when the field names none
  *   link        a button that opens `href` in a tab of its own
  *   about       the About page's masthead - mark, name, version, blurb
  *
@@ -48,6 +49,11 @@
  * A field with a `when` only shows while every key in it holds the value
  * named - that is how the status-bar options stay out of the way of somebody
  * using the floating group block.
+ *
+ * A field marked `local: true` is stored like any other but stays on this
+ * computer: Firefox Sync carries every other setting to the reader's other
+ * computers (see sync.js), and this is for the ones that are about the
+ * computer rather than about the page.
  */
 const Schema = (() => {
   const t = I18N.t;
@@ -225,6 +231,35 @@ const Schema = (() => {
               type: 'toggle',
               default: false,
               note: t('set_faviconNote')
+            }
+          ]
+        },
+        {
+          label: t('group_sync'),
+          fields: [
+            {
+              // On to begin with, because Firefox already asks the question
+              // that matters: nothing leaves this computer unless its reader
+              // has signed in and ticked Add-ons in the Sync settings. This is
+              // for somebody who wants one computer set up differently.
+              //
+              // Per computer, like the permission below it: switching it off
+              // here should not switch it off everywhere else.
+              key: 'sync',
+              label: t('set_sync'),
+              type: 'toggle',
+              default: true,
+              local: true,
+              note: t('set_syncNote')
+            },
+            {
+              // A fact rather than a setting, and one the page hands in - see
+              // `external`, and Sync.status.
+              key: 'syncStatus',
+              label: t('set_syncStatus'),
+              type: 'info',
+              external: true,
+              when: { sync: true }
             }
           ]
         },
@@ -431,6 +466,10 @@ const Schema = (() => {
               // Firefox only grants permissions.request() while it is handling
               // user input, so this toggle has to act on the click itself.
               gesture: true,
+              // It is the permission, and a permission is granted per
+              // computer: the page turns this off wherever it is missing, and
+              // carried to another computer it would only be turned off again.
+              local: true,
               note: t('set_deepIconsNote')
             }
           ]
@@ -812,6 +851,9 @@ const Schema = (() => {
 
   const DEFAULTS = Object.fromEntries(STORED.map(f => [f.key, f.default]));
 
+  /** The stored settings Firefox Sync carries - every one not marked `local`. */
+  const SYNCED = STORED.filter(field => !field.local).map(field => field.key);
+
   /**
    * A `choice` option is either the value itself - `600` - or a
    * `{ value, label }` pair, for when the stored value is not what should be
@@ -919,7 +961,7 @@ const Schema = (() => {
   }
 
   return {
-    SECTIONS, FIELDS, STORED, DEFAULTS, EFFECT_KEYS, SETTINGS_SHORTCUT,
+    SECTIONS, FIELDS, STORED, DEFAULTS, SYNCED, EFFECT_KEYS, SETTINGS_SHORTCUT,
     TIME_FORMATS, DATE_FORMATS,
     coerce, coerceEffects, optionValue, optionLabel
   };

@@ -43,6 +43,10 @@ The start page can take video for its background, not only pictures. A file can 
 
 A light and a dark theme are both there, along with an accent colour for the add-on. The number of columns in the tile grid, the shape of the tiles and the spacing between them are all adjustable, as are the interface fonts, thanks to Google Fonts being built in. Every part of the interface can be set up to suit you, moved somewhere else, or simply hidden, if absolute minimalism is what you are after.
 
+### Sync across devices
+
+Tiles, groups and settings are synced through your Firefox account, so your start page is the same on every computer you use. All it takes is being signed in to Firefox with "Add-ons" ticked in its Sync settings. Sync can be switched off on a single computer, if that one should have a start page of its own. Firefox for Android does not sync add-on data yet.
+
 ### Backup and restore
 
 **Export** and **Import** save and restore all the sites you have kept and the add-on's settings, as a file of its own. The add-on also reads **Speed Dial 2** backup files, which makes for a smooth migration.

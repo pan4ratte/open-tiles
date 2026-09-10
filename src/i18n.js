@@ -266,6 +266,7 @@ const I18N = (() => {
     section_about: 'About',
 
     group_appearance: 'Appearance',
+    group_sync: 'Sync',
     group_backupReset: 'Backup and reset',
     group_grid: 'Grid',
     group_tiles: 'Tiles',
@@ -289,6 +290,20 @@ const I18N = (() => {
     set_searchButtonNote: 'Search can still be started from the right-click menu.',
     set_favicon: 'Show the add-on icon in the tab',
     set_faviconNote: 'The tab wears the OpenTiles mark, on the theme the page is set to.',
+
+    // ------------------------------------------------------- settings: sync
+    // "Add-ons" is the name of the checkbox in Firefox's own Sync settings,
+    // and should read the way Firefox writes it in this language.
+    set_sync: 'Sync across devices',
+    set_syncNote: 'Uses your Firefox account: sign in and tick "Add-ons" in its Sync settings.',
+    set_syncStatus: 'Last change from another device',
+    // What the row above reads before anything has arrived.
+    sync_never: 'None yet',
+    sync_android: 'Firefox for Android does not sync add-on data, so this device keeps its own.',
+    sync_full: 'There is more here than Firefox Sync has room for, so changes are not being '
+      + 'sent. Deleting tiles you no longer need makes room.',
+    // $1 is whatever went wrong, in Firefox's own words.
+    sync_failed: 'Firefox would not sync: $1',
 
     set_backup: 'Backup and restore',
     set_backupNote: 'Export and import your tiles, groups and settings.',

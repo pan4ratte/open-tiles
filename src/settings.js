@@ -10,12 +10,18 @@
 const SettingsUI = (() => {
   const t = I18N.t;
 
-  /** @typedef {{kind:'ok'|'error'|'loading', text:string}} Status */
+  /**
+   * `info` is for something worth knowing that is neither a success nor a
+   * failure - it keeps the secondary label colour and a plain glyph.
+   *
+   * @typedef {{kind:'ok'|'error'|'loading'|'info', text:string}} Status
+   */
 
   const STATUS_ICONS = {
     loading: 'loader-circle',
     ok: 'check',
-    error: 'circle-alert'
+    error: 'circle-alert',
+    info: 'info'
   };
 
   function setStatus(el, status) {
@@ -645,11 +651,16 @@ const SettingsUI = (() => {
     return { control: link };
   }
 
-  /** A fact rather than a setting - the About page's rows are all of these. */
-  function buildInfo(field) {
+  /**
+   * A fact rather than a setting - the About page's rows are all of these. One
+   * that names no `value` of its own shows what the page handed in for it,
+   * which is how a fact that changes, like when sync last heard from another
+   * computer, gets here.
+   */
+  function buildInfo(field, current) {
     const value = document.createElement('span');
     value.className = 'row__value';
-    value.textContent = field.value;
+    value.textContent = field.value !== undefined ? field.value : String(current ?? '');
     return { control: value };
   }
 

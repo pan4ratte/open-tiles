@@ -456,6 +456,9 @@
   "group_appearance": {
     "message": "Оформление"
   },
+  "group_sync": {
+    "message": "Синхронизация"
+  },
   "group_backupReset": {
     "message": "Резервное копирование и сброс настроек"
   },
@@ -521,6 +524,33 @@
   },
   "set_faviconNote": {
     "message": "Во вкладке будет показан значок OpenTiles, соответствующий выбранной теме."
+  },
+  "set_sync": {
+    "message": "Синхронизировать между устройствами"
+  },
+  "set_syncNote": {
+    "message": "Через аккаунт Firefox: войдите и отметьте \"Дополнения\" в настройках синхронизации."
+  },
+  "set_syncStatus": {
+    "message": "Последнее изменение с другого устройства"
+  },
+  "sync_never": {
+    "message": "Пока нет"
+  },
+  "sync_android": {
+    "message": "Firefox для Android не синхронизирует данные плагинов, поэтому на этом устройстве они хранятся отдельно."
+  },
+  "sync_full": {
+    "message": "Данных больше, чем помещается в синхронизацию Firefox, поэтому изменения не отправляются. Удалите ненужные плитки, чтобы освободить место."
+  },
+  "sync_failed": {
+    "message": "Firefox не смог выполнить синхронизацию: $1",
+    "description": "$1 is whatever went wrong, in Firefox's own words.",
+    "placeholders": {
+      "n1": {
+        "content": "$1"
+      }
+    }
   },
   "set_backup": {
     "message": "Резервное копирование и восстановление"

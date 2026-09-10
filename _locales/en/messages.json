@@ -456,6 +456,9 @@
   "group_appearance": {
     "message": "Appearance"
   },
+  "group_sync": {
+    "message": "Sync"
+  },
   "group_backupReset": {
     "message": "Backup and reset"
   },
@@ -521,6 +524,35 @@
   },
   "set_faviconNote": {
     "message": "The tab wears the OpenTiles mark, on the theme the page is set to."
+  },
+  "set_sync": {
+    "message": "Sync across devices",
+    "description": "\"Add-ons\" is the name of the checkbox in Firefox's own Sync settings, and should read the way Firefox writes it in this language."
+  },
+  "set_syncNote": {
+    "message": "Uses your Firefox account: sign in and tick \"Add-ons\" in its Sync settings."
+  },
+  "set_syncStatus": {
+    "message": "Last change from another device"
+  },
+  "sync_never": {
+    "message": "None yet",
+    "description": "What the row above reads before anything has arrived."
+  },
+  "sync_android": {
+    "message": "Firefox for Android does not sync add-on data, so this device keeps its own."
+  },
+  "sync_full": {
+    "message": "There is more here than Firefox Sync has room for, so changes are not being sent. Deleting tiles you no longer need makes room."
+  },
+  "sync_failed": {
+    "message": "Firefox would not sync: $1",
+    "description": "$1 is whatever went wrong, in Firefox's own words.",
+    "placeholders": {
+      "n1": {
+        "content": "$1"
+      }
+    }
   },
   "set_backup": {
     "message": "Backup and restore"

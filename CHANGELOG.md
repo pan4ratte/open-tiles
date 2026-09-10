@@ -1,6 +1,13 @@
 # Changelog
 
 
+## 1.2.0
+
+### New features
+
+* **Sync across devices.** Tiles, groups and settings are now synced through your Firefox account on every computer you are signed in on, as long as "Add-ons" is ticked in the Firefox Sync settings. Sync can be switched off on a single computer in the "General" section of the settings, which also shows when changes last arrived from another device. Backgrounds from local files and large tile icons stay on the device they were added on.
+
+
 ## 1.1.0
 
 ### New features

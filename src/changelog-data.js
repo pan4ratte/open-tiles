@@ -9,6 +9,17 @@
 const CHANGELOG_DATA = {
   "en": [
     {
+      "version": "1.2.0",
+      "groups": [
+        {
+          "kind": "New features",
+          "lines": [
+            "**Sync across devices.** Tiles, groups and settings are now synced through your Firefox account on every computer you are signed in on, as long as \"Add-ons\" is ticked in the Firefox Sync settings. Sync can be switched off on a single computer in the \"General\" section of the settings, which also shows when changes last arrived from another device. Backgrounds from local files and large tile icons stay on the device they were added on."
+          ]
+        }
+      ]
+    },
+    {
       "version": "1.1.0",
       "groups": [
         {
@@ -45,6 +56,17 @@ const CHANGELOG_DATA = {
     }
   ],
   "ru": [
+    {
+      "version": "1.2.0",
+      "groups": [
+        {
+          "kind": "Новые возможности",
+          "lines": [
+            "**Синхронизация между устройствами.** Плитки, группы и настройки теперь синхронизируются через аккаунт Firefox на всех компьютерах, где выполнен вход, если в настройках синхронизации Firefox отмечен пункт \"Дополнения\". Синхронизацию можно отключить на отдельном компьютере в разделе настроек \"Основные\", там же показано, когда в последний раз пришли изменения с другого устройства. Фоны из локальных файлов и крупные иконки плиток остаются на том устройстве, где их добавили."
+          ]
+        }
+      ]
+    },
     {
       "version": "1.1.0",
       "groups": [

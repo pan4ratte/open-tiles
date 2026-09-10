@@ -4034,13 +4034,18 @@
     // `background` is an external field: it has no place in `settings`, so it
     // is handed to the dialog on the side - the picture on screen and the last
     // few, which are the two things its picker draws.
+    const sync = Sync.status();
     SettingsUI.mount(settingsBody, {
       values: {
         ...settings,
         background: { record: background, recent: recentBackgrounds },
-        archive: archivedTiles()
+        archive: archivedTiles(),
+        syncStatus: sync.when
       },
-      status,
+      // What sync has to say for itself sits under its switch whenever the
+      // window is built, rather than only after the change that caused it -
+      // it is a state, not the answer to a click.
+      status: { ...(settings.sync && sync.line ? { sync: sync.line } : {}), ...status },
       onChange: onSettingChange,
       // macOS titles a settings window with the pane it is showing.
       onSection: label => { settingsTitle.textContent = label || t('settings_title'); },
@@ -4407,5 +4412,10 @@
         switchGroup(id, { remember: false });
       }
     });
+
+    // After the listener above, which is how what arrives from another
+    // computer reaches this page: sync.js writes it to storage like another
+    // new tab would, and the page redraws from the change as it always has.
+    Sync.start({ onStatus: () => { if (!settingsModal.hidden) mountSettings(); } });
   })();
 })();

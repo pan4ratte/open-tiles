@@ -39,6 +39,9 @@
  *                url is the address the icon was found at; data is the picture
  *                itself as a data: URI when it was small enough to keep, null
  *                when it was tried and could not be
+ *   syncState  - { doc, seen, joined, device, lastRemote, error }  what the last
+ *                merge with Firefox Sync left behind - written by sync.js and
+ *                read by nothing else; gone while sync is switched off
  */
 const Store = (() => {
   const t = I18N.t;
@@ -459,8 +462,23 @@ const Store = (() => {
     return { src, width, height };
   }
 
+  /**
+   * The background as this page last read or wrote it, as stored - undefined
+   * for one never chosen - or null before it has done either. sync.js asks
+   * for this rather than reading a picture of several megabytes a second time
+   * on every new tab.
+   */
+  let held = null;
+
+  function hold(raw) {
+    held = { value: raw };
+    return raw;
+  }
+
+  const heldBackground = () => held;
+
   async function loadBackground() {
-    return sanitizeBackground(await get(BACKGROUND));
+    return sanitizeBackground(hold(await get(BACKGROUND)));
   }
 
   /** @throws when the picture does not fit in the storage area */
@@ -468,12 +486,13 @@ const Store = (() => {
     const clean = sanitizeBackground(record);
     if (!clean) throw new Error(t('bg_unusable'));
     await set(BACKGROUND, clean);
+    hold(clean);
     return clean;
   }
 
   async function clearBackground() {
     await set(BACKGROUND, null);
-    return null;
+    return hold(null);
   }
 
   /**
@@ -485,7 +504,7 @@ const Store = (() => {
    * with - see `first` in backgrounds.js.
    */
   async function backgroundUntouched() {
-    return (await get(BACKGROUND)) === undefined;
+    return hold(await get(BACKGROUND)) === undefined;
   }
 
   // ------------------------------------------------------ recent backgrounds
@@ -745,6 +764,42 @@ const Store = (() => {
   // ------------------------------------------------------------- change feed
 
   /**
+   * How each key the page listens for is read back in: the change feed below
+   * and sync.js both take a stored value through here before anything uses
+   * it, so a value that arrived from another computer is held to exactly what
+   * one written on this one would be.
+   */
+  const READ = new Map([
+    [TILES, sanitizeTiles],
+    [GROUPS, sanitizeGroups],
+    [SETTINGS, Schema.coerce],
+    [BACKGROUND, sanitizeBackground],
+    [BG_RECENT, sanitizeRecent],
+    [ACTIVE_GROUP, id => (typeof id === 'string' && id ? id : null)],
+    [CHANGELOG_SEEN, version => (typeof version === 'string' ? version : '')]
+  ]);
+
+  const sanitize = (key, raw) => READ.get(key)(raw);
+
+  /**
+   * Writes a value that arrived from another computer - see sync.js.
+   *
+   * Unlike every other write here it leaves no echo behind, so the change
+   * feed reports it on this page as well as on the rest. The page that merged
+   * it did not make the change, it only carried it in, and it has as much
+   * redrawing to do as any other.
+   */
+  async function adopt(key, value) {
+    const clean = sanitize(key, value);
+    if (ext) {
+      await ext.set({ [key]: clean });
+    } else {
+      localStorage.setItem(key, JSON.stringify(clean));
+    }
+    return clean;
+  }
+
+  /**
    * Fires when *another* new-tab page changes any of what is stored here. This
    * page's own writes come back through the same feed and are dropped - see
    * `isEcho` above.
@@ -755,19 +810,9 @@ const Store = (() => {
       || null;
     if (!runtime || !runtime.onChanged) return;
 
-    const READ = [
-      [TILES, sanitizeTiles],
-      [GROUPS, sanitizeGroups],
-      [SETTINGS, Schema.coerce],
-      [BACKGROUND, sanitizeBackground],
-      [BG_RECENT, sanitizeRecent],
-      [ACTIVE_GROUP, id => (typeof id === 'string' && id ? id : null)],
-      [CHANGELOG_SEEN, version => (typeof version === 'string' ? version : '')]
-    ];
-
     runtime.onChanged.addListener((changes, area) => {
       if (area !== 'local') return;
-      READ.forEach(([key, read]) => {
+      READ.forEach((read, key) => {
         if (!changes[key]) return;
         const value = read(changes[key].newValue);
         if (!isEcho(key, value)) handler(key, value);
@@ -781,12 +826,13 @@ const Store = (() => {
     loadActiveGroup, saveActiveGroup,
     loadChangelogSeen, saveChangelogSeen, usedBefore,
     loadSettings, saveSettings, resetSettings,
-    loadBackground, saveBackground, clearBackground, backgroundUntouched,
+    loadBackground, saveBackground, clearBackground, backgroundUntouched, heldBackground,
     loadRecentBackgrounds, rememberBackground, noteRecentEffects,
     forgetRecentBackground, clearRecentBackgrounds, MAX_RECENT,
     getFontCss, putFontCss,
     getFontPreviews, putFontPreviews,
     icons,
+    sanitize, adopt,
     onExternalChange
   };
 })();
