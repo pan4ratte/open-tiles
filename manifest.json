@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "__MSG_extName__",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "author": "pan4ratte",
   "homepage_url": "https://github.com/pan4ratte/open-tiles",
   "description": "__MSG_extDescription__",
