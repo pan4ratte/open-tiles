@@ -7,6 +7,7 @@
 <br>
 <div align="center">
 <a href="https://addons.mozilla.org/ru/firefox/addon/opentiles/"><picture><source media="(prefers-color-scheme: dark)" srcset="https://shieldcn.dev/badge/download%20for-Firefox.svg?size=lg&amp;logo=firefoxbrowser&amp;mode=dark"><img alt="badge" src="https://shieldcn.dev/badge/download%20for-Firefox.svg?size=lg&amp;logo=firefoxbrowser&amp;mode=light"></picture></a>
+<a href="https://pay.cloudtips.ru/p/c0e8eac4"><img alt="badge" src="https://shieldcn.dev/badge/Поддержать%20разработку-(RU%20карты).svg?size=lg&amp;mode=light&amp;logo=ri%3AFaHeart&amp;logoColor=ef4444&amp;labelTextColor=ef4444"></a>
 </div>
 
 ## Install
