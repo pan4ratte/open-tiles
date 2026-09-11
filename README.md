@@ -10,17 +10,10 @@
 <a href="https://pay.cloudtips.ru/p/c0e8eac4"><img alt="badge" src="https://shieldcn.dev/badge/Поддержать%20разработку-(RU%20карты).svg?size=lg&amp;mode=light&amp;logo=ri%3AFaHeart&amp;logoColor=ef4444&amp;labelTextColor=ef4444"></a>
 </div>
 
-## Install
-
-Only Firefox is supported for now, version 140 at the least (142 on Android).
-
-The add-on is on addons.mozilla.org — [install OpenTiles](https://addons.mozilla.org/firefox/addon/opentiles/) and accept the prompt asking to replace the new tab page and the homepage.
-
-On running it from source, see [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## Features
 
-### Keep the sites you love on your start page
+### Save your favorite site on your start page
 
 Add a site you like to the page, and reorder your bookmarks by dragging. Site icons are fetched for you automatically, and **Deep icon lookup** finds the icon of a site that ordinary means cannot reach. Besides the icons fetched automatically, every tile can be given a file of your own, one pasted from the clipboard, or even SVG code pasted into a field meant for it. Icon colour, icon rounding and background colour can be adjusted as well.
 
@@ -52,9 +45,11 @@ Tiles, groups and settings are synced through your Firefox account, so your star
 
 **Export** and **Import** save and restore all the sites you have kept and the add-on's settings, as a file of its own. The add-on also reads **Speed Dial 2** backup files, which makes for a smooth migration.
 
+
 ## About the author
 
 My name is Mark Ingrem. I build various tools for scientific research, and add-ons that make life easier for people using Obsidian and other programs. More of my projects can be found on my [GitHub](https://github.com/pan4ratte) page.
+
 
 ## Third-party licences
 
